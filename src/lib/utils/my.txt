@@ -1,0 +1,13 @@
+const canvas = document.getElementById("doughnut-chart");
+
+  // Canvas not ready yet
+  if (!canvas) {
+    setTimeout(() => updateChartPie(inputData), 50);
+    return;
+  }
+
+
+  useEffect(() => {
+    // Page 1 ke subscriptions fetch karo
+    getRelationshipSubsLines(1, {});
+  }, []);
