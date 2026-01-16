@@ -401,26 +401,34 @@ export default function Home() {
         {isLoading ? (
           // Loading skeleton for charts
           <>
-            <ChartSkeleton height="260px" className="h-[260px]" />
             <ChartSkeleton
-              height="260px"
-              showControls={true}
+              key="chart-skeleton-1"
+              height="160px"
               className="h-[260px]"
             />
             <ChartSkeleton
-              height="260px"
-              showControls={true}
+              key="chart-skeleton-2"
+              height="160px"
               className="h-[260px]"
             />
             <ChartSkeleton
-              height="260px"
-              showControls={true}
+              key="chart-skeleton-3"
+              height="160px"
               className="h-[260px]"
             />
-            <ChartSkeleton height="260px" className="h-[260px]" />
             <ChartSkeleton
-              height="260px"
-              showControls={true}
+              key="chart-skeleton-4"
+              height="160px"
+              className="h-[260px]"
+            />
+            <ChartSkeleton
+              key="chart-skeleton-5"
+              height="160px"
+              className="h-[260px]"
+            />
+            <ChartSkeleton
+              key="chart-skeleton-6"
+              height="160px"
               className="h-[260px]"
             />
           </>

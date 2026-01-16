@@ -48,27 +48,43 @@ export const CardSkeleton = ({
   className = "",
   showDropdown = false,
   ...props
-}) => (
-  <div
-    className={`rounded-xl p-4 flex flex-col justify-between animate-pulse ${
-      bgColor ? "" : "bg-gray-50"
-    } ${className}`}
-    style={bgColor ? { backgroundColor: bgColor } : {}}
-    {...props}
-  >
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <div className="w-6 h-6 bg-gray-300 rounded"></div>
-        <div className="h-4 w-24 bg-gray-300 rounded"></div>
+}) => {
+  const skeletonBaseColor = bgColor ? "bg-white/60" : "bg-gray-300";
+
+  return (
+    <div
+      className={`rounded-xl p-4 flex flex-col justify-between ${
+        bgColor ? "" : "bg-gray-50"
+      } ${className}`}
+      style={bgColor ? { backgroundColor: bgColor } : {}}
+      {...props}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div
+            className={`w-6 h-6 ${skeletonBaseColor} rounded animate-pulse`}
+          ></div>
+          <div
+            className={`h-4 w-24 ${skeletonBaseColor} rounded animate-pulse`}
+          ></div>
+        </div>
+        <div
+          className={`w-4 h-4 ${skeletonBaseColor} rounded animate-pulse`}
+        ></div>
       </div>
-      <div className="w-4 h-4 bg-gray-300 rounded"></div>
+      {showDropdown && (
+        <div
+          className={`h-6 w-20 ${skeletonBaseColor} rounded mt-2 animate-pulse`}
+        ></div>
+      )}
+      <div className="mt-3">
+        <div
+          className={`h-8 w-16 ${skeletonBaseColor} rounded animate-pulse`}
+        ></div>
+      </div>
     </div>
-    {showDropdown && <div className="h-6 w-20 bg-gray-300 rounded mt-2"></div>}
-    <div className="mt-3">
-      <div className="h-8 w-16 bg-gray-300 rounded"></div>
-    </div>
-  </div>
-);
+  );
+};
 
 // Chart Skeleton
 export const ChartSkeleton = ({
@@ -79,22 +95,22 @@ export const ChartSkeleton = ({
   ...props
 }) => (
   <div
-    className={`bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 animate-pulse ${className}`}
+    className={`bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 ${className}`}
     {...props}
   >
     {showHeader && (
-      <div className="h-6 bg-gray-200 rounded w-48 mb-4 sm:mb-6"></div>
+      <div className="h-6 bg-gray-200 rounded w-48 mb-4 sm:mb-6 animate-pulse"></div>
     )}
     {showControls && (
       <div className="flex items-center justify-between mb-2">
-        <div className="h-4 w-32 bg-gray-300 rounded"></div>
+        <div className="h-4 w-32 bg-gray-300 rounded animate-pulse"></div>
         <div className="flex gap-3">
-          <div className="w-4 h-4 bg-gray-300 rounded"></div>
-          <div className="w-4 h-4 bg-gray-300 rounded"></div>
+          <div className="w-4 h-4 bg-gray-300 rounded animate-pulse"></div>
+          <div className="w-4 h-4 bg-gray-300 rounded animate-pulse"></div>
         </div>
       </div>
     )}
-    <div className="bg-gray-200 rounded" style={{ height }}></div>
+    <div className="bg-gray-200 rounded animate-pulse" style={{ height }}></div>
   </div>
 );
 
