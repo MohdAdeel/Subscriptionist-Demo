@@ -2,6 +2,7 @@ import "./App.css";
 import React from "react";
 import Home from "./pages/Home/Home";
 import Menu from "./components/menu";
+import Report from "./pages/Reports/Report";
 import { Route, Routes } from "react-router-dom";
 import Subscription from "./pages/Subscriptions/Subscription";
 
@@ -16,6 +17,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/subscriptions" element={<Subscription />} />
+          <Route path="/reports" element={<Report />} />
           {/* <Route path="/budget-management" element={<BudgetManagement />} /> */}
         </Routes>
       </div>

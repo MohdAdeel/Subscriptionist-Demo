@@ -1,16 +1,14 @@
-import "./Home.css";
-import { useEffect, useRef, useState, useCallback } from "react";
-
-// Static assets - these are small and needed immediately
 import TimeIcon from "../../assets/Time.svg";
 import FrameIcon from "../../assets/Frame.svg";
 import ProfileImg from "../../assets/Image.jpg";
 import OverdueIcon from "../../assets/Overdue.svg";
+import { useEffect, useRef, useState, useCallback } from "react";
 import TotalActiveCostIcon from "../../assets/TotalActiveCost.svg";
 import RenewalTimelineIcon from "../../assets/RenewalTimeline.svg";
 import UpcomingRenewalsIcon from "../../assets/UpcomingRenewals.svg";
 import RecentlyConcludedIcon from "../../assets/RecentlyConcluded.svg";
 import ActiveSubscriptionsIcon from "../../assets/ActiveSubscriptions.svg";
+import { CardSkeleton, ChartSkeleton } from "../../components/SkeletonLoader";
 
 // Lazy load heavy utility modules - these contain Chart.js and are large (~400KB total)
 // They are only needed AFTER the API data is fetched
@@ -62,7 +60,6 @@ const getChartModules = () => {
 };
 
 export default function Home() {
-  const CONTACT_ID = "f0983e34-d2c5-ee11-9079-00224827e0df";
   const currentYear = new Date().getFullYear();
   const activityDataRef = useRef(null);
   const departmentChartRef = useRef(null); // For chart5 - Department Chart
@@ -103,7 +100,6 @@ export default function Home() {
     {
       title: "Renewal Timeline",
       value: "0",
-      sub: "12 months",
       icon: RenewalTimelineIcon,
       info: "Number of subscriptions with near-term renewal dates.",
       bg: "#BFF1FF",
@@ -226,9 +222,7 @@ export default function Home() {
             }, 200);
           }
         } catch (err) {
-          console.error("Error processing charts:", err);
-          // Don't set error state for chart rendering issues, just log them
-          // The charts might still work partially
+          // Chart rendering errors are handled silently to allow partial functionality
         }
       }, 150);
     });
@@ -253,7 +247,6 @@ export default function Home() {
         activityDataRef.current = activityData;
         processAllCharts(activityData);
       } catch (err) {
-        console.error("Error loading activity data:", err);
         setError("Failed to load data. Please try again later.");
       } finally {
         setIsLoading(false);
@@ -304,6 +297,22 @@ export default function Home() {
 
   return (
     <div className="flex-1 bg-[#F6F7FB] min-h-screen p-6">
+      {/* Styles for dynamically generated legend items */}
+      <style>{`
+        #chart-legend ul li {
+          display: flex;
+          align-items: center;
+          margin-bottom: 5px;
+          font-size: 11px;
+        }
+        #chart-legend ul li span {
+          border-radius: 50%;
+          width: 12px;
+          height: 12px;
+          display: inline-block;
+          margin-right: 10px;
+        }
+      `}</style>
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-xl font-semibold text-[#0B0B3B]">Welcome Jane!</h1>
@@ -320,56 +329,38 @@ export default function Home() {
       </div>
 
       {/* Stat Cards */}
-      <div className="dashboard-cards-grid">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
         {isLoading
           ? // Loading skeleton for cards
             [...cards, ...card].map((cardItem) => (
-              <div
+              <CardSkeleton
                 key={cardItem.id}
-                className="dashboard-card skeleton-card"
-                style={{ backgroundColor: cardItem.bg }}
-              >
-                <div className="dashboard-card-header">
-                  <div className="dashboard-card-title">
-                    <div className="skeleton-icon"></div>
-                    <div className="skeleton-text skeleton-title"></div>
-                  </div>
-                  <div className="skeleton-icon-small"></div>
-                </div>
-
-                {cardItem.title === "Renewal Timeline" && (
-                  <div className="skeleton-select"></div>
-                )}
-
-                <div className="dashboard-card-value">
-                  <div className="skeleton-text skeleton-value"></div>
-                </div>
-              </div>
+                bgColor={cardItem.bg}
+                showDropdown={cardItem.title === "Renewal Timeline"}
+              />
             ))
           : // Actual cards with data
             [...cards, ...card].map((cardItem) => (
               <div
                 key={cardItem.id}
-                className="dashboard-card"
+                className="rounded-xl p-4 flex flex-col justify-between"
                 style={{ backgroundColor: cardItem.bg }}
               >
-                <div className="dashboard-card-header">
-                  <div className="dashboard-card-title">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
                     <img
                       src={cardItem.icon}
                       alt={cardItem.title}
-                      className="dashboard-card-icon"
+                      className="w-6 h-6"
                     />
-                    <h5>{cardItem.title}</h5>
+                    <h5 className="text-sm font-semibold m-0">
+                      {cardItem.title}
+                    </h5>
                   </div>
 
                   {cardItem.info && (
-                    <span title={cardItem.info} className="dashboard-card-info">
-                      <img
-                        src={FrameIcon}
-                        alt="Info"
-                        className="dashboard-card-info-icon"
-                      />
+                    <span title={cardItem.info} className="cursor-pointer">
+                      <img src={FrameIcon} alt="Info" className="w-4 h-4" />
                     </span>
                   )}
                 </div>
@@ -377,7 +368,7 @@ export default function Home() {
                 {cardItem.title === "Renewal Timeline" && (
                   <select
                     id="renewalDropdown"
-                    className="dashboard-card-select mt-2"
+                    className="text-xs mt-2"
                     defaultValue="4"
                     onChange={async (e) => {
                       const value = e.target.value;
@@ -396,7 +387,7 @@ export default function Home() {
                   </select>
                 )}
 
-                <div className="dashboard-card-value">
+                <div className="mt-3 text-3xl font-bold">
                   <div id={cardItem.id}>
                     <span>{cardItem.value}</span>
                   </div>
@@ -410,92 +401,90 @@ export default function Home() {
         {isLoading ? (
           // Loading skeleton for charts
           <>
-            <div className="vendor-chart-card skeleton-chart">
-              <div className="skeleton-chart-header">
-                <div className="skeleton-text skeleton-chart-title"></div>
-              </div>
-              <div className="skeleton-chart-content"></div>
-            </div>
-            <div className="monthly-spend-card skeleton-chart">
-              <div className="skeleton-chart-header">
-                <div className="skeleton-text skeleton-chart-title"></div>
-                <div className="skeleton-arrows"></div>
-              </div>
-              <div className="skeleton-chart-content"></div>
-            </div>
-            <div className="department-chart-card skeleton-chart">
-              <div className="skeleton-chart-header">
-                <div className="skeleton-text skeleton-chart-title"></div>
-                <div className="skeleton-arrows"></div>
-              </div>
-              <div className="skeleton-chart-content"></div>
-            </div>
-            <div className="monthly-spend-card skeleton-chart">
-              <div className="skeleton-chart-header">
-                <div className="skeleton-text skeleton-chart-title"></div>
-                <div className="skeleton-arrows"></div>
-              </div>
-              <div className="skeleton-chart-content"></div>
-            </div>
-            <div className="dashboard-listQuickStart-item skeleton-chart">
-              <div className="skeleton-chart-header">
-                <div className="skeleton-text skeleton-chart-title"></div>
-              </div>
-              <div className="skeleton-chart-content"></div>
-            </div>
-            <div className="dashboard-listQuickStart-item skeleton-chart">
-              <div className="skeleton-chart-header">
-                <div className="skeleton-text skeleton-chart-title"></div>
-                <div className="skeleton-arrows"></div>
-              </div>
-              <div className="skeleton-chart-content"></div>
-            </div>
+            <ChartSkeleton height="260px" className="h-[260px]" />
+            <ChartSkeleton
+              height="260px"
+              showControls={true}
+              className="h-[260px]"
+            />
+            <ChartSkeleton
+              height="260px"
+              showControls={true}
+              className="h-[260px]"
+            />
+            <ChartSkeleton
+              height="260px"
+              showControls={true}
+              className="h-[260px]"
+            />
+            <ChartSkeleton height="260px" className="h-[260px]" />
+            <ChartSkeleton
+              height="260px"
+              showControls={true}
+              className="h-[260px]"
+            />
           </>
         ) : (
           <>
             {/* Vendor Chart */}
-            <div className="vendor-chart-card">
+            <div className="bg-white rounded-xl p-3 h-[260px] flex flex-col overflow-hidden">
               <a
                 data-id="usage-analysis"
-                className="page-dashboard__listQuickStart-item"
                 id="usageanalysis"
-                style={{ position: "relative" }}
+                className="relative block h-full flex flex-col"
               >
-                <p>Vendors</p>
-                <span
-                  className="info-tiles"
-                  data-popover="All Active Vendors"
-                ></span>
+                <div className="flex-shrink-0 mb-2">
+                  <p className="text-sm font-semibold mb-2">Vendors</p>
+                  <span
+                    className="info-tiles"
+                    data-popover="All Active Vendors"
+                  ></span>
+                </div>
 
-                <div className="chart-wrapper">
-                  <div className="chart-container">
-                    <canvas id="doughnut-chart"></canvas>
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                  <div className="flex items-center justify-center w-full">
+                    <div className="w-full h-[150px] mx-auto ml-3 flex-shrink-0">
+                      <canvas
+                        id="doughnut-chart"
+                        className="w-full h-full"
+                      ></canvas>
+                    </div>
+                    <div
+                      className="w-[40%] max-w-[200px] flex flex-col justify-center items-start flex-shrink-0"
+                      id="chart-legend"
+                    >
+                      <ul className="list-none p-0 w-full overflow-y-auto max-h-[150px]"></ul>
+                    </div>
                   </div>
-                  <div className="legend-container" id="chart-legend"></div>
                 </div>
               </a>
             </div>
 
             {/* Monthly Spend */}
-            <div className="monthly-spend-card">
+            <div className="bg-white rounded-xl p-4 flex flex-col mb-2 shadow-sm h-[260px]">
               <a
                 data-id="Performance"
-                className="monthly-spend-inner"
                 id="performance"
+                className="flex flex-col p-0 bg-transparent shadow-none flex-none h-full"
               >
-                <div className="monthly-spend-header">
-                  <p className="monthly-spend-title">Monthly Spend Trendings</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold mb-2 text-[#0B0B3B]">
+                    Monthly Spend Trendings
+                  </p>
 
-                  <div className="monthly-spend-arrows" id="MonthlySpend">
+                  <div
+                    className="flex items-center mb-2 gap-3"
+                    id="MonthlySpend"
+                  >
                     <i
-                      className="fas fa-chevron-left arrow"
+                      className="fas fa-chevron-left text-sm opacity-80 cursor-pointer hover:opacity-100"
                       onClick={async () => {
                         const modules = await getChartModules();
                         modules.GetMonthlySpentrend("last-x-months");
                       }}
                     ></i>
                     <i
-                      className="fas fa-chevron-right arrow"
+                      className="fas fa-chevron-right text-sm opacity-80 cursor-pointer hover:opacity-100"
                       onClick={async () => {
                         const modules = await getChartModules();
                         modules.GetMonthlySpentrend("next-x-months");
@@ -504,20 +493,23 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="monthly-spend-chart">
-                  <canvas className="chart" id="chart2"></canvas>
+                <div className="flex-1 min-h-[180px]">
+                  <canvas className="w-full h-full" id="chart2"></canvas>
                 </div>
               </a>
             </div>
 
             {/* Department Chart */}
-            <div className="department-chart-card">
-              <div className="department-chart-header">
-                <h2>Departmental Spend Trend</h2>
+            <div className="bg-white rounded-xl p-4 h-[260px] flex flex-col mb-2 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-sm font-semibold mb-2 text-[#0B0B3B]">
+                  Departmental Spend Trend
+                </h2>
 
-                <div className="department-chart-controls">
+                <div className="flex items-center justify-center gap-3 text-xs mb-2">
                   <button
                     id="leftarrowdep"
+                    className="opacity-80 bg-transparent border-none cursor-pointer text-sm hover:opacity-100"
                     onClick={async () => {
                       const modules = await getChartModules();
                       modules.GetDepartmentSpentrend("last-x-months");
@@ -526,10 +518,16 @@ export default function Home() {
                     ◀
                   </button>
 
-                  <span id="financialyear">{financialYear}</span>
+                  <span
+                    id="financialyear"
+                    className="font-medium text-[#0B0B3B]"
+                  >
+                    {financialYear}
+                  </span>
 
                   <button
                     id="rightarrowdep"
+                    className="opacity-80 bg-transparent border-none cursor-pointer text-sm hover:opacity-100"
                     onClick={async () => {
                       const modules = await getChartModules();
                       modules.GetDepartmentSpentrend("next-x-months");
@@ -540,30 +538,35 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="department-chart-container">
-                <canvas id="chart5" ref={departmentChartRef}></canvas>
+              <div className="flex-1 h-[180px]">
+                <canvas
+                  id="chart5"
+                  ref={departmentChartRef}
+                  className="w-full h-full"
+                ></canvas>
               </div>
             </div>
 
             {/* Actual vs Budget */}
-            <div className="monthly-spend-card">
+            <div className="bg-white rounded-xl p-4 flex flex-col mb-2 shadow-sm h-[260px]">
               <a
                 data-id="Compliance"
-                className="monthly-spend-inner"
                 id="compliance"
+                className="flex flex-col p-0 bg-transparent shadow-none flex-none h-full"
               >
-                <div className="monthly-spend-header">
-                  <p className="monthly-spend-title">Actual vs Budget</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-semibold mb-2 text-[#0B0B3B]">
+                    Actual vs Budget
+                  </p>
 
-                  <div className="monthly-spend-arrows" id="BudgetDepartment">
+                  <div
+                    className="flex items-center mb-2 gap-3"
+                    id="BudgetDepartment"
+                  >
                     <i
-                      className="fas fa-chevron-left arrow"
+                      className="fas fa-chevron-left text-sm opacity-50 pointer-events-none"
                       id="leftarrowbudget"
-                      style={{
-                        marginRight: "15px",
-                        opacity: 0.5,
-                        pointerEvents: "none",
-                      }}
+                      style={{ marginRight: "15px" }}
                       onClick={async () => {
                         const modules = await getChartModules();
                         modules.GetBudgetTrend("last-x-months");
@@ -572,11 +575,11 @@ export default function Home() {
 
                     <span
                       id="financialyearbudget"
-                      style={{ display: "block", fontSize: "10px" }}
+                      className="block text-[10px]"
                     ></span>
 
                     <i
-                      className="fas fa-chevron-right arrow"
+                      className="fas fa-chevron-right text-sm opacity-80 cursor-pointer hover:opacity-100"
                       id="rightarrowbudget"
                       style={{ marginLeft: "15px" }}
                       onClick={async () => {
@@ -587,34 +590,48 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="monthly-spend-chart">
-                  <canvas className="chart" id="chartBudget"></canvas>
+                <div className="flex-1 min-h-[180px]">
+                  <canvas className="w-full h-full" id="chartBudget"></canvas>
                 </div>
               </a>
             </div>
 
             {/* Vendors by Profile */}
-            <div className="dashboard-listQuickStart-item" id="compliance">
-              <h2>Vendors by Profile</h2>
+            <div
+              className="bg-white rounded-xl p-4 h-[260px] flex flex-col shadow-sm"
+              id="compliance"
+            >
+              <h2 className="text-sm font-semibold mb-2 text-[#0B0B3B]">
+                Vendors by Profile
+              </h2>
 
-              <div className="dashboard-flex dashboard-justify-center dashboard-gap-16 dashboard-text-xs dashboard-mb-8">
+              <div className="flex items-center justify-center gap-4 text-xs mb-2">
                 <span>{financialYear}</span>
               </div>
 
-              <div className="dashboard-chart-container" id="vendorprofile">
-                <canvas id="chart6" ref={vendorProfileChartRef}></canvas>
+              <div className="flex-1 h-[180px] relative" id="vendorprofile">
+                <canvas
+                  id="chart6"
+                  ref={vendorProfileChartRef}
+                  className="w-full h-full"
+                ></canvas>
               </div>
             </div>
 
             {/* Upcoming Renewal */}
-            <div className="dashboard-listQuickStart-item" id="upcomingRenewal">
-              <div className="dashboard-header">
-                <h2>Upcoming Renewal Per Month</h2>
+            <div
+              className="bg-white rounded-xl p-4 h-[260px] flex flex-col shadow-sm"
+              id="upcomingRenewal"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-sm font-semibold mb-2 text-[#0B0B3B]">
+                  Upcoming Renewal Per Month
+                </h2>
 
-                <div className="dashboard-flex dashboard-justify-center dashboard-gap-16 dashboard-text-xs dashboard-mb-8">
+                <div className="flex items-center justify-center gap-4 text-xs mb-2">
                   <i
                     id="leftarrowRen"
-                    className="fas fa-chevron-left arrow"
+                    className="fas fa-chevron-left text-sm"
                     style={{
                       opacity: isRenewalLeftArrowDisabled ? 0.5 : 1,
                       pointerEvents: isRenewalLeftArrowDisabled
@@ -635,16 +652,19 @@ export default function Home() {
 
                   <i
                     id="rightarrowRen"
-                    className="fas fa-chevron-right arrow"
-                    style={{ cursor: "pointer" }}
+                    className="fas fa-chevron-right text-sm cursor-pointer"
                     onClick={() => handleRenewalNavigation("next-x-months")}
                     aria-label="Next renewal period"
                   />
                 </div>
               </div>
 
-              <div className="dashboard-chart-container" id="renewalcontainer">
-                <canvas id="chart3" ref={renewalChartRef}></canvas>
+              <div className="flex-1 h-[180px] relative" id="renewalcontainer">
+                <canvas
+                  id="chart3"
+                  ref={renewalChartRef}
+                  className="w-full h-full"
+                ></canvas>
               </div>
             </div>
           </>
@@ -652,46 +672,64 @@ export default function Home() {
       </div>
 
       {/* Tasks */}
-      <div className="tasks-grid">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-6">
         {/* Upcoming Tasks */}
-        <div className="task-card">
-          <div className="task-header">
-            <div className="task-icon upcoming">
-              <img src={TimeIcon} alt="Upcoming" />
+        <div className="bg-white rounded-xl p-6 h-[340px] shadow-sm flex flex-col">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-[10px] flex items-center justify-center bg-green-100">
+              <img src={TimeIcon} alt="Upcoming" className="w-5 h-5" />
             </div>
-            <h2>My Upcoming Tasks</h2>
+            <h2 className="text-base font-semibold text-[#0B0B3B]">
+              My Upcoming Tasks
+            </h2>
           </div>
 
-          <div className="task-list">
+          <div className="flex-1 overflow-y-auto pr-3">
             {upcomingTasks.map((task) => (
-              <div key={task.title} className="task-row">
-                <p className="task-title">{task.title}</p>
-                <span className={`task-status ${task.statusColor}`}>
+              <div
+                key={task.title}
+                className="flex items-center justify-between border-b border-gray-200 pb-4 mb-5"
+              >
+                <p className="w-[45%] text-base font-medium text-[#0B0B3B]">
+                  {task.title}
+                </p>
+                <span
+                  className={`text-sm px-4 py-1.5 rounded-full font-medium ${task.statusColor}`}
+                >
                   {task.status}
                 </span>
-                <span className="task-date">{task.date}</span>
+                <span className="text-sm text-gray-500">{task.date}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Overdue Tasks */}
-        <div className="task-card">
-          <div className="task-header">
-            <div className="task-icon overdue">
-              <img src={OverdueIcon} alt="Overdue" />
+        <div className="bg-white rounded-xl p-6 h-[340px] shadow-sm flex flex-col">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-[10px] flex items-center justify-center bg-indigo-100">
+              <img src={OverdueIcon} alt="Overdue" className="w-5 h-5" />
             </div>
-            <h2>Overdue Tasks</h2>
+            <h2 className="text-base font-semibold text-[#0B0B3B]">
+              Overdue Tasks
+            </h2>
           </div>
 
-          <div className="task-list">
+          <div className="flex-1 overflow-y-auto pr-3">
             {overdueTasks.map((task) => (
-              <div key={task.title} className="task-row">
-                <p className="task-title">{task.title}</p>
-                <span className={`task-status ${task.statusColor}`}>
+              <div
+                key={task.title}
+                className="flex items-center justify-between border-b border-gray-200 pb-4 mb-5"
+              >
+                <p className="w-[45%] text-base font-medium text-[#0B0B3B]">
+                  {task.title}
+                </p>
+                <span
+                  className={`text-sm px-4 py-1.5 rounded-full font-medium ${task.statusColor}`}
+                >
                   {task.status}
                 </span>
-                <span className="task-date">{task.date}</span>
+                <span className="text-sm text-gray-500">{task.date}</span>
               </div>
             ))}
           </div>
