@@ -1,7 +1,28 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Chart from "chart.js/auto";
+import {
+  getDepartmentSpending,
+  getVendorSpending,
+  getSubscriptionTypeData,
+  getBudgetVsActualData,
+  getMostExpensiveSubscriptions,
+  getUsageAnalysisData,
+  getCategorySpending,
+} from "../../../lib/api/reports/reportsApi";
 
 const Financial = () => {
+  const [departmentData, setDepartmentData] = useState([]);
+  const [vendorData, setVendorData] = useState([]);
+  const [subscriptionTypeData, setSubscriptionTypeData] = useState(null);
+  const [budgetVsActualData, setBudgetVsActualData] = useState(null);
+  const [mostExpensiveData, setMostExpensiveData] = useState([]);
+  const [usageAnalysisData, setUsageAnalysisData] = useState({
+    used: 80,
+    unused: 20,
+  });
+  const [categoryData, setCategoryData] = useState([]);
+  const [departmentTableData, setDepartmentTableData] = useState([]);
+
   const departmentChartRef = useRef(null);
   const departmentChartInstanceRef = useRef(null);
   const vendorChartRef = useRef(null);
@@ -15,19 +36,73 @@ const Financial = () => {
   const usageAnalysisChartRef = useRef(null);
   const usageAnalysisChartInstanceRef = useRef(null);
 
+  // Fetch all financial data
+  useEffect(() => {
+    const fetchFinancialData = async () => {
+      try {
+        const [
+          deptSpending,
+          vendorSpending,
+          subTypeData,
+          budgetActual,
+          expensiveSubs,
+          usageData,
+          categorySpending,
+        ] = await Promise.all([
+          getDepartmentSpending(),
+          getVendorSpending(),
+          getSubscriptionTypeData(),
+          getBudgetVsActualData(),
+          getMostExpensiveSubscriptions(),
+          getUsageAnalysisData(),
+          getCategorySpending(),
+        ]);
+
+        if (deptSpending) setDepartmentData(deptSpending.chartData || []);
+        if (deptSpending) setDepartmentTableData(deptSpending.tableData || []);
+        if (vendorSpending) setVendorData(vendorSpending);
+        if (subTypeData) setSubscriptionTypeData(subTypeData);
+        if (budgetActual) setBudgetVsActualData(budgetActual);
+        if (expensiveSubs) setMostExpensiveData(expensiveSubs);
+        if (usageData) setUsageAnalysisData(usageData);
+        if (categorySpending) setCategoryData(categorySpending);
+      } catch (error) {
+        console.error("Error fetching financial data:", error);
+        // Set default mock data
+        setDepartmentData([
+          { department: "Marketing", value: 60606 },
+          { department: "Finance", value: 2020 },
+        ]);
+        setDepartmentTableData([
+          { team: "Marketing", actualSpend: 60606, budget: 120000 },
+          { team: "Finance", actualSpend: 880, budget: 72000 },
+        ]);
+      }
+    };
+
+    fetchFinancialData();
+  }, []);
+
   // Department Bar Chart
   useEffect(() => {
-    if (departmentChartRef.current && !departmentChartInstanceRef.current) {
+    if (
+      departmentChartRef.current &&
+      !departmentChartInstanceRef.current &&
+      departmentData.length > 0
+    ) {
       const ctx = departmentChartRef.current.getContext("2d");
+
+      const labels = departmentData.map((item) => item.department || item.name);
+      const values = departmentData.map((item) => item.value || item.amount);
 
       departmentChartInstanceRef.current = new Chart(ctx, {
         type: "bar",
         data: {
-          labels: ["Marketing", "Finance"],
+          labels: labels,
           datasets: [
             {
               label: "Spend by Department",
-              data: [60606, 2020],
+              data: values,
               backgroundColor: ["rgb(147, 51, 234)", "rgb(34, 211, 238)"],
               borderWidth: 0,
             },
@@ -57,7 +132,7 @@ const Financial = () => {
             },
             y: {
               beginAtZero: true,
-              max: 80808,
+              max: Math.max(...values) * 1.2,
               grid: {
                 color: "#f3f4f6",
                 drawBorder: false,
@@ -70,7 +145,6 @@ const Financial = () => {
                 font: {
                   size: 12,
                 },
-                stepSize: 20202,
                 callback: function (value) {
                   return "$" + value.toLocaleString();
                 },
@@ -87,26 +161,16 @@ const Financial = () => {
         departmentChartInstanceRef.current = null;
       }
     };
-  }, []);
+  }, [departmentData]);
 
   // Vendor Donut Chart
   useEffect(() => {
-    if (vendorChartRef.current && !vendorChartInstanceRef.current) {
+    if (
+      vendorChartRef.current &&
+      !vendorChartInstanceRef.current &&
+      vendorData.length > 0
+    ) {
       const ctx = vendorChartRef.current.getContext("2d");
-
-      const vendorData = [
-        { vendor: "Test Subscription", value: 15000 },
-        { vendor: "new vendor1", value: 25000 },
-        { vendor: "test", value: 20000 },
-        { vendor: "test consol;e2", value: 12000 },
-        { vendor: "test new 4", value: 10000 },
-        { vendor: "test new 5", value: 8000 },
-        { vendor: "test 11", value: 6000 },
-        { vendor: "subscription new22", value: 18000 },
-        { vendor: "new 2323", value: 5000 },
-        { vendor: "Test Vendor", value: 4000 },
-        { vendor: "Test New Azure", value: 3000 },
-      ];
 
       const backgroundColors = [
         "#CCD6EB",
@@ -125,10 +189,10 @@ const Financial = () => {
       vendorChartInstanceRef.current = new Chart(ctx, {
         type: "doughnut",
         data: {
-          labels: vendorData.map((x) => x.vendor),
+          labels: vendorData.map((x) => x.vendor || x.name),
           datasets: [
             {
-              data: vendorData.map((x) => x.value),
+              data: vendorData.map((x) => x.value || x.amount),
               backgroundColor: vendorData.map(
                 (_, i) => backgroundColors[i % backgroundColors.length]
               ),
@@ -160,7 +224,7 @@ const Financial = () => {
         vendorChartInstanceRef.current = null;
       }
     };
-  }, []);
+  }, [vendorData]);
 
   // Subscription Type Line Chart
   useEffect(() => {

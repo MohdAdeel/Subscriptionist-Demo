@@ -465,7 +465,7 @@ const SubscriptionInventory = () => {
                   />
                   {showDatePicker && (
                     <div
-                      className="fixed sm:absolute top-[50%] sm:top-[calc(100%+8px)] left-1/2 sm:left-0 transform -translate-x-1/2 sm:transform-none bg-white border border-gray-300 rounded-xl shadow-xl z-[1000] w-[95vw] sm:w-auto sm:min-w-[700px] p-4 sm:p-6 max-w-[95vw] sm:max-w-[90vw]"
+                      className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white border border-gray-300 rounded-xl shadow-xl z-[1000] w-[calc(100vw-2rem)] sm:w-auto sm:min-w-[700px] p-4 sm:p-6 max-w-[calc(100vw-2rem)] sm:max-w-[90vw] max-h-[90vh] overflow-y-auto"
                       ref={datePickerRef}
                     >
                       <div className="flex items-center justify-between mb-4 sm:mb-5 pb-3 sm:pb-4 border-b-2 border-gray-200 relative gap-2 sm:gap-3">
@@ -503,7 +503,7 @@ const SubscriptionInventory = () => {
                           ×
                         </button>
                       </div>
-                      <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 mb-4 sm:mb-5">
+                      <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 mb-4 sm:mb-5 overflow-x-auto">
                         {renderCalendar(currentMonth)}
                         {renderCalendar(getNextMonth())}
                       </div>
@@ -718,7 +718,12 @@ const SubscriptionInventory = () => {
       {/* MODAL */}
       {showModal && (
         <div className="fixed top-0 left-0 w-screen h-screen bg-black/50 flex justify-center items-center z-[1000] p-3 sm:p-4 md:p-6">
-          <div className="bg-white rounded-lg sm:rounded-[14px] w-full max-w-[1200px] max-h-[95vh] sm:max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-lg sm:rounded-[14px]
+                w-full max-w-[1200px]
+                
+                flex flex-col
+                overflow-hidden">
+
             <div className="flex flex-col h-full" id="formcontentid">
               {/* HEADER */}
               <div className="p-3 sm:p-4 md:p-[18px_28px] border-b border-gray-200 flex justify-between items-center gap-3 sm:gap-4">
@@ -1077,19 +1082,50 @@ const SubscriptionInventory = () => {
               </div>
 
               {/* FOOTER */}
-              <div className="p-3 sm:p-4 md:p-[18px_28px] border-t border-gray-200 flex flex-col xs:flex-row justify-center gap-2 sm:gap-3">
-                <button
-                  className="w-full xs:w-[140px] h-10 sm:h-[42px] rounded-lg bg-white border border-gray-300 text-sm sm:text-base font-medium cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={closeModal}
-                >
-                  Close
-                </button>
-                <button
-                  className="w-full xs:w-[180px] h-10 sm:h-[42px] rounded-lg bg-[#1b1f6a] text-white text-sm sm:text-base font-semibold cursor-pointer hover:bg-[#15195a] transition-colors"
-                  onClick={() => window.updateActivityLine?.()}
-                >
-                  Save changes
-                </button>
+              <div className="p-3 sm:p-4 md:p-[18px_28px]
+                border-t border-gray-200
+                flex flex-col sm:flex-row
+                items-center justify-center
+                gap-3
+                shrink-0">
+
+
+
+
+<button
+  type="button"
+  className="w-full sm:w-auto
+             px-6 h-10 sm:h-[42px]
+             rounded-lg bg-white border border-gray-300
+             text-sm sm:text-base font-medium
+             whitespace-nowrap
+             hover:bg-gray-50"
+  onClick={closeModal}
+>
+  Close
+</button>
+
+
+
+
+
+<button
+  type="button"
+  className="w-full sm:w-auto
+             px-7 h-10 sm:h-[42px]
+             rounded-lg bg-[#1b1f6a] text-white
+             text-sm sm:text-base font-semibold
+             whitespace-nowrap
+             hover:bg-[#15195a]"
+  onClick={() => window.updateActivityLine?.()}
+>
+  Save changes
+</button>
+
+
+
+
+
               </div>
             </div>
           </div>

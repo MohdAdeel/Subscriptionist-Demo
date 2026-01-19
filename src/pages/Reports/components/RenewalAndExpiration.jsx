@@ -1,6 +1,11 @@
 import Chart from "chart.js/auto";
 import { useState, useEffect, useRef } from "react";
 import { FiInfo, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import {
+  getRenewalData,
+  getExpiredSubscriptions,
+  getRenewalCostsData,
+} from "../../../lib/api/reports/reportsApi";
 
 const RenewalAndExpiration = ({ formatCurrency, formatDate }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 0, 1));

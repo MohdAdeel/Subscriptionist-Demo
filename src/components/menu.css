@@ -11,7 +11,7 @@
 }
 
 .sidebar.collapsed {
-  width: 64px;
+  width: 80px;
 }
 
 /* Top Section */
@@ -26,6 +26,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.sidebar.collapsed .logo-row {
+  justify-content: center;
 }
 
 .logo {
@@ -49,6 +53,11 @@
   width: 24px;
   height: 24px;
   cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.toggle.collapsed {
+  transform: rotate(180deg);
 }
 
 /* Menu */
@@ -94,8 +103,11 @@
 .menu-item.collapsed-item {
   justify-content: center;
   padding: 12px;
+  min-width: 40px;
 }
 
 .menu-item.collapsed-item img {
-  filter: brightness(0) invert(1);
+  width: 20px;
+  height: 20px;
+  display: block;
 }

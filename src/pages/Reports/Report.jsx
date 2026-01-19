@@ -15,18 +15,21 @@ import { useState, useEffect } from "react";
 import Financial from "./components/Financial";
 import StandardReports from "./components/StandardReports";
 import RenewalAndExpiration from "./components/RenewalAndExpiration";
+import {
+  getKPIData,
+  getSubscriptionData,
+} from "../../lib/api/reports/reportsApi";
 
 const Report = () => {
   const [activeTab, setActiveTab] = useState("standard");
   const [isLoading, setIsLoading] = useState(true);
-
-  // KPI Data
-  const kpiData = {
-    totalActiveCost: 136315.0,
-    activeSubscriptions: 6,
-    upcomingRenewal: 105180.0,
+  const [kpiData, setKpiData] = useState({
+    totalActiveCost: 0,
+    activeSubscriptions: 0,
+    upcomingRenewal: 0,
     costSavingsIdentified: 0,
-  };
+  });
+  const [subscriptionData, setSubscriptionData] = useState([]);
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat("en-US", {
@@ -46,97 +49,66 @@ const Report = () => {
     return `${day}/${month}/${year}`;
   };
 
+  // Fetch data from API
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 3000);
+    const fetchReportData = async () => {
+      try {
+        setIsLoading(true);
 
-    return () => clearTimeout(timer);
+        // Fetch KPI data
+        const kpiResponse = await getKPIData();
+        if (kpiResponse) {
+          setKpiData({
+            totalActiveCost: kpiResponse.totalActiveCost || 0,
+            activeSubscriptions: kpiResponse.activeSubscriptions || 0,
+            upcomingRenewal: kpiResponse.upcomingRenewal || 0,
+            costSavingsIdentified: kpiResponse.costSavingsIdentified || 0,
+          });
+        }
+
+        // Fetch subscription data
+        const subscriptionResponse = await getSubscriptionData();
+        if (subscriptionResponse && Array.isArray(subscriptionResponse)) {
+          setSubscriptionData(subscriptionResponse);
+        }
+      } catch (error) {
+        console.error("Error fetching report data:", error);
+        // Set default mock data on error
+        setKpiData({
+          totalActiveCost: 136315.0,
+          activeSubscriptions: 6,
+          upcomingRenewal: 105180.0,
+          costSavingsIdentified: 0,
+        });
+        setSubscriptionData([
+          {
+            id: 1,
+            subscriptionName: "Example1",
+            vendorName: "Test Subscription",
+            subscriptionAmount: 10412.0,
+            startDate: "2026-01-01",
+            endDate: "2026-12-31",
+            paymentFrequency: "14 Monthly",
+            activityStatus: "Active",
+          },
+          {
+            id: 2,
+            subscriptionName: "Activity Line console 11223",
+            vendorName: "test consolee",
+            subscriptionAmount: 8500.0,
+            startDate: "2026-02-15",
+            endDate: "2027-02-14",
+            paymentFrequency: "2 Months",
+            activityStatus: "Active",
+          },
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchReportData();
   }, []);
-
-  // Mock subscription data
-  const subscriptionData = [
-    {
-      id: 1,
-      subscriptionName: "Example1",
-      vendorName: "Test Subscription",
-      subscriptionAmount: 10412.0,
-      startDate: "2026-01-01",
-      endDate: "2026-12-31",
-      paymentFrequency: "14 Monthly",
-      activityStatus: "Active",
-    },
-    {
-      id: 2,
-      subscriptionName: "Activity Line console 11223",
-      vendorName: "test consolee",
-      subscriptionAmount: 8500.0,
-      startDate: "2026-02-15",
-      endDate: "2027-02-14",
-      paymentFrequency: "2 Months",
-      activityStatus: "Active",
-    },
-    {
-      id: 3,
-      subscriptionName: "now 1234 56565",
-      vendorName: "test new 4",
-      subscriptionAmount: 12000.0,
-      startDate: "2026-03-01",
-      endDate: "2027-03-01",
-      paymentFrequency: "1 Monthly",
-      activityStatus: "Active",
-    },
-    {
-      id: 4,
-      subscriptionName: "Subscription Alpha",
-      vendorName: "Vendor ABC",
-      subscriptionAmount: 15600.0,
-      startDate: "2025-12-01",
-      endDate: "2026-11-30",
-      paymentFrequency: "12 Monthly",
-      activityStatus: "Active",
-    },
-    {
-      id: 5,
-      subscriptionName: "Beta Service",
-      vendorName: "Tech Solutions Inc",
-      subscriptionAmount: 9200.0,
-      startDate: "2026-01-10",
-      endDate: "2026-12-09",
-      paymentFrequency: "1 Monthly",
-      activityStatus: "Active",
-    },
-    {
-      id: 6,
-      subscriptionName: "Gamma Platform",
-      vendorName: "Cloud Services",
-      subscriptionAmount: 18500.0,
-      startDate: "2025-11-15",
-      endDate: "2026-11-14",
-      paymentFrequency: "12 Monthly",
-      activityStatus: "Expired",
-    },
-    {
-      id: 7,
-      subscriptionName: "Delta Tools",
-      vendorName: "Software Corp",
-      subscriptionAmount: 7500.0,
-      startDate: "2026-02-20",
-      endDate: "2027-02-19",
-      paymentFrequency: "1 Monthly",
-      activityStatus: "Active",
-    },
-    {
-      id: 8,
-      subscriptionName: "Epsilon Suite",
-      vendorName: "Enterprise Solutions",
-      subscriptionAmount: 22000.0,
-      startDate: "2025-10-01",
-      endDate: "2026-09-30",
-      paymentFrequency: "12 Monthly",
-      activityStatus: "Expired",
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">

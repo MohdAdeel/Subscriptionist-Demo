@@ -35,7 +35,7 @@ const Menu = () => {
           <img
             src={ToggleIcon}
             alt="Toggle"
-            className="toggle"
+            className={`toggle ${isCollapsed ? "collapsed" : ""}`}
             onClick={() => setIsCollapsed(!isCollapsed)}
           />
         </div>
