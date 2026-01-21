@@ -9,6 +9,15 @@ import {
 } from "./sharedUtils";
 import { useReportsPageStore } from "../../stores";
 
+let subscriptionArray = [];
+let filtersForFinance = {
+  startDate: null,
+  endDate: null,
+  amount1: null,
+  amount2: null,
+  status: null,
+};
+
 export const handleActivityLinesSuccess = (originalData) => {
   // Extract lines from response - handle different response structures
   var lines;
@@ -45,9 +54,8 @@ export const handleActivityLinesSuccess = (originalData) => {
 
   const transformedData = groupByVendorName(transformedLines);
   const SubscriptionJSonBackup = transformedData;
-
+  countByVendorName(SubscriptionJSonBackup);
   const SubscriptionJSon = JSON.parse(JSON.stringify(SubscriptionJSonBackup));
-
   modifySubscriptionsWithChartLimit(SubscriptionJSon);
 };
 
@@ -78,15 +86,24 @@ function modifySubscriptionsWithChartLimit(SubscriptionJSon) {
 
   // Merge records by month
   mergeRecordsByMonth();
-  countByVendorName(SubscriptionJSon);
+  // countByVendorName(SubscriptionJSon);
   modifyDepartmentChartLimit(SubscriptionJSon);
+  const aggregatedByVendorProfile = aggregateByVendorProfileAndMonth(subscriptionArray);
+  const { setVendorProfileAggregation } = useReportsPageStore.getState();
+  setVendorProfileAggregation(aggregatedByVendorProfile);
+  const mostExpensiveSubscriptions = aggregateSubscriptionsByName(subscriptionArray);
+  const { setMostExpensiveAggregations } = useReportsPageStore.getState();
+  setMostExpensiveAggregations(mostExpensiveSubscriptions);
+  const subsbyCategory = aggregateSubscriptionsByCategory(SubscriptionJSon);
+  const { setCategorySummary } = useReportsPageStore.getState();
+  setCategorySummary(subsbyCategory);
 }
 
 export function mergeRecordsByMonth() {
   // Create an object to store merged records
   let mergedRecords = {};
 
-  let subscriptionArray = JSON.parse(JSON.stringify(filterMonthlySubsinRange())); // Filtering subscriptions that are in range for, say, on load 12 months
+  subscriptionArray = JSON.parse(JSON.stringify(filterMonthlySubsinRange())); // Filtering subscriptions that are in range for, say, on load 12 months
 
   // Get current active tab from store (React best practice - no DOM manipulation)
   const { activeSubscriptionTab } = useReportsPageStore.getState();
@@ -126,6 +143,7 @@ export function mergeRecordsByMonth() {
   setStandardReportCards(subscriptionArray);
   setMonthlySpendChartData(flattenedArray);
 }
+
 let filters = {
   startDate: null,
   endDate: null,
@@ -515,7 +533,164 @@ function mergeRecordsBymonthForDepartment() {
     }
   });
   var mergedArray = Object.values(mergedRecords).map((record) => [record]);
-
+  console.log("here is mergedArray", mergedArray);
   const { setSpendByDepartmentChartData } = useReportsPageStore.getState();
   setSpendByDepartmentChartData(mergedArray);
+}
+
+function aggregateByVendorProfileAndMonth(records) {
+  // Helper function to get the month name from a date string
+  function getMonthName(dateString) {
+    const date = new Date(dateString);
+    const monthNames = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    return monthNames[date.getUTCMonth()]; // Using getUTCMonth ensures the correct month index
+  }
+
+  // Object to hold aggregated records
+  let aggregatedRecords = {};
+
+  // Iterate through the subscription records
+  records.forEach((record) => {
+    // Destructure necessary values from the record
+    const { VendorProfile, SubscriptionContractAmount, SubscriptionStartDate } = record;
+
+    // Check if VendorProfile and SubscriptionContractAmount are valid
+    if (
+      VendorProfile !== null &&
+      VendorProfile !== undefined &&
+      SubscriptionContractAmount &&
+      SubscriptionStartDate
+    ) {
+      // Get the month name from the SubscriptionStartDate
+      const monthName = getMonthName(SubscriptionStartDate);
+
+      // Create a unique key combining VendorProfile and monthName
+      const key = `${VendorProfile}-${monthName}`;
+
+      // Initialize the entry if it doesn't exist
+      if (!aggregatedRecords[key]) {
+        aggregatedRecords[key] = {
+          VendorProfile: VendorProfile,
+          SubscriptionContractAmount: { Value: 0 },
+          Month: monthName,
+        };
+      }
+
+      // Accumulate the subscription contract amount
+      aggregatedRecords[key].SubscriptionContractAmount.Value += SubscriptionContractAmount.Value;
+    }
+  });
+
+  // Convert aggregatedRecords object back to an array
+  const aggregatedArray = Object.values(aggregatedRecords);
+
+  // Return the aggregated array
+  return aggregatedArray;
+}
+
+function aggregateSubscriptionsByName(subscriptionArray) {
+  let subscriptionAmounts = {};
+  subscriptionArray = subscriptionArray.filter((subscription) => subscription.status !== 1);
+
+  // Aggregate amounts by SubscriptionName and SubscriptionContractAmount.Value
+  subscriptionArray.forEach((record) => {
+    if (
+      record &&
+      record.SubscriptionName &&
+      record.SubscriptionContractAmount &&
+      record.SubscriptionContractAmount.Value !== undefined
+    ) {
+      const name = record.SubscriptionName;
+      const amount = record.SubscriptionContractAmount.Value;
+
+      // Create a unique key using both SubscriptionName and SubscriptionContractAmount.Value
+      const key = `${name}_${amount}`;
+
+      if (!subscriptionAmounts[key]) {
+        subscriptionAmounts[key] = {
+          SubscriptionName: name,
+          SubscriptionContractAmount: { Value: 0 },
+        };
+      }
+      subscriptionAmounts[key].SubscriptionContractAmount.Value += amount;
+    }
+  });
+
+  // Convert the aggregated amounts object to an array
+  const aggregatedArray = Object.values(subscriptionAmounts);
+
+  // Sort the array by SubscriptionContractAmount in descending order
+  aggregatedArray.sort(
+    (a, b) => b.SubscriptionContractAmount.Value - a.SubscriptionContractAmount.Value
+  );
+
+  // Return the top four subscriptions
+  return aggregatedArray.slice(0, 4);
+}
+
+function aggregateSubscriptionsByCategory(subscriptions) {
+  const Today = new Date();
+  const currentYear = Today.getFullYear();
+  var startDateForDep = new Date(currentYear, 0, 1);
+  var endDateForDep = new Date(startDateForDep.getFullYear(), 11, 31);
+  // Step 1: Flatten the array
+  const flattened = subscriptions.flat();
+  // Filter the subscriptions to return only those with an end date greater than today
+  const filtered = flattened.filter((subscription) => {
+    const endDate = new Date(subscription.SubscriptionStartDate);
+    return endDate >= startDateForDep && endDate <= endDateForDep;
+  });
+
+  // Step 2: Create a map to aggregate amounts and count subscriptions
+  const categoryMap = {};
+
+  filtered.forEach((subscription) => {
+    const categoryName = subscription.SubscriptionCategory?.Name;
+
+    if (categoryName === null) {
+      return;
+    }
+
+    const amount = subscription.SubscriptionContractAmount.Value;
+
+    // Initialize the category if it doesn't exist
+    if (!categoryMap[categoryName]) {
+      categoryMap[categoryName] = {
+        accumulatedAmount: 0,
+        count: 0,
+      };
+    }
+
+    // Update accumulated amount and count
+    categoryMap[categoryName].accumulatedAmount += amount;
+    categoryMap[categoryName].count += 1;
+  });
+
+  // Step 3: Convert the map to an array
+  const result = Object.keys(categoryMap).map((category) => ({
+    category: category,
+    accumulatedAmount: categoryMap[category].accumulatedAmount,
+    count: categoryMap[category].count,
+  }));
+  const filteredSubscriptions = result.filter((subscription) => {
+    const amountValue = subscription.accumulatedAmount;
+    const isWithinRange =
+      (filtersForFinance.amount1 === null || amountValue >= filtersForFinance.amount1) &&
+      (filtersForFinance.amount2 === null || amountValue <= filtersForFinance.amount2);
+    return isWithinRange;
+  });
+  return filteredSubscriptions;
 }

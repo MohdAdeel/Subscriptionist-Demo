@@ -15,11 +15,17 @@ export const useReportsPageStore = create((set) => ({
     data: [],
   },
   vendorCountData: [],
+  vendorProfileAggregation: [],
+  mostExpensiveAggregations: [],
+  categorySummary: [],
   spendByDepartmentChartData: [],
 
   setVendorCountData: (vendorCountData) => set({ vendorCountData: vendorCountData }),
+  setVendorProfileAggregation: (vendorProfileAggregation) => set({ vendorProfileAggregation }),
+  setMostExpensiveAggregations: (mostExpensiveAggregations) => set({ mostExpensiveAggregations }),
   setSpendByDepartmentChartData: (spendByDepartmentChartData) =>
     set({ spendByDepartmentChartData: spendByDepartmentChartData }),
+  setCategorySummary: (categorySummary) => set({ categorySummary }),
   // Subscription table data from API
   subscriptionTableData: [],
   // Active tab for subscription table: 'all' | 'active' | 'expired'
@@ -49,6 +55,9 @@ export const useReportsPageStore = create((set) => ({
         data: [],
       },
       subscriptionTableData: [],
+      vendorProfileAggregation: [],
+      mostExpensiveAggregations: [],
+      categorySummary: [],
       activeSubscriptionTab: "all",
     }),
 }));

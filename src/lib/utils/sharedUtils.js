@@ -100,8 +100,6 @@ export function isValidDate(date) {
 }
 
 export function transformAzureResponseToBlobFormat(azureLines) {
-  console.log("Transforming Azure response, input:", azureLines);
-
   if (!azureLines || !Array.isArray(azureLines)) {
     console.error("azureLines is not an array:", azureLines);
     return [];
@@ -140,7 +138,6 @@ export function transformAzureResponseToBlobFormat(azureLines) {
           DepartmentBudget: line.DepartmentNames?.Budget?.Value || line.DepartmentBudget,
         };
 
-        console.log(`Transformed line ${index}:`, transformedLine);
         return transformedLine;
       } catch (lineError) {
         console.error(`Error transforming line ${index}:`, lineError, line);
@@ -170,7 +167,6 @@ export function removeObjectsWithSameTime(array) {
 }
 
 export function generateSimilarRecordsbyMonth(record) {
-  console.log("Generating similar records by month:", record);
   var endDate = new Date(record.SubscriptionEndDate);
   var startDate = new Date(record.SubscriptionStartDate);
 
@@ -474,69 +470,4 @@ export function setMostExpensiveChart(expensiveSubscriptions) {
       },
     },
   });
-}
-
-export function aggregateByVendorProfileAndMonth(records) {
-  "use strict"; // Enable strict mode
-
-  // Helper function to get the month name from a date string
-  function getMonthName(dateString) {
-    const date = new Date(dateString);
-    const monthNames = [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
-    ];
-    return monthNames[date.getUTCMonth()]; // Using getUTCMonth ensures the correct month index
-  }
-
-  // Object to hold aggregated records
-  let aggregatedRecords = {};
-
-  // Iterate through the subscription records
-  records.forEach((record) => {
-    // Destructure necessary values from the record
-    const { VendorProfile, SubscriptionContractAmount, SubscriptionStartDate } = record;
-
-    // Check if VendorProfile and SubscriptionContractAmount are valid
-    if (
-      VendorProfile !== null &&
-      VendorProfile !== undefined &&
-      SubscriptionContractAmount &&
-      SubscriptionStartDate
-    ) {
-      // Get the month name from the SubscriptionStartDate
-      const monthName = getMonthName(SubscriptionStartDate);
-
-      // Create a unique key combining VendorProfile and monthName
-      const key = `${VendorProfile}-${monthName}`;
-
-      // Initialize the entry if it doesn't exist
-      if (!aggregatedRecords[key]) {
-        aggregatedRecords[key] = {
-          VendorProfile: VendorProfile,
-          SubscriptionContractAmount: { Value: 0 },
-          Month: monthName,
-        };
-      }
-
-      // Accumulate the subscription contract amount
-      aggregatedRecords[key].SubscriptionContractAmount.Value += SubscriptionContractAmount.Value;
-    }
-  });
-
-  // Convert aggregatedRecords object back to an array
-  const aggregatedArray = Object.values(aggregatedRecords);
-
-  // Return the aggregated array
-  return aggregatedArray;
 }
