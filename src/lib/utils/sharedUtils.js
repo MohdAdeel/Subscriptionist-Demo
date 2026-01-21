@@ -7,6 +7,16 @@
  * @param {Array} data - Array of subscription items
  * @returns {Array} - Array of arrays, each containing items for a vendor
  */
+
+const monthlySubscription = [];
+let filtersForFinance = {
+  startDate: null,
+  endDate: null,
+  amount1: null,
+  amount2: null,
+  status: null,
+};
+
 export function groupByVendorName(data) {
   if (!Array.isArray(data)) return [];
 
@@ -87,4 +97,446 @@ export function isValidDate(date) {
   if (!date) return false;
   const d = new Date(date);
   return d instanceof Date && !isNaN(d) && d.getFullYear() !== 1;
+}
+
+export function transformAzureResponseToBlobFormat(azureLines) {
+  console.log("Transforming Azure response, input:", azureLines);
+
+  if (!azureLines || !Array.isArray(azureLines)) {
+    console.error("azureLines is not an array:", azureLines);
+    return [];
+  }
+
+  try {
+    return azureLines.map((line, index) => {
+      try {
+        // Map Azure Function field names to expected blob format field names
+        const transformedLine = {
+          // Map field names based on Azure response structure
+          AccountId: line.AccountId,
+          ActivityId: line.ActivityId,
+          ActivityCreatedOn: line.ActivityCreatedOn,
+          SubscriptionCreatedOn: line.SubscriptionCreatedOn,
+          VendorName: line.VendorName,
+          status: line.status,
+          VendorProfile: line.VendorProfile,
+          LastDueDate: line.LastDueDate,
+          NextDueDate: line.NextDueDate,
+          InitiationDate: line.InitiationDate,
+          SubscriptionEndDate: line.SubscriptionEndDate,
+          SubscriptionStartDate: line.SubscriptionStartDate,
+          SubscriptionFrequency: line.SubscriptionFrequency,
+          SubscriptionContractAmount: line.SubscriptionContractAmount,
+          SubscriptionName: line.SubscriptionName,
+          SubscriptionCategory: { Name: line.SubscriptionCategory?.Name },
+          DepartmentNames: line.DepartmentNames,
+
+          // Ensure amount value is properly extracted
+          Amount:
+            line.SubscriptionContractAmount?.Value || line.Amount || line.SubscriptionAmount || 0,
+
+          // Add any other fields that existing functions expect
+          DepartmentName: line.DepartmentNames?.Name || line.DepartmentName,
+          DepartmentBudget: line.DepartmentNames?.Budget?.Value || line.DepartmentBudget,
+        };
+
+        console.log(`Transformed line ${index}:`, transformedLine);
+        return transformedLine;
+      } catch (lineError) {
+        console.error(`Error transforming line ${index}:`, lineError, line);
+      }
+    });
+  } catch (error) {
+    console.error("Error in transformAzureResponseToBlobFormat:", error);
+    return [];
+  }
+}
+
+export function removeObjectsWithSameTime(array) {
+  for (let i = 0; i < array.length; i++) {
+    let subArray = array[i];
+    for (let j = 0; j < subArray.length; j++) {
+      let record = subArray[j];
+      let startDate = new Date(record.SubscriptionStartDate);
+      let endDate = new Date(record.SubscriptionEndDate);
+      if (startDate.getTime() === endDate.getTime()) {
+        // Remove the object from the array
+        subArray.splice(j, 1);
+        j--; // Adjust the index after removal
+      }
+    }
+  }
+  // return array;
+}
+
+export function generateSimilarRecordsbyMonth(record) {
+  console.log("Generating similar records by month:", record);
+  var endDate = new Date(record.SubscriptionEndDate);
+  var startDate = new Date(record.SubscriptionStartDate);
+
+  var frequency = parseFrequency(record.SubscriptionFrequency);
+
+  // Check if frequency is a valid number
+  if (isNaN(frequency) || frequency == 0) {
+    return [];
+  }
+  if (startDate.getFullYear() === 1) {
+    return [];
+  }
+  // var currentdate= new Date()    ;
+  var startYear = startDate.getFullYear();
+  var startMonth = startDate.getMonth();
+  var endYear = endDate.getFullYear();
+  var endMonth = endDate.getMonth();
+  var monthDifference = (endYear - startYear) * 12 + (endMonth - startMonth);
+
+  var tempdate = new Date(startDate);
+  var endDateForComparison = new Date(startDate);
+  endDateForComparison.setMonth(endDateForComparison.getMonth() + monthDifference);
+  endDateForComparison.setDate(endDate.getDate());
+  //  && startDate.getMonth() != endDate.getMonth()
+  // Loop from startDate to endDate with frequency as the increment
+  while (startDate <= endDateForComparison) {
+    if (
+      startDate.getFullYear() === endDateForComparison.getFullYear() &&
+      startDate.getMonth() === endDateForComparison.getMonth()
+    ) {
+      break; // Exit loop if year and month match
+    }
+
+    var subscriptionAmount =
+      record.SubscriptionContractAmount !== null ? record.SubscriptionContractAmount.Value : 0;
+
+    var newRecord = {
+      SubscriptionStartDate: tempdate,
+      status: record.status, // Convert date to ISO format
+      VendorProfile: record.VendorProfile,
+      ActivityGuid: record.ActivityId,
+      //"ReminderInterval": record.reminderInterval,
+      VendorName: record.VendorName,
+      SubscriptionEndDate: record.SubscriptionEndDate,
+      SubscriptionFrequency: record.SubscriptionFrequency, // Append the frequency to the original value
+      SubscriptionContractAmount: {
+        Value: subscriptionAmount,
+      },
+      SubscriptionName: record.SubscriptionName,
+      DepartmentNames: {
+        Name: record.DepartmentNames.Name,
+      },
+    };
+
+    monthlySubscription.push(newRecord);
+
+    startDate.setMonth(startDate.getMonth() + frequency);
+    tempdate = new Date(startDate);
+  }
+}
+
+export function generateSimilarRecordsbyYear(record) {
+  var endDate = new Date(record.SubscriptionEndDate);
+  var startDate = new Date(record.SubscriptionStartDate);
+
+  var frequency = parseFrequency(record.SubscriptionFrequency);
+
+  // Check if frequency is a valid number
+  if (isNaN(frequency) || frequency == 0) {
+    return [];
+  }
+
+  if (startDate.getFullYear() === 1) {
+    return [];
+  }
+
+  var currentdate = new Date();
+  var startYear = startDate.getFullYear();
+  var startMonth = startDate.getMonth();
+  var endYear = endDate.getFullYear();
+  var endMonth = endDate.getMonth();
+  var yearDifference = endYear - startYear;
+
+  var endDateForComparison = new Date(startDate);
+  endDateForComparison.setFullYear(endDateForComparison.getFullYear() + yearDifference);
+  endDateForComparison.setDate(endDate.getDate());
+  var tempdate = new Date(startDate);
+
+  // Loop from startDate to endDate with frequency as the increment
+  while (startDate.getFullYear() < endDateForComparison.getFullYear()) {
+    var subscriptionAmount =
+      record.SubscriptionContractAmount !== null ? record.SubscriptionContractAmount.Value : 0;
+
+    var newRecord = {
+      SubscriptionStartDate: tempdate, // Convert date to ISO format
+      VendorName: record.VendorName,
+      status: record.status, // Convert date to ISO format
+      VendorProfile: record.VendorProfile,
+      ActivityGuid: record.ActivityId,
+      //"ReminderInterval": record.reminderInterval,
+      SubscriptionEndDate: record.SubscriptionEndDate,
+      SubscriptionFrequency: record.SubscriptionFrequency, // Append the frequency to the original value
+      SubscriptionContractAmount: {
+        Value: subscriptionAmount,
+      },
+      SubscriptionName: record.SubscriptionName,
+      DepartmentNames: {
+        Name: record.DepartmentNames.Name,
+      },
+    };
+
+    monthlySubscription.push(newRecord);
+    //newRecords.push(newRecord);
+    // }
+
+    startDate.setFullYear(startDate.getFullYear() + frequency);
+
+    tempdate = new Date(startDate);
+  }
+}
+
+export function filterMonthlySubsinRange() {
+  const currentDate = new Date();
+  const startMonthIndex = 0; // January
+  const endMonthIndex = 11; // December
+  const startDate = new Date(currentDate.getFullYear(), startMonthIndex, 1); // January 1st
+  const endDate = new Date(currentDate.getFullYear(), endMonthIndex + 1, 0); // December 31st
+
+  var tempMonthly = [];
+
+  monthlySubscription.forEach(function (record) {
+    var subscriptionstartDate = new Date(record.SubscriptionStartDate);
+
+    // Filter records that fall within the full year range
+    if (subscriptionstartDate >= startDate && subscriptionstartDate <= endDate) {
+      // Create a deep copy to prevent reference issues
+      tempMonthly.push(JSON.parse(JSON.stringify(record)));
+    }
+  });
+
+  return tempMonthly;
+}
+
+export function filterSubscriptionsforFinance(flattenedArray) {
+  // Ensure amount1 and amount2 are numbers
+  var minRangeInput = document.getElementById("range-min-2");
+  var maxRangeInput = document.getElementById("range-max-2");
+  if (minRangeInput && maxRangeInput) {
+    filtersForFinance.amount1 = minRangeInput.value || null; // Set amount1
+    filtersForFinance.amount2 = maxRangeInput.value || null; // Set amount2
+  }
+  const minAmount = parseFloat(filtersForFinance.amount1);
+  const maxAmount = parseFloat(filtersForFinance.amount2);
+
+  // Filter the flattenedArray based on SubscriptionContractAmount
+  const filteredArray = flattenedArray.filter((subscription) => {
+    const contractAmount = subscription.SubscriptionContractAmount.Value;
+    return contractAmount >= minAmount && contractAmount <= maxAmount;
+  });
+  if (filteredArray.length == 0) {
+    return []; // This only happens if the chart has no data
+  }
+  return filteredArray;
+}
+
+export function aggregateSubscriptionsByName(subscriptionArray) {
+  let subscriptionAmounts = {};
+  subscriptionArray = subscriptionArray.filter((subscription) => subscription.status !== 1);
+
+  // Aggregate amounts by SubscriptionName and SubscriptionContractAmount.Value
+  subscriptionArray.forEach((record) => {
+    if (
+      record &&
+      record.SubscriptionName &&
+      record.SubscriptionContractAmount &&
+      record.SubscriptionContractAmount.Value !== undefined
+    ) {
+      const name = record.SubscriptionName;
+      const amount = record.SubscriptionContractAmount.Value;
+
+      // Create a unique key using both SubscriptionName and SubscriptionContractAmount.Value
+      const key = `${name}_${amount}`;
+
+      if (!subscriptionAmounts[key]) {
+        subscriptionAmounts[key] = {
+          SubscriptionName: name,
+          SubscriptionContractAmount: { Value: 0 },
+        };
+      }
+      subscriptionAmounts[key].SubscriptionContractAmount.Value += amount;
+    }
+  });
+
+  // Convert the aggregated amounts object to an array
+  const aggregatedArray = Object.values(subscriptionAmounts);
+
+  // Sort the array by SubscriptionContractAmount in descending order
+  aggregatedArray.sort(
+    (a, b) => b.SubscriptionContractAmount.Value - a.SubscriptionContractAmount.Value
+  );
+
+  // Return the top four subscriptions
+  return aggregatedArray.slice(0, 4);
+}
+
+export function setMostExpensiveChart(expensiveSubscriptions) {
+  // Get the context of the canvas for the chart
+  const ctx = document.getElementById("most-expensive-chart").getContext("2d");
+
+  // Check if data is available; if not, handle the case with 'No Data Available'
+  const hasData = expensiveSubscriptions && expensiveSubscriptions.length > 0;
+
+  // Prepare labels and amounts based on the availability of data
+  const departmentNames = hasData
+    ? expensiveSubscriptions.map((sub) => sub.SubscriptionName)
+    : ["No Data Available"];
+  const departmentAmounts = hasData
+    ? expensiveSubscriptions.map((sub) => sub.SubscriptionContractAmount.Value)
+    : [0];
+
+  // Destroy the existing chart instance if it exists to avoid reusing the canvas
+  if (mostExpensiveChart) {
+    mostExpensiveChart.destroy();
+  }
+
+  // Create a new bar chart using Chart.js
+  mostExpensiveChart = new Chart(ctx, {
+    type: "bar", // Set the type of chart to bar
+    data: {
+      labels: departmentNames, // Set the labels for the x-axis
+      datasets: [
+        {
+          label: hasData ? "Subscription Contract Amount" : "", // Label for the dataset
+          data: departmentAmounts, // Data for the chart
+          backgroundColor: hasData
+            ? ["#E1DBFE", "#E1FFBB", "#BFF1FF", "#CFE1FF"] // Colors for bars if data is available
+            : ["rgba(0, 0, 0, 0.1)"], // Light grey color if no data
+          borderWidth: 0, // No border for the bars
+          borderRadius: 10, // Rounded corners for the bars
+          hoverBackgroundColor: hasData
+            ? ["#E1DBFE", "#E1FFBB", "#BFF1FF", "#CFE1FF"] // Hover colors for bars if data is available
+            : ["rgba(0, 0, 0, 0.2)"], // Darker grey if no data on hover
+        },
+      ],
+    },
+    options: {
+      responsive: true, // Make the chart responsive to window size
+      maintainAspectRatio: false, // Allow height to be controlled by CSS
+      scales: {
+        x: {
+          ticks: {
+            color: "#00021D", // Color for x-axis tick labels
+            font: {
+              size: 12, // Font size for x-axis tick labels
+            },
+          },
+          grid: {
+            display: false, // Hide the grid lines on the x-axis
+          },
+        },
+        y: {
+          beginAtZero: true, // Start y-axis at zero
+          suggestedMin: 0, // Minimum suggested value for y-axis
+          // Dynamically set the max value for better visualization
+          suggestedMax: Math.max(...departmentAmounts) * 1.1, // Set max value slightly above the max amount
+          ticks: {
+            color: "#00021D", // Color for y-axis tick labels
+            font: {
+              size: 12, // Font size for y-axis tick labels
+            },
+            callback: function (value) {
+              return "$" + value.toLocaleString(); // Format numbers with commas and a dollar sign
+            },
+            // Limit the number of ticks to exactly 6
+            maxTicksLimit: 6, // Set maximum ticks on y-axis to 6
+            stepSize: Math.ceil(Math.max(...departmentAmounts) / 6), // Calculate step size based on 6 ticks
+          },
+          grid: {
+            display: true, // Show grid lines on the y-axis
+            color: "#EAECF0", // Color of the grid lines
+            borderDash: [5, 5], // Dashed style for grid lines
+          },
+          // Set the y-axis line color to white
+          border: {
+            color: "#FFFFFF", // Color of the y-axis line
+            width: 1, // Width of the y-axis line
+          },
+        },
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: function (tooltipItem) {
+              return "$" + tooltipItem.raw.toLocaleString(); // Format tooltip to add commas and a dollar sign
+            },
+          },
+        },
+        legend: {
+          display: false, // Hide the legend since there's only one dataset
+        },
+      },
+    },
+  });
+}
+
+export function aggregateByVendorProfileAndMonth(records) {
+  "use strict"; // Enable strict mode
+
+  // Helper function to get the month name from a date string
+  function getMonthName(dateString) {
+    const date = new Date(dateString);
+    const monthNames = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+    return monthNames[date.getUTCMonth()]; // Using getUTCMonth ensures the correct month index
+  }
+
+  // Object to hold aggregated records
+  let aggregatedRecords = {};
+
+  // Iterate through the subscription records
+  records.forEach((record) => {
+    // Destructure necessary values from the record
+    const { VendorProfile, SubscriptionContractAmount, SubscriptionStartDate } = record;
+
+    // Check if VendorProfile and SubscriptionContractAmount are valid
+    if (
+      VendorProfile !== null &&
+      VendorProfile !== undefined &&
+      SubscriptionContractAmount &&
+      SubscriptionStartDate
+    ) {
+      // Get the month name from the SubscriptionStartDate
+      const monthName = getMonthName(SubscriptionStartDate);
+
+      // Create a unique key combining VendorProfile and monthName
+      const key = `${VendorProfile}-${monthName}`;
+
+      // Initialize the entry if it doesn't exist
+      if (!aggregatedRecords[key]) {
+        aggregatedRecords[key] = {
+          VendorProfile: VendorProfile,
+          SubscriptionContractAmount: { Value: 0 },
+          Month: monthName,
+        };
+      }
+
+      // Accumulate the subscription contract amount
+      aggregatedRecords[key].SubscriptionContractAmount.Value += SubscriptionContractAmount.Value;
+    }
+  });
+
+  // Convert aggregatedRecords object back to an array
+  const aggregatedArray = Object.values(aggregatedRecords);
+
+  // Return the aggregated array
+  return aggregatedArray;
 }

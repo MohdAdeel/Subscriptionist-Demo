@@ -1,27 +1,80 @@
-import { useEffect, useRef, useState } from "react";
 import Chart from "chart.js/auto";
-import {
-  getDepartmentSpending,
-  getVendorSpending,
-  getSubscriptionTypeData,
-  getBudgetVsActualData,
-  getMostExpensiveSubscriptions,
-  getUsageAnalysisData,
-  getCategorySpending,
-} from "../../../lib/api/reports/reportsApi";
+import { useReportsPageStore } from "../../../stores";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+const VENDOR_CHART_COLORS = [
+  "#CCD6EB",
+  "#E1FFBB",
+  "#1D225D",
+  "#BFF1FF",
+  "#CFE1FF",
+  "#D4F1F4",
+  "#E1DBFE",
+  "#1D225D",
+  "#0891B2",
+  "#CCD6EB",
+  "#E1DBFE",
+];
+
+const DEPARTMENT_BAR_COLORS = ["#E1DBFE", "#BFF1FF", "#E1FFBB", "#EAECF0", "#CFE1FF", "#BFF1FF"];
+
+const getVendorLabel = (entry) =>
+  entry.vendor ?? entry.name ?? entry.vendorName ?? "Unknown vendor";
+
+const getVendorValue = (entry) => entry.count ?? entry.value ?? entry.amount ?? 0;
+
+const getDepartmentLabel = (entry) =>
+  entry?.department ?? entry?.name ?? entry?.DepartmentNames?.Name ?? "Unknown department";
+
+const getDepartmentValue = (entry) =>
+  entry?.value ?? entry?.amount ?? entry?.SubscriptionContractAmount?.Value ?? 0;
+
+const normalizeDepartmentRecord = (entry) => (Array.isArray(entry) ? entry[0] : entry);
 
 const Financial = () => {
   const [departmentData, setDepartmentData] = useState([]);
   const [vendorData, setVendorData] = useState([]);
-  const [subscriptionTypeData, setSubscriptionTypeData] = useState(null);
-  const [budgetVsActualData, setBudgetVsActualData] = useState(null);
-  const [mostExpensiveData, setMostExpensiveData] = useState([]);
-  const [usageAnalysisData, setUsageAnalysisData] = useState({
-    used: 80,
-    unused: 20,
-  });
-  const [categoryData, setCategoryData] = useState([]);
-  const [departmentTableData, setDepartmentTableData] = useState([]);
+  const vendorCountData = useReportsPageStore((state) => state.vendorCountData);
+  const spendByDepartmentChartData = useReportsPageStore(
+    (state) => state.spendByDepartmentChartData
+  );
+
+  const vendorChartEntries = useMemo(() => {
+    const sourceData = vendorCountData.length ? vendorCountData : vendorData;
+    return sourceData.map((entry) => ({
+      label: getVendorLabel(entry),
+      value: getVendorValue(entry),
+    }));
+  }, [vendorCountData, vendorData]);
+
+  const departmentChartEntries = useMemo(() => {
+    const sourceData = spendByDepartmentChartData.length
+      ? spendByDepartmentChartData
+      : departmentData;
+
+    return sourceData
+      .map((entry) => {
+        const record = normalizeDepartmentRecord(entry);
+        if (!record) {
+          return null;
+        }
+
+        return {
+          label: getDepartmentLabel(record),
+          value: getDepartmentValue(record),
+        };
+      })
+      .filter(Boolean);
+  }, [spendByDepartmentChartData, departmentData]);
+
+  const legendItems = useMemo(
+    () =>
+      vendorChartEntries.map((entry, index) => ({
+        label: entry.label,
+        color: VENDOR_CHART_COLORS[index % VENDOR_CHART_COLORS.length],
+      })),
+    [vendorChartEntries]
+  );
 
   const departmentChartRef = useRef(null);
   const departmentChartInstanceRef = useRef(null);
@@ -36,124 +89,69 @@ const Financial = () => {
   const usageAnalysisChartRef = useRef(null);
   const usageAnalysisChartInstanceRef = useRef(null);
 
-  // Fetch all financial data
+  // Spent By Department Chart
   useEffect(() => {
-    const fetchFinancialData = async () => {
-      try {
-        const [
-          deptSpending,
-          vendorSpending,
-          subTypeData,
-          budgetActual,
-          expensiveSubs,
-          usageData,
-          categorySpending,
-        ] = await Promise.all([
-          getDepartmentSpending(),
-          getVendorSpending(),
-          getSubscriptionTypeData(),
-          getBudgetVsActualData(),
-          getMostExpensiveSubscriptions(),
-          getUsageAnalysisData(),
-          getCategorySpending(),
-        ]);
+    if (!departmentChartRef.current) return;
 
-        if (deptSpending) setDepartmentData(deptSpending.chartData || []);
-        if (deptSpending) setDepartmentTableData(deptSpending.tableData || []);
-        if (vendorSpending) setVendorData(vendorSpending);
-        if (subTypeData) setSubscriptionTypeData(subTypeData);
-        if (budgetActual) setBudgetVsActualData(budgetActual);
-        if (expensiveSubs) setMostExpensiveData(expensiveSubs);
-        if (usageData) setUsageAnalysisData(usageData);
-        if (categorySpending) setCategoryData(categorySpending);
-      } catch (error) {
-        console.error("Error fetching financial data:", error);
-        // Set default mock data
-        setDepartmentData([
-          { department: "Marketing", value: 60606 },
-          { department: "Finance", value: 2020 },
-        ]);
-        setDepartmentTableData([
-          { team: "Marketing", actualSpend: 60606, budget: 120000 },
-          { team: "Finance", actualSpend: 880, budget: 72000 },
-        ]);
-      }
-    };
-
-    fetchFinancialData();
-  }, []);
-
-  // Department Bar Chart
-  useEffect(() => {
-    if (
-      departmentChartRef.current &&
-      !departmentChartInstanceRef.current &&
-      departmentData.length > 0
-    ) {
-      const ctx = departmentChartRef.current.getContext("2d");
-
-      const labels = departmentData.map((item) => item.department || item.name);
-      const values = departmentData.map((item) => item.value || item.amount);
-
-      departmentChartInstanceRef.current = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: "Spend by Department",
-              data: values,
-              backgroundColor: ["rgb(147, 51, 234)", "rgb(34, 211, 238)"],
-              borderWidth: 0,
-            },
-          ],
+    const ctx = departmentChartRef.current.getContext("2d");
+    departmentChartInstanceRef.current = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: "Spend by Department",
+            data: [],
+            backgroundColor: [],
+            borderWidth: 0,
+            borderRadius: 20,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            padding: 12,
+            cornerRadius: 8,
+          },
         },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
+        scales: {
+          x: {
+            grid: {
               display: false,
             },
-            tooltip: {
-              backgroundColor: "rgba(0, 0, 0, 0.8)",
-              padding: 12,
-              cornerRadius: 8,
+            border: {
+              display: false,
             },
           },
-          scales: {
-            x: {
-              grid: {
-                display: false,
-              },
-              border: {
-                display: false,
-              },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: "#f3f4f6",
+              drawBorder: false,
             },
-            y: {
-              beginAtZero: true,
-              max: Math.max(...values) * 1.2,
-              grid: {
-                color: "#f3f4f6",
-                drawBorder: false,
+            border: {
+              display: false,
+            },
+            ticks: {
+              color: "#6b7280",
+              font: {
+                size: 12,
               },
-              border: {
-                display: false,
-              },
-              ticks: {
-                color: "#6b7280",
-                font: {
-                  size: 12,
-                },
-                callback: function (value) {
-                  return "$" + value.toLocaleString();
-                },
+              callback: function (value) {
+                return "$" + value.toLocaleString();
               },
             },
           },
         },
-      });
-    }
+      },
+    });
 
     return () => {
       if (departmentChartInstanceRef.current) {
@@ -161,62 +159,62 @@ const Financial = () => {
         departmentChartInstanceRef.current = null;
       }
     };
-  }, [departmentData]);
+  }, []);
+
+  useEffect(() => {
+    if (!departmentChartInstanceRef.current) return;
+
+    const labels = departmentChartEntries.map((entry) => entry.label);
+    const values = departmentChartEntries.map((entry) => entry.value);
+    const backgroundColor = labels.map(
+      (_, index) => DEPARTMENT_BAR_COLORS[index % DEPARTMENT_BAR_COLORS.length]
+    );
+
+    departmentChartInstanceRef.current.data.labels = labels;
+    departmentChartInstanceRef.current.data.datasets[0].data = values;
+    departmentChartInstanceRef.current.data.datasets[0].backgroundColor = backgroundColor;
+    if (values.length) {
+      departmentChartInstanceRef.current.options.scales.y.max = Math.max(...values) * 1.2;
+    } else {
+      delete departmentChartInstanceRef.current.options.scales.y.max;
+    }
+    departmentChartInstanceRef.current.update();
+  }, [departmentChartEntries]);
 
   // Vendor Donut Chart
   useEffect(() => {
-    if (
-      vendorChartRef.current &&
-      !vendorChartInstanceRef.current &&
-      vendorData.length > 0
-    ) {
-      const ctx = vendorChartRef.current.getContext("2d");
+    if (!vendorChartRef.current) return;
 
-      const backgroundColors = [
-        "#CCD6EB",
-        "#E1FFBB",
-        "#1D225D",
-        "#BFF1FF",
-        "#CFE1FF",
-        "#D4F1F4",
-        "#E1DBFE",
-        "#1D225D",
-        "#0891B2",
-        "#CCD6EB",
-        "#E1DBFE",
-      ];
+    const ctx = vendorChartRef.current.getContext("2d");
 
-      vendorChartInstanceRef.current = new Chart(ctx, {
-        type: "doughnut",
-        data: {
-          labels: vendorData.map((x) => x.vendor || x.name),
-          datasets: [
-            {
-              data: vendorData.map((x) => x.value || x.amount),
-              backgroundColor: vendorData.map(
-                (_, i) => backgroundColors[i % backgroundColors.length]
-              ),
-              borderWidth: 0,
-            },
-          ],
-        },
-        options: {
-          cutout: "70%",
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
-            tooltip: {
-              backgroundColor: "rgba(0, 0, 0, 0.8)",
-              padding: 12,
-              cornerRadius: 8,
-            },
+    vendorChartInstanceRef.current = new Chart(ctx, {
+      type: "doughnut",
+      data: {
+        labels: [],
+        datasets: [
+          {
+            data: [],
+            backgroundColor: [],
+            borderWidth: 0,
+          },
+        ],
+      },
+      options: {
+        cutout: "70%",
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            padding: 12,
+            cornerRadius: 8,
           },
         },
-      });
-    }
+      },
+    });
 
     return () => {
       if (vendorChartInstanceRef.current) {
@@ -224,14 +222,26 @@ const Financial = () => {
         vendorChartInstanceRef.current = null;
       }
     };
-  }, [vendorData]);
+  }, []);
+
+  useEffect(() => {
+    if (!vendorChartInstanceRef.current) return;
+
+    const labels = vendorChartEntries.map((entry) => entry.label);
+    const values = vendorChartEntries.map((entry) => entry.value);
+    const backgroundColor = labels.map(
+      (_, index) => VENDOR_CHART_COLORS[index % VENDOR_CHART_COLORS.length]
+    );
+
+    vendorChartInstanceRef.current.data.labels = labels;
+    vendorChartInstanceRef.current.data.datasets[0].data = values;
+    vendorChartInstanceRef.current.data.datasets[0].backgroundColor = backgroundColor;
+    vendorChartInstanceRef.current.update();
+  }, [vendorChartEntries]);
 
   // Subscription Type Line Chart
   useEffect(() => {
-    if (
-      subscriptionTypeChartRef.current &&
-      !subscriptionTypeChartInstanceRef.current
-    ) {
+    if (subscriptionTypeChartRef.current && !subscriptionTypeChartInstanceRef.current) {
       const ctx = subscriptionTypeChartRef.current.getContext("2d");
 
       subscriptionTypeChartInstanceRef.current = new Chart(ctx, {
@@ -254,9 +264,7 @@ const Financial = () => {
           datasets: [
             {
               label: "Strategic",
-              data: [
-                10312, 0, 10312, 0, 10312, 0, 10312, 0, 10312, 0, 10312, 0,
-              ],
+              data: [10312, 0, 10312, 0, 10312, 0, 10312, 0, 10312, 0, 10312, 0],
               borderColor: "rgb(147, 51, 234)",
               backgroundColor: "rgba(147, 51, 234, 0.1)",
               borderWidth: 2,
@@ -369,10 +377,7 @@ const Financial = () => {
 
   // Budget vs Actual Area Chart
   useEffect(() => {
-    if (
-      budgetVsActualChartRef.current &&
-      !budgetVsActualChartInstanceRef.current
-    ) {
+    if (budgetVsActualChartRef.current && !budgetVsActualChartInstanceRef.current) {
       const ctx = budgetVsActualChartRef.current.getContext("2d");
 
       budgetVsActualChartInstanceRef.current = new Chart(ctx, {
@@ -482,10 +487,7 @@ const Financial = () => {
 
   // Most Expensive Subscriptions Bar Chart
   useEffect(() => {
-    if (
-      mostExpensiveChartRef.current &&
-      !mostExpensiveChartInstanceRef.current
-    ) {
+    if (mostExpensiveChartRef.current && !mostExpensiveChartInstanceRef.current) {
       const ctx = mostExpensiveChartRef.current.getContext("2d");
 
       mostExpensiveChartInstanceRef.current = new Chart(ctx, {
@@ -571,10 +573,7 @@ const Financial = () => {
 
   // Usage Analysis Donut Chart
   useEffect(() => {
-    if (
-      usageAnalysisChartRef.current &&
-      !usageAnalysisChartInstanceRef.current
-    ) {
+    if (usageAnalysisChartRef.current && !usageAnalysisChartInstanceRef.current) {
       const ctx = usageAnalysisChartRef.current.getContext("2d");
 
       usageAnalysisChartInstanceRef.current = new Chart(ctx, {
@@ -623,16 +622,13 @@ const Financial = () => {
   return (
     <div className="space-y-6">
       {/* Top Row: Two Charts Side by Side */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-2">
         {/* Spend by Department Bar Chart */}
         <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 lg:col-span-3">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4 sm:mb-6">
             Spend by Department
           </h2>
-          <div
-            className="relative"
-            style={{ height: "300px", minHeight: "250px" }}
-          >
+          <div className="relative" style={{ height: "300px", minHeight: "250px" }}>
             <canvas ref={departmentChartRef}></canvas>
           </div>
         </div>
@@ -659,27 +655,13 @@ const Financial = () => {
                 id="vendor-chart-legend"
                 className="flex flex-col gap-1.5 text-xs sm:text-sm max-h-[150px]"
               >
-                {[
-                  { vendor: "Test Subscription", color: "#CCD6EB" },
-                  { vendor: "new vendor1", color: "#E1FFBB" },
-                  { vendor: "test", color: "#1D225D" },
-                  { vendor: "test consol;e2", color: "#BFF1FF" },
-                  { vendor: "test new 4", color: "#CFE1FF" },
-                  { vendor: "test new 5", color: "#D4F1F4" },
-                  { vendor: "test 11", color: "#E1DBFE" },
-                  { vendor: "subscription new22", color: "#1D225D" },
-                  { vendor: "new 2323", color: "#0891B2" },
-                  { vendor: "Test Vendor", color: "#CCD6EB" },
-                  { vendor: "Test New Azure", color: "#E1DBFE" },
-                ].map((item, index) => (
-                  <div key={index} className="flex items-center gap-1.5">
+                {legendItems.map((item, index) => (
+                  <div key={`${item.label}-${index}`} className="flex items-center gap-1.5">
                     <span
                       className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                       style={{ backgroundColor: item.color }}
                     ></span>
-                    <span className="text-gray-700 truncate">
-                      {item.vendor}
-                    </span>
+                    <span className="text-gray-700 truncate">{item.label}</span>
                   </div>
                 ))}
               </div>
@@ -693,10 +675,7 @@ const Financial = () => {
         <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4 sm:mb-6">
           Spend by Subscription type
         </h2>
-        <div
-          className="relative"
-          style={{ height: "300px", minHeight: "250px" }}
-        >
+        <div className="relative" style={{ height: "300px", minHeight: "250px" }}>
           <canvas ref={subscriptionTypeChartRef}></canvas>
         </div>
       </div>
@@ -706,21 +685,16 @@ const Financial = () => {
         <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4 sm:mb-6">
           Budget vs Actual Report
         </h2>
-        <div
-          className="relative"
-          style={{ height: "300px", minHeight: "250px" }}
-        >
+        <div className="relative" style={{ height: "300px", minHeight: "250px" }}>
           <canvas ref={budgetVsActualChartRef}></canvas>
         </div>
       </div>
 
       {/* Tables Row: Spend by Category (Left) and Spend by Department (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
         {/* Spend by Category Table */}
         <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100">
-          <h3 className="text-base font-semibold text-gray-800 mb-4">
-            Spend by Category
-          </h3>
+          <h3 className="text-base font-semibold text-gray-800 mb-4">Spend by Category</h3>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
@@ -738,13 +712,8 @@ const Financial = () => {
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
                 <tr className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 text-sm text-gray-800">
-                    Pay-as-You-Go Subscription
-                  </td>
-                  <td
-                    className="px-4 py-3 text-sm font-medium"
-                    style={{ color: "#0891B2" }}
-                  >
+                  <td className="px-4 py-3 text-sm text-gray-800">Pay-as-You-Go Subscription</td>
+                  <td className="px-4 py-3 text-sm font-medium" style={{ color: "#0891B2" }}>
                     $101.00
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-800">1</td>
@@ -756,9 +725,7 @@ const Financial = () => {
 
         {/* Spend by Department Table */}
         <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100">
-          <h3 className="text-base font-semibold text-gray-800 mb-4">
-            Spend by Department
-          </h3>
+          <h3 className="text-base font-semibold text-gray-800 mb-4">Spend by Department</h3>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
@@ -777,31 +744,19 @@ const Financial = () => {
               <tbody className="divide-y divide-gray-200 bg-white">
                 <tr className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 text-sm text-gray-800">Marketing</td>
-                  <td
-                    className="px-4 py-3 text-sm font-medium"
-                    style={{ color: "#0891B2" }}
-                  >
+                  <td className="px-4 py-3 text-sm font-medium" style={{ color: "#0891B2" }}>
                     $60,606
                   </td>
-                  <td
-                    className="px-4 py-3 text-sm font-medium"
-                    style={{ color: "#6B46C1" }}
-                  >
+                  <td className="px-4 py-3 text-sm font-medium" style={{ color: "#6B46C1" }}>
                     $120,000
                   </td>
                 </tr>
                 <tr className="hover:bg-gray-50 transition-colors">
                   <td className="px-4 py-3 text-sm text-gray-800">Finance</td>
-                  <td
-                    className="px-4 py-3 text-sm font-medium"
-                    style={{ color: "#0891B2" }}
-                  >
+                  <td className="px-4 py-3 text-sm font-medium" style={{ color: "#0891B2" }}>
                     $880
                   </td>
-                  <td
-                    className="px-4 py-3 text-sm font-medium"
-                    style={{ color: "#6B46C1" }}
-                  >
+                  <td className="px-4 py-3 text-sm font-medium" style={{ color: "#6B46C1" }}>
                     $72,000
                   </td>
                 </tr>
@@ -818,19 +773,14 @@ const Financial = () => {
           <h3 className="text-base font-semibold text-gray-800 mb-4">
             Most Expensive Subscriptions
           </h3>
-          <div
-            className="relative"
-            style={{ height: "300px", minHeight: "250px" }}
-          >
+          <div className="relative" style={{ height: "300px", minHeight: "250px" }}>
             <canvas ref={mostExpensiveChartRef}></canvas>
           </div>
         </div>
 
         {/* Usage Analysis Donut Chart */}
         <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 lg:col-span-1">
-          <h3 className="text-base font-semibold text-gray-800 mb-4">
-            Usage Analysis
-          </h3>
+          <h3 className="text-base font-semibold text-gray-800 mb-4">Usage Analysis</h3>
           <div className="flex flex-col items-center gap-4 sm:gap-6">
             <div
               className="relative flex-shrink-0 w-full max-w-[200px] sm:max-w-[250px]"
