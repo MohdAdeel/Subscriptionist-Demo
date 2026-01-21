@@ -8,17 +8,18 @@ import {
   FiDownload,
   FiCalendar,
 } from "react-icons/fi";
+import { useActivityLines } from "../../hooks";
 import Financial from "./components/Financial";
 import { useState, useEffect, useRef } from "react";
 import StandardReports from "./components/StandardReports";
 import RenewalAndExpiration from "./components/RenewalAndExpiration";
-import { getActivity } from "../../lib/api/activityLine/activityLine";
 import { TableSkeleton, ChartSkeleton, KPICardSkeleton } from "../../components/SkeletonLoader";
 
 const Report = () => {
-  const hasActivityRun = useRef(false);
+  // React Query handles caching, deduplication, and loading state
+  const { isLoading, error } = useActivityLines();
+
   const [activeTab, setActiveTab] = useState("standard");
-  const [isLoading, setIsLoading] = useState(true);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const MIN_HIGH_SPEND = 0;
   const MAX_HIGH_SPEND = 800000;
@@ -224,24 +225,17 @@ const Report = () => {
     return next;
   };
 
-  // Fetch actual data from Activity Lines API (this populates the Zustand store)
-  useEffect(() => {
-    if (hasActivityRun.current) return;
-    hasActivityRun.current = true;
-
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        await getActivity();
-      } catch (error) {
-        console.error("Error fetching activity data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
+  // Show error state if fetch failed
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Failed to load reports</h2>
+          <p className="text-gray-600">{error.message}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">

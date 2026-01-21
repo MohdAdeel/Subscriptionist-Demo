@@ -1,8 +1,9 @@
 import TimeIcon from "../../assets/Time.svg";
+import { useActivityLines } from "../../hooks";
 import FrameIcon from "../../assets/Frame.svg";
 import ProfileImg from "../../assets/Image.jpg";
 import OverdueIcon from "../../assets/Overdue.svg";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import TotalActiveCostIcon from "../../assets/TotalActiveCost.svg";
 import RenewalTimelineIcon from "../../assets/RenewalTimeline.svg";
 import UpcomingRenewalsIcon from "../../assets/UpcomingRenewals.svg";
@@ -61,14 +62,13 @@ const getChartModules = () => {
 
 export default function Home() {
   const currentYear = new Date().getFullYear();
-  const activityDataRef = useRef(null);
+  const hasProcessedCharts = useRef(false);
   const departmentChartRef = useRef(null); // For chart5 - Department Chart
   const vendorProfileChartRef = useRef(null); // For chart6 - Vendor Profile Chart
   const renewalChartRef = useRef(null); // For chart3 - Renewal Chart
 
-  // State for loading and error handling
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // React Query handles caching - data is shared with Reports page
+  const { data: activityData, isLoading, error } = useActivityLines();
 
   // State for renewal date management (replaces window.startDateforRenwal)
   const [renewalStartDate, setRenewalStartDate] = useState(() => {
@@ -191,25 +191,18 @@ export default function Home() {
 
           // Process vendor profile chart with its specific ref
           if (vendorProfileChartRef.current) {
-            modules.handleVendorProcessingData(
-              activityData,
-              vendorProfileChartRef
-            );
+            modules.handleVendorProcessingData(activityData, vendorProfileChartRef);
           } else {
             // Fallback: try again after a short delay
             setTimeout(() => {
               if (vendorProfileChartRef.current) {
-                modules.handleVendorProcessingData(
-                  activityData,
-                  vendorProfileChartRef
-                );
+                modules.handleVendorProcessingData(activityData, vendorProfileChartRef);
               }
             }, 200);
           }
 
           // Process renewal chart
-          const renewalCanvas =
-            renewalChartRef.current || document.getElementById("chart3");
+          const renewalCanvas = renewalChartRef.current || document.getElementById("chart3");
           if (renewalCanvas) {
             modules.handleRenewalChartData(activityData, renewalCanvas);
           } else {
@@ -228,33 +221,12 @@ export default function Home() {
     });
   }, []);
 
+  // Process charts when activity data is available
   useEffect(() => {
-    const loadAllData = async () => {
-      if (activityDataRef.current) {
-        setIsLoading(false);
-        return;
-      }
-
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        // Lazy load the API module
-        const { getActivity } = await import(
-          "../../lib/api/activityLine/activityLine"
-        );
-        const activityData = await getActivity();
-        activityDataRef.current = activityData;
-        processAllCharts(activityData);
-      } catch (err) {
-        setError("Failed to load data. Please try again later.");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadAllData();
-  }, [processAllCharts]);
+    if (!activityData || hasProcessedCharts.current) return;
+    hasProcessedCharts.current = true;
+    processAllCharts(activityData);
+  }, [activityData, processAllCharts]);
 
   // Handler for renewal navigation (replaces window.Getrenewal)
   const handleRenewalNavigation = useCallback(async (action) => {
@@ -283,7 +255,9 @@ export default function Home() {
     return (
       <div className="flex-1 bg-[#F6F7FB] min-h-screen p-6 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+          <p className="text-red-600 mb-4">
+            {error?.message || "Failed to load data. Please try again later."}
+          </p>
           <button
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -320,11 +294,7 @@ export default function Home() {
           <span className="text-xs text-gray-500">
             {isLoading ? "Loading..." : "Last Update 10 min ago"}
           </span>
-          <img
-            src={ProfileImg}
-            alt="Profile"
-            className="w-9 h-9 rounded-full object-cover"
-          />
+          <img src={ProfileImg} alt="Profile" className="w-9 h-9 rounded-full object-cover" />
         </div>
       </div>
 
@@ -348,14 +318,8 @@ export default function Home() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <img
-                      src={cardItem.icon}
-                      alt={cardItem.title}
-                      className="w-6 h-6"
-                    />
-                    <h5 className="text-sm font-semibold m-0">
-                      {cardItem.title}
-                    </h5>
+                    <img src={cardItem.icon} alt={cardItem.title} className="w-6 h-6" />
+                    <h5 className="text-sm font-semibold m-0">{cardItem.title}</h5>
                   </div>
 
                   {cardItem.info && (
@@ -373,9 +337,7 @@ export default function Home() {
                     onChange={async (e) => {
                       const value = e.target.value;
                       const modules = await getChartModules();
-                      if (
-                        typeof modules.updateSubscriptionAmount === "function"
-                      ) {
+                      if (typeof modules.updateSubscriptionAmount === "function") {
                         modules.updateSubscriptionAmount(value);
                       }
                     }}
@@ -401,36 +363,12 @@ export default function Home() {
         {isLoading ? (
           // Loading skeleton for charts
           <>
-            <ChartSkeleton
-              key="chart-skeleton-1"
-              height="160px"
-              className="h-[260px]"
-            />
-            <ChartSkeleton
-              key="chart-skeleton-2"
-              height="160px"
-              className="h-[260px]"
-            />
-            <ChartSkeleton
-              key="chart-skeleton-3"
-              height="160px"
-              className="h-[260px]"
-            />
-            <ChartSkeleton
-              key="chart-skeleton-4"
-              height="160px"
-              className="h-[260px]"
-            />
-            <ChartSkeleton
-              key="chart-skeleton-5"
-              height="160px"
-              className="h-[260px]"
-            />
-            <ChartSkeleton
-              key="chart-skeleton-6"
-              height="160px"
-              className="h-[260px]"
-            />
+            <ChartSkeleton key="chart-skeleton-1" height="160px" className="h-[260px]" />
+            <ChartSkeleton key="chart-skeleton-2" height="160px" className="h-[260px]" />
+            <ChartSkeleton key="chart-skeleton-3" height="160px" className="h-[260px]" />
+            <ChartSkeleton key="chart-skeleton-4" height="160px" className="h-[260px]" />
+            <ChartSkeleton key="chart-skeleton-5" height="160px" className="h-[260px]" />
+            <ChartSkeleton key="chart-skeleton-6" height="160px" className="h-[260px]" />
           </>
         ) : (
           <>
@@ -443,19 +381,13 @@ export default function Home() {
               >
                 <div className="flex-shrink-0 mb-2">
                   <p className="text-sm font-semibold mb-2">Vendors</p>
-                  <span
-                    className="info-tiles"
-                    data-popover="All Active Vendors"
-                  ></span>
+                  <span className="info-tiles" data-popover="All Active Vendors"></span>
                 </div>
 
                 <div className="flex-1 min-h-0 overflow-y-auto">
                   <div className="flex items-center justify-center w-full">
                     <div className="w-full h-[150px] mx-auto ml-3 flex-shrink-0">
-                      <canvas
-                        id="doughnut-chart"
-                        className="w-full h-full"
-                      ></canvas>
+                      <canvas id="doughnut-chart" className="w-full h-full"></canvas>
                     </div>
                     <div
                       className="w-[40%] max-w-[200px] flex flex-col justify-center items-start flex-shrink-0"
@@ -480,10 +412,7 @@ export default function Home() {
                     Monthly Spend Trendings
                   </p>
 
-                  <div
-                    className="flex items-center mb-2 gap-3"
-                    id="MonthlySpend"
-                  >
+                  <div className="flex items-center mb-2 gap-3" id="MonthlySpend">
                     <i
                       className="fas fa-chevron-left text-sm opacity-80 cursor-pointer hover:opacity-100"
                       onClick={async () => {
@@ -526,10 +455,7 @@ export default function Home() {
                     ◀
                   </button>
 
-                  <span
-                    id="financialyear"
-                    className="font-medium text-[#0B0B3B]"
-                  >
+                  <span id="financialyear" className="font-medium text-[#0B0B3B]">
                     {financialYear}
                   </span>
 
@@ -547,11 +473,7 @@ export default function Home() {
               </div>
 
               <div className="flex-1 h-[180px]">
-                <canvas
-                  id="chart5"
-                  ref={departmentChartRef}
-                  className="w-full h-full"
-                ></canvas>
+                <canvas id="chart5" ref={departmentChartRef} className="w-full h-full"></canvas>
               </div>
             </div>
 
@@ -563,14 +485,9 @@ export default function Home() {
                 className="flex flex-col p-0 bg-transparent shadow-none flex-none h-full"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-semibold mb-2 text-[#0B0B3B]">
-                    Actual vs Budget
-                  </p>
+                  <p className="text-sm font-semibold mb-2 text-[#0B0B3B]">Actual vs Budget</p>
 
-                  <div
-                    className="flex items-center mb-2 gap-3"
-                    id="BudgetDepartment"
-                  >
+                  <div className="flex items-center mb-2 gap-3" id="BudgetDepartment">
                     <i
                       className="fas fa-chevron-left text-sm opacity-50 pointer-events-none"
                       id="leftarrowbudget"
@@ -581,10 +498,7 @@ export default function Home() {
                       }}
                     ></i>
 
-                    <span
-                      id="financialyearbudget"
-                      className="block text-[10px]"
-                    ></span>
+                    <span id="financialyearbudget" className="block text-[10px]"></span>
 
                     <i
                       className="fas fa-chevron-right text-sm opacity-80 cursor-pointer hover:opacity-100"
@@ -609,20 +523,14 @@ export default function Home() {
               className="bg-white rounded-xl p-4 h-[260px] flex flex-col shadow-sm"
               id="compliance"
             >
-              <h2 className="text-sm font-semibold mb-2 text-[#0B0B3B]">
-                Vendors by Profile
-              </h2>
+              <h2 className="text-sm font-semibold mb-2 text-[#0B0B3B]">Vendors by Profile</h2>
 
               <div className="flex items-center justify-center gap-4 text-xs mb-2">
                 <span>{financialYear}</span>
               </div>
 
               <div className="flex-1 h-[180px] relative" id="vendorprofile">
-                <canvas
-                  id="chart6"
-                  ref={vendorProfileChartRef}
-                  className="w-full h-full"
-                ></canvas>
+                <canvas id="chart6" ref={vendorProfileChartRef} className="w-full h-full"></canvas>
               </div>
             </div>
 
@@ -642,14 +550,11 @@ export default function Home() {
                     className="fas fa-chevron-left text-sm"
                     style={{
                       opacity: isRenewalLeftArrowDisabled ? 0.5 : 1,
-                      pointerEvents: isRenewalLeftArrowDisabled
-                        ? "none"
-                        : "auto",
+                      pointerEvents: isRenewalLeftArrowDisabled ? "none" : "auto",
                       cursor: "pointer",
                     }}
                     onClick={() =>
-                      !isRenewalLeftArrowDisabled &&
-                      handleRenewalNavigation("last-x-months")
+                      !isRenewalLeftArrowDisabled && handleRenewalNavigation("last-x-months")
                     }
                     aria-label="Previous renewal period"
                   />
@@ -668,11 +573,7 @@ export default function Home() {
               </div>
 
               <div className="flex-1 h-[180px] relative" id="renewalcontainer">
-                <canvas
-                  id="chart3"
-                  ref={renewalChartRef}
-                  className="w-full h-full"
-                ></canvas>
+                <canvas id="chart3" ref={renewalChartRef} className="w-full h-full"></canvas>
               </div>
             </div>
           </>
@@ -687,9 +588,7 @@ export default function Home() {
             <div className="w-10 h-10 rounded-[10px] flex items-center justify-center bg-green-100">
               <img src={TimeIcon} alt="Upcoming" className="w-5 h-5" />
             </div>
-            <h2 className="text-base font-semibold text-[#0B0B3B]">
-              My Upcoming Tasks
-            </h2>
+            <h2 className="text-base font-semibold text-[#0B0B3B]">My Upcoming Tasks</h2>
           </div>
 
           <div className="flex-1 overflow-y-auto pr-3">
@@ -698,9 +597,7 @@ export default function Home() {
                 key={task.title}
                 className="flex items-center justify-between border-b border-gray-200 pb-4 mb-5"
               >
-                <p className="w-[45%] text-base font-medium text-[#0B0B3B]">
-                  {task.title}
-                </p>
+                <p className="w-[45%] text-base font-medium text-[#0B0B3B]">{task.title}</p>
                 <span
                   className={`text-sm px-4 py-1.5 rounded-full font-medium ${task.statusColor}`}
                 >
@@ -718,9 +615,7 @@ export default function Home() {
             <div className="w-10 h-10 rounded-[10px] flex items-center justify-center bg-indigo-100">
               <img src={OverdueIcon} alt="Overdue" className="w-5 h-5" />
             </div>
-            <h2 className="text-base font-semibold text-[#0B0B3B]">
-              Overdue Tasks
-            </h2>
+            <h2 className="text-base font-semibold text-[#0B0B3B]">Overdue Tasks</h2>
           </div>
 
           <div className="flex-1 overflow-y-auto pr-3">
@@ -729,9 +624,7 @@ export default function Home() {
                 key={task.title}
                 className="flex items-center justify-between border-b border-gray-200 pb-4 mb-5"
               >
-                <p className="w-[45%] text-base font-medium text-[#0B0B3B]">
-                  {task.title}
-                </p>
+                <p className="w-[45%] text-base font-medium text-[#0B0B3B]">{task.title}</p>
                 <span
                   className={`text-sm px-4 py-1.5 rounded-full font-medium ${task.statusColor}`}
                 >
