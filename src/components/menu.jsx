@@ -17,6 +17,7 @@ const Menu = () => {
     { name: "Home", icon: HomeIcon, path: "/" },
     { name: "Reports", icon: ReportsIcon, path: "/reports" },
     { name: "Subscriptions", icon: SubscriptionsIcon, path: "/subscriptions" },
+    { name: "Vendors", icon: MyTasksIcon, path: "/vendors" },
     { name: "My Tasks", icon: MyTasksIcon, path: "/mytasks" },
     { name: "FAQs", icon: FAQsIcon, path: "/faqs" },
   ];

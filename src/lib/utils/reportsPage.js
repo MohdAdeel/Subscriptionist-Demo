@@ -2,6 +2,7 @@ import {
   parseFrequency,
   groupByVendorName,
   filterMonthlySubsinRange,
+  clearMonthlySubscription,
   removeObjectsWithSameTime,
   generateSimilarRecordsbyYear,
   generateSimilarRecordsbyMonth,
@@ -19,6 +20,12 @@ let filtersForFinance = {
 };
 
 export const handleActivityLinesSuccess = (originalData) => {
+  // IMPORTANT: Clear all module-level arrays to prevent data duplication on refetch
+  // These arrays persist between React Query refetches and would otherwise accumulate data
+  subscriptionArray = [];
+  monthlyDepartments = [];
+  clearMonthlySubscription();
+
   // Extract lines from response - handle different response structures
   var lines;
 
@@ -86,7 +93,7 @@ function modifySubscriptionsWithChartLimit(SubscriptionJSon) {
 
   // Merge records by month
   mergeRecordsByMonth();
-  // countByVendorName(SubscriptionJSon);
+
   modifyDepartmentChartLimit(SubscriptionJSon);
   const aggregatedByVendorProfile = aggregateByVendorProfileAndMonth(subscriptionArray);
   const { setVendorProfileAggregation } = useReportsPageStore.getState();

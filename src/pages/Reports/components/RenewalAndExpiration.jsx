@@ -1,11 +1,6 @@
 import Chart from "chart.js/auto";
 import { useState, useEffect, useRef } from "react";
 import { FiInfo, FiChevronLeft, FiChevronRight } from "react-icons/fi";
-import {
-  getRenewalData,
-  getExpiredSubscriptions,
-  getRenewalCostsData,
-} from "../../../lib/api/reports/reportsApi";
 
 const RenewalAndExpiration = ({ formatCurrency, formatDate }) => {
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 0, 1));
@@ -87,10 +82,7 @@ const RenewalAndExpiration = ({ formatCurrency, formatDate }) => {
 
     for (let day = 1; day <= daysInMonth; day++) {
       days.push(
-        <div
-          key={day}
-          className="h-8 flex items-center justify-center text-sm text-gray-700"
-        >
+        <div key={day} className="h-8 flex items-center justify-center text-sm text-gray-700">
           {day}
         </div>
       );
@@ -117,15 +109,11 @@ const RenewalAndExpiration = ({ formatCurrency, formatDate }) => {
   };
 
   const handlePreviousMonth = () => {
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
-    );
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
   };
 
   const handleNextMonth = () => {
-    setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
-    );
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
   };
 
   const getNextMonth = () => {
@@ -278,9 +266,7 @@ const RenewalAndExpiration = ({ formatCurrency, formatDate }) => {
         </h2>
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
           <div className="flex-shrink-0">
-            <div className="text-sm font-medium text-gray-700 mb-3">
-              Values:
-            </div>
+            <div className="text-sm font-medium text-gray-700 mb-3">Values:</div>
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
                 <span
@@ -373,13 +359,8 @@ const RenewalAndExpiration = ({ formatCurrency, formatDate }) => {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {displayedData.map((subscription) => (
-                  <tr
-                    key={subscription.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-4 sm:px-6 py-3 text-sm text-gray-800">
-                      {subscription.name}
-                    </td>
+                  <tr key={subscription.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 sm:px-6 py-3 text-sm text-gray-800">{subscription.name}</td>
                     <td
                       className="px-4 sm:px-6 py-3 text-sm font-medium"
                       style={{ color: "#6B46C1" }}
@@ -425,10 +406,7 @@ const RenewalAndExpiration = ({ formatCurrency, formatDate }) => {
         <h3 className="text-base font-semibold text-gray-800 mb-4">
           Renewal costs and usage evaluation
         </h3>
-        <div
-          className="relative"
-          style={{ height: "300px", minHeight: "250px" }}
-        >
+        <div className="relative" style={{ height: "300px", minHeight: "250px" }}>
           <canvas ref={renewalCostsChartRef}></canvas>
         </div>
       </div>
@@ -464,13 +442,8 @@ const RenewalAndExpiration = ({ formatCurrency, formatDate }) => {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {expiredData.map((subscription) => (
-                  <tr
-                    key={subscription.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-4 sm:px-6 py-3 text-sm text-gray-800">
-                      {subscription.name}
-                    </td>
+                  <tr key={subscription.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 sm:px-6 py-3 text-sm text-gray-800">{subscription.name}</td>
                     <td
                       className="px-4 sm:px-6 py-3 text-sm font-medium"
                       style={{ color: "#6B46C1" }}

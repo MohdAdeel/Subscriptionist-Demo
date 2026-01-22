@@ -8,7 +8,7 @@
  * @returns {Array} - Array of arrays, each containing items for a vendor
  */
 
-const monthlySubscription = [];
+let monthlySubscription = [];
 let filtersForFinance = {
   startDate: null,
   endDate: null,
@@ -16,6 +16,14 @@ let filtersForFinance = {
   amount2: null,
   status: null,
 };
+
+/**
+ * Clears the monthlySubscription array to prevent data duplication on refetch.
+ * This must be called at the start of data processing to ensure fresh data.
+ */
+export function clearMonthlySubscription() {
+  monthlySubscription = [];
+}
 
 export function groupByVendorName(data) {
   if (!Array.isArray(data)) return [];

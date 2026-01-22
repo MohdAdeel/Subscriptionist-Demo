@@ -9,7 +9,7 @@ import App from "./App.jsx";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // Data stays fresh for 5 minutes
+      staleTime: 1 * 60 * 1000, // Data stays fresh for 5 minutes
       gcTime: 10 * 60 * 1000, // Cache persists for 10 minutes (formerly cacheTime)
       retry: 2, // Retry failed requests twice
       refetchOnWindowFocus: false, // Don't refetch when window regains focus
