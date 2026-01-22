@@ -3,10 +3,15 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { useReportsPageStore } from "../../../stores";
 import { FiInfo, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
-const RenewalAndExpiration = ({ formatCurrency, formatDate }) => {
+const RenewalAndExpiration = ({
+  formatCurrency,
+  formatDate,
+  renewalCostsChartRef: externalRenewalCostsChartRef,
+}) => {
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 0, 1));
   const [showMore, setShowMore] = useState(false);
-  const renewalCostsChartRef = useRef(null);
+  const internalRenewalCostsChartRef = useRef(null);
+  const renewalCostsChartRef = externalRenewalCostsChartRef ?? internalRenewalCostsChartRef;
   const renewalCostsChartInstanceRef = useRef(null);
 
   const renewalData = [

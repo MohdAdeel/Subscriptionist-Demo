@@ -3,7 +3,7 @@ import { FiRefreshCw, FiInfo } from "react-icons/fi";
 import { useReportsPageStore } from "../../../stores";
 import { useEffect, useRef, useCallback, useMemo, useState } from "react";
 
-const StandardReports = ({ formatCurrency, formatDate }) => {
+const StandardReports = ({ formatCurrency, formatDate, chartRef: externalChartRef }) => {
   const formatTopCardValue = (value) => {
     const numericValue = value === null || value === undefined ? 0 : Number(value);
     if (Number.isNaN(numericValue)) return "0";
@@ -28,7 +28,8 @@ const StandardReports = ({ formatCurrency, formatDate }) => {
   const subscriptionTableData = useReportsPageStore((state) => state.subscriptionTableData);
   const activeSubscriptionTab = useReportsPageStore((state) => state.activeSubscriptionTab);
   const setActiveSubscriptionTab = useReportsPageStore((state) => state.setActiveSubscriptionTab);
-  const chartRef = useRef(null);
+  const internalChartRef = useRef(null);
+  const chartRef = externalChartRef ?? internalChartRef;
   const chartInstanceRef = useRef(null);
   const tabButtonsRef = useRef({});
   const tabsContainerRef = useRef(null);

@@ -10,6 +10,7 @@ import {
 } from "react-icons/fi";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import ExcelJS from "exceljs";
 import Financial from "./components/Financial";
 import { useActivityLines } from "../../hooks";
 import { useReportsPageStore } from "../../stores";
@@ -30,6 +31,7 @@ const Report = () => {
   );
   const vendorCountData = useReportsPageStore((state) => state.vendorCountData);
   const categorySummary = useReportsPageStore((state) => state.categorySummary);
+  const mostExpensiveAggregations = useReportsPageStore((state) => state.mostExpensiveAggregations);
   const nearingRenewalData = useReportsPageStore((state) => state.nearingRenewalData);
   const expiredSubscriptionsData = useReportsPageStore((state) => state.expiredSubscriptionsData);
   const categorizedSubscriptions = useReportsPageStore((state) => state.categorizedSubscriptions);
@@ -53,6 +55,11 @@ const Report = () => {
   const financialRef = useRef(null);
   const renewalRef = useRef(null);
   const standardChartRef = useRef(null);
+  const financialDepartmentChartRef = useRef(null);
+  const financialVendorChartRef = useRef(null);
+  const financialMostExpensiveChartRef = useRef(null);
+  const financialUsageAnalysisChartRef = useRef(null);
+  const renewalCostsChartRef = useRef(null);
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat("en-US", {
@@ -70,6 +77,389 @@ const Report = () => {
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
+  };
+
+  const formatExcelDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleDateString("en-US");
+  };
+
+  const formatExcelAmount = (value) => {
+    const numericValue = value === null || value === undefined ? 0 : Number(value);
+    if (Number.isNaN(numericValue)) return "0.00";
+    return numericValue.toFixed(2);
+  };
+
+  const formatDateKey = (value) => {
+    if (!value) return null;
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const normalizeStandardRows = (subscriptions) => {
+    const today = new Date();
+    const rows = (subscriptions || []).map((subscription) => {
+      const endDate = subscription.endDate ?? subscription.SubscriptionEndDate;
+      const isActive =
+        endDate instanceof Date
+          ? endDate > today
+          : endDate
+            ? new Date(endDate) > today
+            : subscription.activityStatus === "Active" || subscription.status === 0;
+
+      return {
+        ActivityId:
+          subscription.activityGuid ?? subscription.ActivityGuid ?? subscription.ActivityId ?? "",
+        SubscriptionName: subscription.subscriptionName ?? subscription.SubscriptionName ?? "",
+        VendorName: subscription.vendorName ?? subscription.VendorName ?? "",
+        Amount: formatExcelAmount(
+          subscription.subscriptionAmount ?? subscription.SubscriptionContractAmount?.Value ?? 0
+        ),
+        StartDate: formatExcelDate(subscription.startDate ?? subscription.SubscriptionStartDate),
+        EndDate: formatExcelDate(endDate),
+        Frequency: subscription.paymentFrequency ?? subscription.SubscriptionFrequency ?? "",
+        Status: isActive ? "Active" : "Inactive",
+      };
+    });
+
+    const seen = new Set();
+    const deduped = rows.filter((row) => {
+      const key = `${row.SubscriptionName}-${row.Amount}-${row.EndDate}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    const active = deduped.filter((row) => row.Status === "Active");
+    const expired = deduped.filter((row) => row.Status !== "Active");
+    return { all: deduped, active, expired };
+  };
+
+  const addTableSheet = (workbook, title, rows, tableName) => {
+    const sheet = workbook.addWorksheet(title);
+    if (!rows.length) {
+      sheet.addRow(["No data available"]);
+      return;
+    }
+
+    const headers = Object.keys(rows[0]);
+    const dataRows = rows.map((row) => headers.map((header) => row[header] ?? ""));
+
+    sheet.addTable({
+      name: tableName,
+      ref: "A1",
+      headerRow: true,
+      style: {
+        theme: "TableStyleMedium2",
+        showRowStripes: true,
+      },
+      columns: headers.map((header) => ({ name: header })),
+      rows: dataRows,
+    });
+
+    sheet.columns = headers.map((header, columnIndex) => {
+      const maxLength = Math.max(
+        header.length,
+        ...dataRows.map((row) => String(row[columnIndex] ?? "").length)
+      );
+      return { width: Math.min(45, maxLength + 5) };
+    });
+  };
+
+  const addOverviewSheet = (workbook, chartCanvas) => {
+    const summarySheet = workbook.addWorksheet("Overview");
+    summarySheet.properties.defaultGridLines = false;
+
+    const totalColumns = 16;
+    for (let col = 1; col <= totalColumns; col += 1) {
+      summarySheet.getColumn(col).width = 18;
+    }
+
+    const fillBackground = (rowStart, rowEnd, colStart, colEnd, color) => {
+      summarySheet.mergeCells(rowStart, colStart, rowEnd, colEnd);
+      for (let row = rowStart; row <= rowEnd; row += 1) {
+        for (let col = colStart; col <= colEnd; col += 1) {
+          summarySheet.getCell(row, col).fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: color },
+          };
+        }
+      }
+    };
+
+    const setCardText = (row, col, text, fontSize, bold = false) => {
+      const cell = summarySheet.getCell(row, col);
+      cell.value = text;
+      cell.font = { bold, size: fontSize, color: { argb: "FF1F2937" } };
+      cell.alignment = { vertical: "middle", horizontal: "left" };
+    };
+
+    const cards = [
+      {
+        title: "Total Active Cost",
+        value: `$${formatExcelAmount(TopCards.totalContractAmount)}`,
+        color: "FFD4F1F4",
+        startCol: 1,
+        endCol: 4,
+      },
+      {
+        title: "Active Subscriptions",
+        value: String(TopCards.ActiveCount ?? 0),
+        color: "FFBFF1FF",
+        startCol: 5,
+        endCol: 8,
+      },
+      {
+        title: "Upcoming Renewal",
+        value: `$${formatExcelAmount(TopCards.totalContractAmountFuture)}`,
+        color: "FFE1FFBB",
+        startCol: 9,
+        endCol: 12,
+      },
+      {
+        title: "Cost Savings Identified",
+        value: "0",
+        color: "FFCFE1FF",
+        startCol: 13,
+        endCol: 16,
+      },
+    ];
+
+    cards.forEach((card) => {
+      fillBackground(2, 6, card.startCol, card.endCol, card.color);
+      setCardText(3, card.startCol, card.title, 10, false);
+      setCardText(5, card.startCol, card.value, 16, true);
+    });
+
+    summarySheet.mergeCells(8, 1, 8, 7);
+    const chartTitleCell = summarySheet.getCell(8, 1);
+    chartTitleCell.value = "Monthly Spend";
+    chartTitleCell.font = { bold: true, size: 14, color: { argb: "FF111827" } };
+    chartTitleCell.alignment = { vertical: "middle", horizontal: "left" };
+
+    if (chartCanvas) {
+      const chartImageBase64 = chartCanvas.toDataURL("image/png").split(",")[1];
+      const chartImageId = workbook.addImage({
+        base64: chartImageBase64,
+        extension: "png",
+      });
+
+      summarySheet.addImage(chartImageId, {
+        tl: { col: 0, row: 9 },
+        ext: { width: 950, height: 360 },
+      });
+    }
+  };
+
+  const addFinancialOverviewSheet = (workbook) => {
+    const overviewSheet = workbook.addWorksheet("Overview");
+    overviewSheet.properties.defaultGridLines = false;
+
+    const totalColumns = 16;
+    for (let col = 1; col <= totalColumns; col += 1) {
+      overviewSheet.getColumn(col).width = 18;
+    }
+
+    const placeTitle = (row, col, title) => {
+      const cell = overviewSheet.getCell(row, col);
+      cell.value = title;
+      cell.font = { bold: true, size: 12, color: { argb: "FF111827" } };
+      cell.alignment = { vertical: "middle", horizontal: "left" };
+    };
+
+    const addChartImage = (canvas, row, col, width, height, fallbackText) => {
+      if (!canvas) {
+        const cell = overviewSheet.getCell(row + 6, col);
+        cell.value = fallbackText;
+        cell.font = { size: 10, color: { argb: "FF6B7280" } };
+        return;
+      }
+      const imageBase64 = canvas.toDataURL("image/png").split(",")[1];
+      const imageId = workbook.addImage({ base64: imageBase64, extension: "png" });
+      overviewSheet.addImage(imageId, {
+        tl: { col: col - 1, row: row - 1 },
+        ext: { width, height },
+      });
+    };
+
+    placeTitle(2, 1, "Spend by Department");
+    addChartImage(
+      financialDepartmentChartRef.current,
+      3,
+      1,
+      520,
+      260,
+      "Spend by Department chart not available"
+    );
+
+    placeTitle(2, 9, "Spend by Vendor");
+    addChartImage(
+      financialVendorChartRef.current,
+      3,
+      9,
+      280,
+      220,
+      "Spend by Vendor chart not available"
+    );
+
+    placeTitle(18, 1, "Most Expensive Subscriptions");
+    addChartImage(
+      financialMostExpensiveChartRef.current,
+      19,
+      1,
+      520,
+      260,
+      "Most Expensive Subscriptions chart not available"
+    );
+
+    placeTitle(18, 9, "Usage Analysis");
+    addChartImage(
+      financialUsageAnalysisChartRef.current,
+      19,
+      9,
+      280,
+      220,
+      "Usage Analysis chart not available"
+    );
+  };
+
+  const addRenewalOverviewSheet = (workbook) => {
+    const overviewSheet = workbook.addWorksheet("Overview");
+    overviewSheet.properties.defaultGridLines = false;
+
+    const totalColumns = 16;
+    for (let col = 1; col <= totalColumns; col += 1) {
+      overviewSheet.getColumn(col).width = 16;
+    }
+
+    const setTitle = (row, col, title) => {
+      const cell = overviewSheet.getCell(row, col);
+      cell.value = title;
+      cell.font = { bold: true, size: 12, color: { argb: "FF111827" } };
+      cell.alignment = { vertical: "middle", horizontal: "left" };
+    };
+
+    const addImage = (canvas, row, col, width, height, fallbackText) => {
+      if (!canvas) {
+        const cell = overviewSheet.getCell(row + 4, col);
+        cell.value = fallbackText;
+        cell.font = { size: 10, color: { argb: "FF6B7280" } };
+        return;
+      }
+      const imageBase64 = canvas.toDataURL("image/png").split(",")[1];
+      const imageId = workbook.addImage({ base64: imageBase64, extension: "png" });
+      overviewSheet.addImage(imageId, {
+        tl: { col: col - 1, row: row - 1 },
+        ext: { width, height },
+      });
+    };
+
+    const highlightedDatesMap = new Map();
+    Object.entries(categorizedSubscriptions || {}).forEach(([category, subscriptions]) => {
+      (subscriptions || []).forEach((subscription) => {
+        const dateKey = formatDateKey(subscription.SubscriptionEndDate);
+        if (!dateKey) return;
+        const existing = highlightedDatesMap.get(dateKey) ?? [];
+        existing.push({ subscription, category });
+        highlightedDatesMap.set(dateKey, existing);
+      });
+    });
+
+    const getCalendarStartMonth = () => {
+      const dates = Array.from(highlightedDatesMap.keys())
+        .map((dateKey) => new Date(dateKey))
+        .filter((date) => !Number.isNaN(date.getTime()))
+        .sort((a, b) => a - b);
+      if (dates.length > 0) {
+        const first = dates[0];
+        return new Date(first.getFullYear(), first.getMonth(), 1);
+      }
+      return new Date();
+    };
+
+    const urgencyColors = {
+      notUrgent: "FFE1DBFE",
+      urgent: "FF9333EA",
+      veryUrgent: "FF6B21A8",
+    };
+
+    const weekdayNames = ["S", "M", "T", "W", "T", "F", "S"];
+    const monthNames = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+
+    const drawCalendar = (monthDate, startRow, startCol) => {
+      const firstDay = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1).getDay();
+      const totalDays = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
+      const titleCell = overviewSheet.getCell(startRow, startCol);
+      overviewSheet.mergeCells(startRow, startCol, startRow, startCol + 6);
+      titleCell.value = `${monthNames[monthDate.getMonth()]} ${monthDate.getFullYear()}`;
+      titleCell.font = { bold: true, size: 11, color: { argb: "FF1F2937" } };
+
+      weekdayNames.forEach((day, index) => {
+        const cell = overviewSheet.getCell(startRow + 1, startCol + index);
+        cell.value = day;
+        cell.font = { size: 9, color: { argb: "FF6B7280" } };
+        cell.alignment = { horizontal: "center", vertical: "middle" };
+      });
+
+      let dayNumber = 1;
+      for (let row = 0; row < 6; row += 1) {
+        for (let col = 0; col < 7; col += 1) {
+          const cell = overviewSheet.getCell(startRow + 2 + row, startCol + col);
+          const cellIndex = row * 7 + col;
+          if (cellIndex < firstDay || dayNumber > totalDays) {
+            cell.value = "";
+            continue;
+          }
+          const dateKey = formatDateKey(
+            new Date(Date.UTC(monthDate.getFullYear(), monthDate.getMonth(), dayNumber))
+          );
+          const highlights = highlightedDatesMap.get(dateKey);
+          const category = highlights ? highlights[0]?.category : null;
+          if (category && urgencyColors[category]) {
+            cell.fill = {
+              type: "pattern",
+              pattern: "solid",
+              fgColor: { argb: urgencyColors[category] },
+            };
+            cell.font = { size: 9, color: { argb: "FFFFFFFF" } };
+          } else {
+            cell.font = { size: 9, color: { argb: "FF374151" } };
+          }
+          cell.value = dayNumber;
+          cell.alignment = { horizontal: "center", vertical: "middle" };
+          dayNumber += 1;
+        }
+      }
+    };
+
+    setTitle(2, 1, "Renewal Calendar Report");
+    drawCalendar(getCalendarStartMonth(), 3, 1);
+    const nextMonth = getCalendarStartMonth();
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    drawCalendar(nextMonth, 3, 9);
+
+    setTitle(12, 1, "Renewal Costs and Usage Evaluation");
+    addImage(renewalCostsChartRef.current, 13, 1, 620, 260, "Renewal costs chart not available");
   };
 
   useEffect(() => {
@@ -938,9 +1328,138 @@ const Report = () => {
     }
   };
 
-  const handleExportToExcel = () => {
-    console.log("here is activeTab", activeTab);
-    console.log("Export to Excel");
+  const handleExportToExcel = async () => {
+    setIsExporting(true);
+
+    try {
+      const workbook = new ExcelJS.Workbook();
+      let fileName = "Report";
+
+      if (activeTab === "standard") {
+        fileName = "Standard_Reports";
+        const { all, active, expired } = normalizeStandardRows(subscriptionTableData || []);
+        addOverviewSheet(workbook, standardChartRef.current);
+
+        addTableSheet(
+          workbook,
+          "All Subscriptions",
+          all.map((row) => ({
+            "Activity ID": row.ActivityId,
+            "Subscription Name": row.SubscriptionName,
+            "Vendor Name": row.VendorName,
+            "Amount ($)": row.Amount,
+            "Start Date": row.StartDate,
+            "End Date": row.EndDate,
+            Frequency: row.Frequency,
+            Status: row.Status,
+          })),
+          "AllSubscriptionsTable"
+        );
+
+        addTableSheet(
+          workbook,
+          "Active Subscriptions",
+          active.map((row) => ({
+            "Activity ID": row.ActivityId,
+            "Subscription Name": row.SubscriptionName,
+            "Vendor Name": row.VendorName,
+            "Amount ($)": row.Amount,
+            "Start Date": row.StartDate,
+            "End Date": row.EndDate,
+            Frequency: row.Frequency,
+            Status: row.Status,
+          })),
+          "ActiveSubscriptionsTable"
+        );
+
+        addTableSheet(
+          workbook,
+          "Expired Subscriptions",
+          expired.map((row) => ({
+            "Activity ID": row.ActivityId,
+            "Subscription Name": row.SubscriptionName,
+            "Vendor Name": row.VendorName,
+            "Amount ($)": row.Amount,
+            "Start Date": row.StartDate,
+            "End Date": row.EndDate,
+            Frequency: row.Frequency,
+            Status: row.Status,
+          })),
+          "ExpiredSubscriptionsTable"
+        );
+      } else if (activeTab === "financial") {
+        fileName = "Financial_Reports";
+
+        const categoryRows = (categorySummary || []).map((row) => ({
+          Category: row.category || "Unknown",
+          "Actual Spend": formatExcelAmount(row.accumulatedAmount ?? 0),
+          "Number of Subscriptions": row.count ?? 0,
+        }));
+
+        const departmentRows = (spendByDepartmentChartData || [])
+          .flat()
+          .filter(Boolean)
+          .map((record) => ({
+            Team: record?.department ?? record?.name ?? record?.DepartmentNames?.Name ?? "Unknown",
+            "Actual Spend": formatExcelAmount(
+              record?.value ?? record?.amount ?? record?.SubscriptionContractAmount?.Value ?? 0
+            ),
+            Budget: formatExcelAmount(
+              Number(
+                record?.DepartmentNames?.Budget?.Value ??
+                  record?.DepartmentNames?.Budget ??
+                  record?.budget ??
+                  0
+              ) || 0
+            ),
+          }));
+
+        addFinancialOverviewSheet(workbook);
+        addTableSheet(workbook, "Spend by Category", categoryRows, "SpendByCategoryTable");
+        addTableSheet(workbook, "Spend by Department", departmentRows, "SpendByDepartmentTable");
+      } else if (activeTab === "renewal") {
+        fileName = "Renewal_Expiration_Reports";
+
+        const nearingRows = (nearingRenewalData || []).map((row) => ({
+          Name: row.SubscriptionName ?? row.name ?? "Unknown",
+          Amount: formatExcelAmount(
+            row.SubscriptionContractAmount?.Value ?? row.subscriptionAmount ?? 0
+          ),
+          "Start Date": formatExcelDate(row.SubscriptionStartDate ?? row.startDate),
+          "End Date": formatExcelDate(row.SubscriptionEndDate ?? row.endDate),
+          Frequency: row.SubscriptionFrequency ?? row.paymentFrequency ?? "N/A",
+          Status: row.status === 0 ? "Active" : row.activityStatus || "Inactive",
+        }));
+
+        const expiredRows = (expiredSubscriptionsData || []).map((row) => ({
+          Name: row.SubscriptionName ?? "Unknown",
+          Amount: formatExcelAmount(row.SubscriptionContractAmount?.Value ?? 0),
+          "Start Date": formatExcelDate(row.SubscriptionStartDate),
+          "End Date": formatExcelDate(row.SubscriptionEndDate),
+          Frequency: row.SubscriptionFrequency ?? "N/A",
+          Status: "Expired",
+        }));
+
+        addRenewalOverviewSheet(workbook);
+        addTableSheet(workbook, "Nearing Renewal", nearingRows, "NearingRenewalTable");
+        addTableSheet(workbook, "Expired Subscriptions", expiredRows, "ExpiredRenewalsTable");
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${fileName}_${new Date().toISOString().split("T")[0]}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -1113,7 +1632,11 @@ const Report = () => {
           </div>
         ) : (
           <div ref={standardReportsRef}>
-            <StandardReports formatCurrency={formatCurrency} formatDate={formatDate} />
+            <StandardReports
+              formatCurrency={formatCurrency}
+              formatDate={formatDate}
+              chartRef={standardChartRef}
+            />
           </div>
         ))}
 
@@ -1147,7 +1670,12 @@ const Report = () => {
           </div>
         ) : (
           <div ref={financialRef}>
-            <Financial />
+            <Financial
+              departmentChartRef={financialDepartmentChartRef}
+              vendorChartRef={financialVendorChartRef}
+              mostExpensiveChartRef={financialMostExpensiveChartRef}
+              usageAnalysisChartRef={financialUsageAnalysisChartRef}
+            />
           </div>
         ))}
 
@@ -1169,7 +1697,11 @@ const Report = () => {
           </div>
         ) : (
           <div ref={renewalRef}>
-            <RenewalAndExpiration formatCurrency={formatCurrency} formatDate={formatDate} />
+            <RenewalAndExpiration
+              formatCurrency={formatCurrency}
+              formatDate={formatDate}
+              renewalCostsChartRef={renewalCostsChartRef}
+            />
           </div>
         ))}
 

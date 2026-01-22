@@ -66,7 +66,12 @@ const createMonthlyDatasetTemplate = () =>
     borderWidth: 2,
   }));
 
-const Financial = () => {
+const Financial = ({
+  departmentChartRef: externalDepartmentChartRef,
+  vendorChartRef: externalVendorChartRef,
+  mostExpensiveChartRef: externalMostExpensiveChartRef,
+  usageAnalysisChartRef: externalUsageAnalysisChartRef,
+}) => {
   const vendorCountData = useReportsPageStore((state) => state.vendorCountData);
   const spendByDepartmentChartData = useReportsPageStore(
     (state) => state.spendByDepartmentChartData
@@ -195,18 +200,23 @@ const Financial = () => {
     console.log("stored category summary", categorySummary);
   }, [categorySummary]);
 
-  const departmentChartRef = useRef(null);
+  const internalDepartmentChartRef = useRef(null);
   const departmentChartInstanceRef = useRef(null);
-  const vendorChartRef = useRef(null);
+  const internalVendorChartRef = useRef(null);
   const vendorChartInstanceRef = useRef(null);
   const subscriptionTypeChartRef = useRef(null);
   const subscriptionTypeChartInstanceRef = useRef(null);
   const budgetVsActualChartRef = useRef(null);
   const budgetVsActualChartInstanceRef = useRef(null);
-  const mostExpensiveChartRef = useRef(null);
+  const internalMostExpensiveChartRef = useRef(null);
   const mostExpensiveChartInstanceRef = useRef(null);
-  const usageAnalysisChartRef = useRef(null);
+  const internalUsageAnalysisChartRef = useRef(null);
   const usageAnalysisChartInstanceRef = useRef(null);
+
+  const departmentChartRef = externalDepartmentChartRef ?? internalDepartmentChartRef;
+  const vendorChartRef = externalVendorChartRef ?? internalVendorChartRef;
+  const mostExpensiveChartRef = externalMostExpensiveChartRef ?? internalMostExpensiveChartRef;
+  const usageAnalysisChartRef = externalUsageAnalysisChartRef ?? internalUsageAnalysisChartRef;
 
   // Spent By Department Chart
   useEffect(() => {
