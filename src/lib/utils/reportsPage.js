@@ -18,6 +18,20 @@ let filtersForFinance = {
   amount2: null,
   status: null,
 };
+let filtersforRenewal = {
+  startDate: null,
+  endDate: null,
+  amount1: null,
+  amount2: null,
+  status: null,
+};
+let monthlyRenewal = [];
+var startDateForRen = new Date();
+var endDateForRen = new Date(startDateForRen.getFullYear(), 11, 31);
+let startDateforRenwal = 0;
+let endDateforRenewal = 11;
+let currentDate = new Date();
+var nearingRenewal = [];
 
 export const handleActivityLinesSuccess = (originalData) => {
   // IMPORTANT: Clear all module-level arrays to prevent data duplication on refetch
@@ -64,6 +78,13 @@ export const handleActivityLinesSuccess = (originalData) => {
   countByVendorName(SubscriptionJSonBackup);
   const SubscriptionJSon = JSON.parse(JSON.stringify(SubscriptionJSonBackup));
   modifySubscriptionsWithChartLimit(SubscriptionJSon);
+
+  var sortedSubscriptions = modifyRenewalCalendarReport(SubscriptionJSon);
+  var categorizedSubscriptions = categorizeSubscriptionsByUrgency(sortedSubscriptions);
+  const { setCategorizedSubscriptions } = useReportsPageStore.getState();
+  setCategorizedSubscriptions(categorizedSubscriptions);
+  modifyRenewalSubscriptionsWithChartLimit(SubscriptionJSon);
+  // initializeCalendar(categorizedSubscriptions);
 };
 
 function modifySubscriptionsWithChartLimit(SubscriptionJSon) {
@@ -540,7 +561,6 @@ function mergeRecordsBymonthForDepartment() {
     }
   });
   var mergedArray = Object.values(mergedRecords).map((record) => [record]);
-  console.log("here is mergedArray", mergedArray);
   const { setSpendByDepartmentChartData } = useReportsPageStore.getState();
   setSpendByDepartmentChartData(mergedArray);
 }
@@ -700,4 +720,372 @@ function aggregateSubscriptionsByCategory(subscriptions) {
     return isWithinRange;
   });
   return filteredSubscriptions;
+}
+
+function modifyRenewalCalendarReport(subscriptions) {
+  // Flatten the array of subscriptions if it's nested
+  const flattened = subscriptions.flat();
+
+  // Sort the flattened array by SubscriptionEndDate in ascending order
+  const sorted = flattened.sort((a, b) => {
+    const dateA = new Date(a.SubscriptionEndDate);
+    const dateB = new Date(b.SubscriptionEndDate);
+    return dateA - dateB; // Sort in ascending order
+  });
+
+  const today = new Date(); // Get the current date
+
+  // Filter the subscriptions to return only those with an end date within the specified range
+  const filtered = sorted.filter((subscription) => {
+    const endDate = new Date(subscription.SubscriptionEndDate);
+    return endDate >= startDateForRen && endDate <= endDateForRen; // Keep subscriptions in the specified date range
+  });
+
+  const filteredSubscriptions = filtered.filter((subscription) => {
+    if (
+      !subscription.SubscriptionContractAmount ||
+      subscription.SubscriptionContractAmount.Value == null
+    ) {
+      return false; // Exclude subscriptions with null or missing SubscriptionContractAmount
+    }
+
+    const amountValue = subscription.SubscriptionContractAmount.Value;
+    const isWithinRange =
+      (filtersforRenewal.amount1 === null || amountValue >= filtersforRenewal.amount1) &&
+      (filtersforRenewal.amount2 === null || amountValue <= filtersforRenewal.amount2);
+
+    return isWithinRange;
+  });
+
+  return filteredSubscriptions; // Return the filtered subscriptions
+}
+
+function categorizeSubscriptionsByUrgency(subscriptions) {
+  const today = new Date(startDateForRen); // Get the current date based on the provided start date
+
+  // Create variables for date thresholds: 1 month, 3 months, and 6 months from today
+  const oneMonthLater = new Date(today.getFullYear(), today.getMonth() + 1, today.getDate());
+  const threeMonthsLater = new Date(today.getFullYear(), today.getMonth() + 3, today.getDate());
+  const sixMonthsLater = new Date(today.getFullYear(), today.getMonth() + 6, today.getDate());
+
+  // Initialize an object to categorize subscriptions by urgency
+  const urgencyCategories = {
+    veryUrgent: [], // For subscriptions ending within 1 month
+    urgent: [], // For subscriptions ending within 1 to 3 months
+    notUrgent: [], // For subscriptions ending within 3 to 6 months
+  };
+
+  // Iterate through each subscription and categorize them based on their end date
+  subscriptions.forEach((subscription) => {
+    const endDate = new Date(subscription.SubscriptionEndDate); // Get the end date of the subscription
+
+    // Categorize based on the defined urgency thresholds
+    if (endDate <= oneMonthLater) {
+      urgencyCategories.veryUrgent.push(subscription); // Very urgent subscriptions
+    } else if (endDate <= threeMonthsLater) {
+      urgencyCategories.urgent.push(subscription); // Urgent subscriptions
+    } else if (endDate <= sixMonthsLater) {
+      urgencyCategories.notUrgent.push(subscription); // Not urgent subscriptions
+    }
+  });
+
+  return urgencyCategories; // Return the categorized subscriptions
+}
+
+function modifyRenewalSubscriptionsWithChartLimit(SubscriptionJSon) {
+  // Remove duplicate objects based on their time properties
+  removeObjectsWithSameTime(SubscriptionJSon);
+
+  // Iterate through each subscription array in SubscriptionJSon
+  SubscriptionJSon.forEach(function (subArray) {
+    // Loop through each record in the subArray
+    subArray.forEach(function (record) {
+      // Process only if SubscriptionFrequency is valid and not empty
+      if (record.SubscriptionFrequency && record.SubscriptionFrequency.trim() !== "") {
+        // Check if the subscription frequency is monthly or contains 'Months'
+        if (
+          record.SubscriptionFrequency.includes("Monthly") ||
+          record.SubscriptionFrequency.includes("Months")
+        ) {
+          // Generate similar records for monthly renewals
+          generateSimilarRecordsbyMonthforRenewal(record);
+        }
+        // Check if the subscription frequency is yearly or contains 'Years'
+        else if (
+          record.SubscriptionFrequency.includes("Yearly") ||
+          record.SubscriptionFrequency.includes("Years")
+        ) {
+          // Generate similar records for yearly renewals
+          generateSimilarRecordsbyYearforRenewal(record);
+        }
+      }
+    });
+  });
+
+  // Merge all records by month for renewal processing
+  mergeRecordsByMonthforRenewal();
+  // Close the loading popup after processing is complete
+  // closePopup("popup_loading");
+}
+
+function generateSimilarRecordsbyMonthforRenewal(record) {
+  // Parse the subscription end and start dates
+  var endDate = new Date(record.SubscriptionEndDate);
+  var startDate = new Date(record.SubscriptionStartDate);
+
+  // Parse the subscription frequency to get the number of months
+  var frequency = parseFrequency(record.SubscriptionFrequency);
+
+  // Check if the frequency is a valid number
+  if (isNaN(frequency) || frequency == 0) {
+    return []; // Return an empty array if frequency is invalid
+  }
+
+  // Check for an unrealistic year value (e.g., year 1)
+  if (startDate.getFullYear() === 1) {
+    return []; // Return an empty array if the start year is not valid
+  }
+
+  // Initialize year and month variables for calculations
+  var startYear = startDate.getFullYear();
+  var startMonth = startDate.getMonth();
+  var endYear = endDate.getFullYear();
+  var endMonth = endDate.getMonth();
+
+  // Calculate the total month difference between start and end dates
+  var monthDifference = (endYear - startYear) * 12 + (endMonth - startMonth);
+
+  // Create temporary date objects for looping
+  var tempDate = new Date(startDate);
+  var endDateForComparison = new Date(startDate);
+  endDateForComparison.setMonth(endDateForComparison.getMonth() + monthDifference);
+  endDateForComparison.setDate(endDate.getDate());
+
+  // Loop from startDate to endDate with frequency as the increment
+  while (startDate <= endDateForComparison) {
+    // Exit loop if year and month match the end comparison date
+    if (
+      startDate.getFullYear() === endDateForComparison.getFullYear() &&
+      startDate.getMonth() === endDateForComparison.getMonth()
+    ) {
+      break; // Exit loop if year and month match
+    }
+
+    // Get the subscription amount, defaulting to 0 if null
+    var subscriptionAmount =
+      record.SubscriptionContractAmount !== null ? record.SubscriptionContractAmount.Value : 0;
+
+    // Create a new record for the monthly renewal
+    var newRecord = {
+      SubscriptionStartDate: tempDate,
+      status: record.status, // Retain the original status
+      VendorProfile: record.VendorProfile,
+      ActivityGuid: record.ActivityId,
+      // "ReminderInterval": record.reminderInterval,
+      VendorName: record.VendorName,
+      SubscriptionEndDate: record.SubscriptionEndDate,
+      SubscriptionFrequency: record.SubscriptionFrequency, // Retain the original frequency
+      SubscriptionContractAmount: {
+        Value: subscriptionAmount,
+      },
+      SubscriptionName: record.SubscriptionName,
+      DepartmentNames: {
+        Name: record.DepartmentNames.Name,
+      },
+    };
+
+    // Push the new record into the monthlyRenewal array
+    monthlyRenewal.push(newRecord);
+
+    // Increment the start date by the frequency
+    startDate.setMonth(startDate.getMonth() + frequency);
+    tempDate = new Date(startDate); // Update the temporary date
+  }
+}
+
+function generateSimilarRecordsbyYearforRenewal(record) {
+  // Parse the subscription end and start dates
+  var endDate = new Date(record.SubscriptionEndDate);
+  var startDate = new Date(record.SubscriptionStartDate);
+
+  // Parse the subscription frequency to determine the increment in years
+  var frequency = parseFrequency(record.SubscriptionFrequency);
+
+  // Check if the frequency is a valid number
+  if (isNaN(frequency) || frequency == 0) {
+    return []; // Return an empty array if frequency is invalid
+  }
+
+  // Check for an unrealistic year value (e.g., year 1)
+  if (startDate.getFullYear() === 1) {
+    return []; // Return an empty array if the start year is not valid
+  }
+
+  // Initialize year variables for calculations
+  var startYear = startDate.getFullYear();
+  var endYear = endDate.getFullYear();
+  var yearDifference = endYear - startYear;
+
+  // Create a comparison date by adding the year difference to the start date
+  var endDateForComparison = new Date(startDate);
+  endDateForComparison.setFullYear(endDateForComparison.getFullYear() + yearDifference);
+  endDateForComparison.setDate(endDate.getDate()); // Set to the same day of the month
+
+  // Initialize a temporary date for generating new records
+  var tempDate = new Date(startDate);
+
+  // Loop from startDate to endDate with frequency as the increment
+  while (startDate.getFullYear() < endDateForComparison.getFullYear()) {
+    // Get the subscription amount, defaulting to 0 if null
+    var subscriptionAmount =
+      record.SubscriptionContractAmount !== null ? record.SubscriptionContractAmount.Value : 0;
+
+    // Create a new record for the yearly renewal
+    var newRecord = {
+      SubscriptionStartDate: tempDate, // Keep the original start date
+      VendorName: record.VendorName,
+      status: record.status, // Retain the original status
+      VendorProfile: record.VendorProfile,
+      ActivityGuid: record.ActivityId,
+      // "ReminderInterval": record.reminderInterval,
+      SubscriptionEndDate: record.SubscriptionEndDate,
+      SubscriptionFrequency: record.SubscriptionFrequency, // Retain the original frequency
+      SubscriptionContractAmount: {
+        Value: subscriptionAmount,
+      },
+      SubscriptionName: record.SubscriptionName,
+      DepartmentNames: {
+        Name: record.DepartmentNames.Name,
+      },
+    };
+
+    // Push the new record into the monthlyRenewal array
+    monthlyRenewal.push(newRecord);
+
+    // Increment the start date by the frequency (in years)
+    startDate.setFullYear(startDate.getFullYear() + frequency);
+
+    // Update the temporary date to match the new start date
+    tempDate = new Date(startDate);
+  }
+}
+
+function mergeRecordsByMonthforRenewal() {
+  // Filter monthly subscriptions within a specific range for renewal
+  filterMonthlySubsinRangeForRenewal();
+
+  // Create a deep copy of the monthlyRenewal array for nearing renewal processing
+  nearingRenewal = JSON.parse(JSON.stringify(monthlyRenewal));
+
+  // Set the nearing renewal subscriptions in the corresponding table
+  setSubscriptionNearingRenTable(nearingRenewal);
+
+  fillExpiredSubscriptionsTable(nearingRenewal);
+}
+
+function filterMonthlySubsinRangeForRenewal() {
+  // Define the start and end dates for filtering monthly subscriptions
+  const startDate = new Date(currentDate.getFullYear(), startDateforRenwal, 1); // Start date: January 1st of the current year
+  const endDate = new Date(currentDate.getFullYear(), endDateforRenewal + 1, 0); // End date: December 31st of the current year
+
+  // Temporary array to hold filtered monthly subscriptions
+  var tempMonthly = [];
+
+  // Iterate through each record in the monthlyRenewal array
+  monthlyRenewal.forEach(function (record) {
+    var subscriptionStartDate = new Date(record.SubscriptionStartDate); // Convert subscription start date to Date object
+
+    // Check if the subscription start date is within the specified range
+    if (subscriptionStartDate >= startDate && subscriptionStartDate <= endDate) {
+      // Keep the record if the date is within the specified range
+      tempMonthly.push(record);
+    }
+  });
+
+  // Update the monthlyRenewal array to only include the filtered records
+  monthlyRenewal = tempMonthly;
+}
+
+function deepCopyArray(array) {
+  return JSON.parse(JSON.stringify(array));
+}
+
+function setSubscriptionNearingRenTable(subscriptions) {
+  // Create a deep copy of the subscriptions data to avoid mutating the original
+  let subscriptionData = deepCopyArray(subscriptions);
+
+  var today = new Date(); // Get the current date
+
+  // Filter out subscriptions that have already ended
+  subscriptionData = subscriptionData.filter((subscription) => {
+    const endDate = new Date(subscription.SubscriptionEndDate);
+    return endDate > today; // Keep only future subscriptions
+  });
+
+  var todayForRen = new Date();
+  var endOfYear = null;
+
+  // Determine the date range for filtering renewals
+  if (filtersforRenewal.startDate == null && filtersforRenewal.endDate == null) {
+    endOfYear = new Date(todayForRen.getFullYear(), 11, 31); // Default to December 31st of the current year
+  } else {
+    todayForRen = new Date(filtersforRenewal.startDate);
+    endOfYear = new Date(filtersforRenewal.endDate); // Set end of year based on filter
+  }
+
+  // Filter subscriptions to keep those starting within the specified range
+  subscriptionData = subscriptionData.filter((subscription) => {
+    const startdate = new Date(subscription.SubscriptionStartDate);
+    return startdate > todayForRen && startdate <= endOfYear; // Keep subscriptions starting after today and before the end date
+  });
+
+  // Remove duplicate subscriptions based on SubscriptionName and SubscriptionContractAmount
+  subscriptionData = subscriptionData.filter((subscription, index, self) => {
+    return (
+      index ===
+      self.findIndex(
+        (s) =>
+          s.SubscriptionName === subscription.SubscriptionName &&
+          s.SubscriptionContractAmount.Value === subscription.SubscriptionContractAmount.Value
+      )
+    );
+  });
+
+  const { setNearingRenewalData } = useReportsPageStore.getState();
+  setNearingRenewalData(subscriptionData);
+}
+
+function fillExpiredSubscriptionsTable(subscriptions) {
+  // Create a deep copy of the subscriptions array to avoid modifying the original data
+  let expiredSubscriptions = deepCopyArray(subscriptions);
+
+  // Remove duplicate subscriptions based on SubscriptionName and SubscriptionContractAmount
+  expiredSubscriptions = expiredSubscriptions.filter((subscription, index, self) => {
+    return (
+      index ===
+      self.findIndex(
+        (s) =>
+          s.SubscriptionName === subscription.SubscriptionName &&
+          s.SubscriptionContractAmount.Value === subscription.SubscriptionContractAmount.Value
+      )
+    );
+  });
+
+  const today = new Date(); // Get the current date
+
+  // Filter subscriptions to keep only those that are expired
+  expiredSubscriptions = expiredSubscriptions.filter((subscription) => {
+    return new Date(subscription.SubscriptionEndDate) <= today;
+  });
+
+  // Further filter subscriptions based on the specified amount range
+  const filteredSubscriptions = expiredSubscriptions.filter((subscription) => {
+    const amountValue = subscription.SubscriptionContractAmount.Value;
+    const isWithinRange =
+      (filtersforRenewal.amount1 === null || amountValue >= filtersforRenewal.amount1) &&
+      (filtersforRenewal.amount2 === null || amountValue <= filtersforRenewal.amount2);
+    return isWithinRange;
+  });
+  const { setExpiredSubscriptionsData } = useReportsPageStore.getState();
+  setExpiredSubscriptionsData(filteredSubscriptions);
 }

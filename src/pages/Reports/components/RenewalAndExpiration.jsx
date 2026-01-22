@@ -1,5 +1,6 @@
 import Chart from "chart.js/auto";
-import { useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { useReportsPageStore } from "../../../stores";
 import { FiInfo, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
 const RenewalAndExpiration = ({ formatCurrency, formatDate }) => {
@@ -47,42 +48,129 @@ const RenewalAndExpiration = ({ formatCurrency, formatDate }) => {
     },
   ];
 
-  const displayedData = showMore ? renewalData : renewalData.slice(0, 3);
+  const categorizedSubscriptions = useReportsPageStore((state) => state.categorizedSubscriptions);
+  const nearingRenewalData = useReportsPageStore((state) => state.nearingRenewalData);
+  const expiredSubscriptionsData = useReportsPageStore((state) => state.expiredSubscriptionsData);
+  const [hoveredDateDetails, setHoveredDateDetails] = useState(null);
 
-  const getDaysInMonth = (date) => {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const getStatusLabel = (status) => {
+    if (status === 0) return "Active";
+    if (status === 1) return "Expired";
+    return "Inactive";
   };
 
-  const getFirstDayOfMonth = (date) => {
-    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  const expirationRows = useMemo(() => {
+    return (expiredSubscriptionsData ?? []).map((subscription) => ({
+      id: subscription.ActivityGuid ?? subscription.SubscriptionName,
+      name: subscription.SubscriptionName ?? "Unknown",
+      amount: subscription.SubscriptionContractAmount?.Value ?? 0,
+      startDate: subscription.SubscriptionStartDate,
+      endDate: subscription.SubscriptionEndDate,
+      paymentFrequency: subscription.SubscriptionFrequency ?? "N/A",
+      status: subscription.status === 0 ? "Active" : "Inactive",
+    }));
+  }, [expiredSubscriptionsData]);
+
+  const renewalRows = useMemo(() => {
+    const source = nearingRenewalData?.length ? nearingRenewalData : renewalData;
+    return source.map((item, index) => {
+      const name = item.SubscriptionName ?? item.name ?? "Unknown";
+      const amount =
+        item.SubscriptionContractAmount?.Value !== undefined
+          ? item.SubscriptionContractAmount.Value
+          : (item.subscriptionAmount ?? 0);
+      const startDate = item.SubscriptionStartDate ?? item.startDate;
+      const endDate = item.SubscriptionEndDate ?? item.endDate;
+      const paymentFrequency = item.SubscriptionFrequency ?? item.paymentFrequency ?? "N/A";
+      const activityStatus =
+        typeof item.status === "number"
+          ? getStatusLabel(item.status)
+          : (item.activityStatus ?? "Inactive");
+
+      return {
+        id: item.ActivityGuid ?? item.id ?? `${name}-${index}`,
+        name,
+        subscriptionAmount: amount,
+        startDate,
+        endDate,
+        paymentFrequency,
+        activityStatus,
+      };
+    });
+  }, [nearingRenewalData, renewalData]);
+
+  const displayedData = showMore ? renewalRows : renewalRows.slice(0, 3);
+
+  const formatDateKey = (value) => {
+    if (!value) return null;
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
   };
+
+  const urgencyStyles = {
+    veryUrgent: "bg-purple-100 text-purple-800 border border-purple-300",
+    urgent: "bg-orange-100 text-orange-800 border border-orange-300",
+    notUrgent: "bg-slate-100 text-slate-800 border border-slate-300",
+  };
+
+  const weekdayNames = ["S", "M", "T", "W", "T", "F", "S"];
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
+  const highlightedDates = useMemo(() => {
+    const map = new Map();
+    Object.entries(categorizedSubscriptions || {}).forEach(([category, subscriptions]) => {
+      subscriptions.forEach((subscription) => {
+        const dateKey = formatDateKey(subscription.SubscriptionEndDate);
+        if (!dateKey) return;
+        const existing = map.get(dateKey) ?? [];
+        existing.push({ subscription, category });
+        map.set(dateKey, existing);
+      });
+    });
+    return map;
+  }, [categorizedSubscriptions]);
 
   const renderCalendar = (date) => {
-    const daysInMonth = getDaysInMonth(date);
-    const firstDay = getFirstDayOfMonth(date);
-    const days = [];
-    const monthNames = [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
-    ];
+    const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+    const totalDays = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    const cells = [];
 
     for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="h-8"></div>);
+      cells.push(<div key={`empty-${i}`} className="h-8" />);
     }
 
-    for (let day = 1; day <= daysInMonth; day++) {
-      days.push(
-        <div key={day} className="h-8 flex items-center justify-center text-sm text-gray-700">
+    for (let day = 1; day <= totalDays; day++) {
+      const currentDay = new Date(Date.UTC(date.getFullYear(), date.getMonth(), day));
+      const dateKey = formatDateKey(currentDay);
+      const highlights = highlightedDates.get(dateKey);
+      const urgencyClass = highlights ? urgencyStyles[highlights[0].category] : "";
+
+      cells.push(
+        <div
+          key={`${dateKey}-${day}`}
+          className={`h-8 flex items-center justify-center text-sm rounded ${urgencyClass}`}
+          onMouseEnter={() =>
+            highlights && setHoveredDateDetails({ date: dateKey, details: highlights })
+          }
+          onMouseLeave={() => highlights && setHoveredDateDetails(null)}
+        >
           {day}
         </div>
       );
@@ -94,16 +182,16 @@ const RenewalAndExpiration = ({ formatCurrency, formatDate }) => {
           {monthNames[date.getMonth()]} {date.getFullYear()}
         </div>
         <div className="grid grid-cols-7 gap-1 mb-2">
-          {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
+          {weekdayNames.map((weekday, index) => (
             <div
-              key={index}
+              key={`${weekday}-${index}`}
               className="h-8 flex items-center justify-center text-xs font-medium text-gray-500"
             >
-              {day}
+              {weekday}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-1">{days}</div>
+        <div className="grid grid-cols-7 gap-1">{cells}</div>
       </div>
     );
   };
@@ -119,36 +207,6 @@ const RenewalAndExpiration = ({ formatCurrency, formatDate }) => {
   const getNextMonth = () => {
     return new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1);
   };
-
-  const expiredData = [
-    {
-      id: 1,
-      name: "Gamma Platform",
-      subscriptionAmount: 18500.0,
-      startDate: "2025-11-15",
-      endDate: "2026-11-14",
-      paymentFrequency: "12 Monthly",
-      status: "Expired",
-    },
-    {
-      id: 2,
-      name: "Epsilon Suite",
-      subscriptionAmount: 22000.0,
-      startDate: "2025-10-01",
-      endDate: "2026-09-30",
-      paymentFrequency: "12 Monthly",
-      status: "Expired",
-    },
-    {
-      id: 3,
-      name: "Legacy Service",
-      subscriptionAmount: 15000.0,
-      startDate: "2025-09-01",
-      endDate: "2026-08-31",
-      paymentFrequency: "12 Monthly",
-      status: "Expired",
-    },
-  ];
 
   useEffect(() => {
     if (renewalCostsChartRef.current && !renewalCostsChartInstanceRef.current) {
@@ -320,6 +378,33 @@ const RenewalAndExpiration = ({ formatCurrency, formatDate }) => {
               {renderCalendar(currentMonth)}
               {renderCalendar(getNextMonth())}
             </div>
+            <div className="mt-4">
+              {hoveredDateDetails ? (
+                <div className="rounded-lg border border-gray-200 bg-white p-3 text-sm text-gray-700">
+                  <p className="font-semibold text-gray-900 mb-1">
+                    Subscriptions expiring on {formatDate(hoveredDateDetails.date)}
+                  </p>
+                  <ul className="space-y-1">
+                    {hoveredDateDetails.details.map(({ subscription, category }, index) => (
+                      <li
+                        key={`${subscription.ActivityId}-${index}`}
+                        className="rounded px-2 py-1 text-xs font-medium leading-tight"
+                      >
+                        <span className="block text-gray-900">{subscription.SubscriptionName}</span>
+                        <span className="block text-gray-500">
+                          {category} · {subscription.SubscriptionFrequency || "N/A"} · $
+                          {(subscription.SubscriptionContractAmount?.Value || 0).toFixed(2)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  Hover over a highlighted date to see subscription details.
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -390,7 +475,7 @@ const RenewalAndExpiration = ({ formatCurrency, formatDate }) => {
               </tbody>
             </table>
           </div>
-          {renewalData.length > 3 && (
+          {renewalRows.length > 3 && (
             <div className="flex justify-center mt-4">
               <button
                 onClick={() => setShowMore(!showMore)}
@@ -402,6 +487,7 @@ const RenewalAndExpiration = ({ formatCurrency, formatDate }) => {
           )}
         </div>
       </div>
+
       <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100">
         <h3 className="text-base font-semibold text-gray-800 mb-4">
           Renewal costs and usage evaluation
@@ -441,35 +527,45 @@ const RenewalAndExpiration = ({ formatCurrency, formatDate }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {expiredData.map((subscription) => (
-                  <tr key={subscription.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 sm:px-6 py-3 text-sm text-gray-800">{subscription.name}</td>
-                    <td
-                      className="px-4 sm:px-6 py-3 text-sm font-medium"
-                      style={{ color: "#6B46C1" }}
-                    >
-                      {formatCurrency(subscription.subscriptionAmount)}
-                    </td>
-                    <td
-                      className="px-4 sm:px-6 py-3 text-sm font-medium"
-                      style={{ color: "#0891B2" }}
-                    >
-                      {formatDate(subscription.startDate)}
-                    </td>
-                    <td
-                      className="px-4 sm:px-6 py-3 text-sm font-medium"
-                      style={{ color: "#0891B2" }}
-                    >
-                      {formatDate(subscription.endDate)}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 text-sm text-gray-800">
-                      {subscription.paymentFrequency}
-                    </td>
-                    <td className="px-4 sm:px-6 py-3 text-sm text-gray-800">
-                      {subscription.status}
+                {expirationRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-6 text-center text-sm text-gray-500">
+                      No expired subscriptions available.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  expirationRows.map((subscription) => (
+                    <tr key={subscription.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 sm:px-6 py-3 text-sm text-gray-800">
+                        {subscription.name}
+                      </td>
+                      <td
+                        className="px-4 sm:px-6 py-3 text-sm font-medium"
+                        style={{ color: "#6B46C1" }}
+                      >
+                        {formatCurrency(subscription.amount)}
+                      </td>
+                      <td
+                        className="px-4 sm:px-6 py-3 text-sm font-medium"
+                        style={{ color: "#0891B2" }}
+                      >
+                        {formatDate(subscription.startDate)}
+                      </td>
+                      <td
+                        className="px-4 sm:px-6 py-3 text-sm font-medium"
+                        style={{ color: "#0891B2" }}
+                      >
+                        {formatDate(subscription.endDate)}
+                      </td>
+                      <td className="px-4 sm:px-6 py-3 text-sm text-gray-800">
+                        {subscription.paymentFrequency}
+                      </td>
+                      <td className="px-4 sm:px-6 py-3 text-sm text-gray-800">
+                        {subscription.status}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
