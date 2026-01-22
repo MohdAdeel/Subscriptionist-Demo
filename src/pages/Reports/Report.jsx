@@ -8,8 +8,11 @@ import {
   FiDownload,
   FiCalendar,
 } from "react-icons/fi";
-import { useActivityLines } from "../../hooks";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import Financial from "./components/Financial";
+import { useActivityLines } from "../../hooks";
+import { useReportsPageStore } from "../../stores";
 import { useState, useEffect, useRef } from "react";
 import StandardReports from "./components/StandardReports";
 import RenewalAndExpiration from "./components/RenewalAndExpiration";
@@ -18,6 +21,18 @@ import { TableSkeleton, ChartSkeleton, KPICardSkeleton } from "../../components/
 const Report = () => {
   // React Query handles caching, deduplication, and loading state
   const { isLoading, error } = useActivityLines();
+
+  // Get store data for PDF export
+  const TopCards = useReportsPageStore((state) => state.TopCards);
+  const subscriptionTableData = useReportsPageStore((state) => state.subscriptionTableData);
+  const spendByDepartmentChartData = useReportsPageStore(
+    (state) => state.spendByDepartmentChartData
+  );
+  const vendorCountData = useReportsPageStore((state) => state.vendorCountData);
+  const categorySummary = useReportsPageStore((state) => state.categorySummary);
+  const nearingRenewalData = useReportsPageStore((state) => state.nearingRenewalData);
+  const expiredSubscriptionsData = useReportsPageStore((state) => state.expiredSubscriptionsData);
+  const categorizedSubscriptions = useReportsPageStore((state) => state.categorizedSubscriptions);
 
   const [activeTab, setActiveTab] = useState("standard");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -30,6 +45,14 @@ const Report = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [dateRangeText, setDateRangeText] = useState("");
   const datePickerRef = useRef(null);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Refs for PDF export
+  const standardReportsRef = useRef(null);
+  const financialRef = useRef(null);
+  const renewalRef = useRef(null);
+  const standardChartRef = useRef(null);
 
   const formatCurrency = (value) => {
     return new Intl.NumberFormat("en-US", {
@@ -237,8 +260,737 @@ const Report = () => {
     );
   }
 
+  const handleExportToPDF = async () => {
+    setIsExporting(true);
+
+    try {
+      let fileName = "Report";
+
+      // Create PDF document
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      let yPosition = margin;
+
+      // Helper function to format currency
+      const formatValue = (value) => {
+        const numericValue = value === null || value === undefined ? 0 : Number(value);
+        if (Number.isNaN(numericValue)) return "$0.00";
+        return (
+          "$" +
+          numericValue.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
+        );
+      };
+
+      // Helper function to format date
+      const formatPdfDate = (dateString) => {
+        if (!dateString) return "";
+        const date = new Date(dateString);
+        return date.toLocaleDateString("en-US");
+      };
+
+      const formatDateKey = (value) => {
+        if (!value) return null;
+        const date = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(date.getTime())) return null;
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+        const day = String(date.getUTCDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
+
+      const buildHighlightedDatesMap = (categorized) => {
+        const map = new Map();
+        Object.entries(categorized || {}).forEach(([category, subscriptions]) => {
+          (subscriptions || []).forEach((subscription) => {
+            const dateKey = formatDateKey(subscription.SubscriptionEndDate);
+            if (!dateKey) return;
+            const existing = map.get(dateKey) ?? [];
+            existing.push({ subscription, category });
+            map.set(dateKey, existing);
+          });
+        });
+        return map;
+      };
+
+      const getCalendarStartMonth = (highlightedMap) => {
+        const dates = Array.from(highlightedMap.keys())
+          .map((dateKey) => new Date(dateKey))
+          .filter((date) => !Number.isNaN(date.getTime()))
+          .sort((a, b) => a - b);
+        if (dates.length > 0) {
+          const first = dates[0];
+          return new Date(first.getFullYear(), first.getMonth(), 1);
+        }
+        return new Date();
+      };
+
+      // Helper function to check if we need a new page
+      const checkNewPage = (requiredHeight) => {
+        if (yPosition + requiredHeight > pageHeight - margin) {
+          pdf.addPage();
+          yPosition = margin;
+          return true;
+        }
+        return false;
+      };
+
+      // Helper function to draw a card
+      const drawCard = (x, y, width, height, bgColor, title, value) => {
+        // Draw background
+        pdf.setFillColor(bgColor.r, bgColor.g, bgColor.b);
+        pdf.roundedRect(x, y, width, height, 3, 3, "F");
+
+        // Draw title
+        pdf.setFontSize(10);
+        pdf.setTextColor(75, 85, 99);
+        pdf.text(title, x + 8, y + 15);
+
+        // Draw value
+        pdf.setFontSize(18);
+        pdf.setTextColor(31, 41, 55);
+        pdf.setFont(undefined, "bold");
+        pdf.text(value, x + 8, y + 30);
+        pdf.setFont(undefined, "normal");
+      };
+
+      // Helper function to add a table using autoTable
+      const addTable = (title, headers, data) => {
+        checkNewPage(20);
+
+        // Add title
+        pdf.setFontSize(14);
+        pdf.setTextColor(31, 41, 55);
+        pdf.setFont(undefined, "bold");
+        pdf.text(title, margin, yPosition);
+        pdf.setFont(undefined, "normal");
+        yPosition += 8;
+
+        if (data.length === 0) {
+          pdf.setFontSize(10);
+          pdf.setTextColor(107, 114, 128);
+          pdf.text("No data available", margin, yPosition + 5);
+          yPosition += 15;
+          return;
+        }
+
+        // Use autoTable for clean tables
+        autoTable(pdf, {
+          startY: yPosition,
+          head: [headers],
+          body: data,
+          margin: { left: margin, right: margin },
+          headStyles: {
+            fillColor: [234, 236, 240],
+            textColor: [55, 65, 81],
+            fontStyle: "bold",
+            fontSize: 9,
+          },
+          bodyStyles: {
+            fontSize: 9,
+            textColor: [55, 65, 81],
+          },
+          alternateRowStyles: {
+            fillColor: [249, 250, 251],
+          },
+          columnStyles: {
+            2: { textColor: [124, 58, 237] }, // Amount column - purple
+            3: { textColor: [8, 145, 178] }, // Start Date column - cyan
+            4: { textColor: [8, 145, 178] }, // End Date column - cyan
+          },
+        });
+
+        yPosition = pdf.lastAutoTable.finalY + 15;
+      };
+
+      // Helper function to add chart image
+      const addChartImage = (title, canvas) => {
+        if (!canvas) return;
+
+        checkNewPage(80);
+
+        // Add title
+        pdf.setFontSize(14);
+        pdf.setTextColor(31, 41, 55);
+        pdf.setFont(undefined, "bold");
+        pdf.text(title, margin, yPosition);
+        pdf.setFont(undefined, "normal");
+        yPosition += 5;
+
+        // Add chart image
+        const imgData = canvas.toDataURL("image/png");
+        const imgWidth = pageWidth - margin * 2;
+        const imgHeight = 60;
+
+        pdf.addImage(imgData, "PNG", margin, yPosition, imgWidth, imgHeight);
+        yPosition += imgHeight + 15;
+      };
+
+      const addDonutChartWithLegend = (title, canvas, legendItems) => {
+        if (!canvas) return;
+
+        const chartSize = 50;
+        const rowHeight = 5.5;
+        const maxVisibleItems = 10;
+        const items = legendItems.slice(0, maxVisibleItems);
+        const remainingCount = legendItems.length - items.length;
+        const legendRows = items.length + (remainingCount > 0 ? 1 : 0);
+        const sectionHeight = Math.max(chartSize, legendRows * rowHeight);
+
+        checkNewPage(sectionHeight + 12);
+
+        pdf.setFontSize(14);
+        pdf.setTextColor(31, 41, 55);
+        pdf.setFont(undefined, "bold");
+        pdf.text(title, margin, yPosition);
+        pdf.setFont(undefined, "normal");
+        yPosition += 6;
+
+        const imgData = canvas.toDataURL("image/png");
+        pdf.addImage(imgData, "PNG", margin, yPosition, chartSize, chartSize);
+
+        const legendX = margin + chartSize + 10;
+        let legendY = yPosition + 4;
+
+        pdf.setFontSize(9);
+        items.forEach((item) => {
+          pdf.setFillColor(item.color[0], item.color[1], item.color[2]);
+          pdf.circle(legendX + 2, legendY + 2, 1.7, "F");
+          pdf.setTextColor(55, 65, 81);
+          pdf.text(item.label, legendX + 6, legendY + 3);
+          legendY += rowHeight;
+        });
+
+        if (remainingCount > 0) {
+          pdf.setTextColor(107, 114, 128);
+          pdf.text(`+${remainingCount} more`, legendX + 6, legendY + 3);
+        }
+
+        yPosition += sectionHeight + 12;
+      };
+
+      const addRenewalCalendarReport = () => {
+        const highlightedDatesMap = buildHighlightedDatesMap(categorizedSubscriptions);
+        const calendarStartDate = getCalendarStartMonth(highlightedDatesMap);
+        const nextMonthDate = new Date(
+          calendarStartDate.getFullYear(),
+          calendarStartDate.getMonth() + 1,
+          1
+        );
+
+        const categoryColors = {
+          notUrgent: { fill: [225, 219, 254], text: [55, 65, 81] },
+          urgent: { fill: [147, 51, 234], text: [255, 255, 255] },
+          veryUrgent: { fill: [107, 33, 168], text: [255, 255, 255] },
+        };
+
+        const categoryLabels = {
+          notUrgent: "Not Urgent",
+          urgent: "Urgently",
+          veryUrgent: "Very Urgently",
+        };
+
+        const weekdayNames = ["S", "M", "T", "W", "T", "F", "S"];
+        const monthNames = [
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+          "July",
+          "August",
+          "September",
+          "October",
+          "November",
+          "December",
+        ];
+
+        const drawCalendar = (date, startX, startY, width) => {
+          const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+          const totalDays = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+          const totalCells = firstDay + totalDays;
+          const rows = Math.ceil(totalCells / 7);
+
+          const titleHeight = 6;
+          const weekHeight = 5;
+          const cellHeight = 7;
+          const cellWidth = width / 7;
+
+          pdf.setFontSize(10);
+          pdf.setTextColor(31, 41, 55);
+          pdf.setFont(undefined, "bold");
+          pdf.text(`${monthNames[date.getMonth()]} ${date.getFullYear()}`, startX, startY + 4);
+          pdf.setFont(undefined, "normal");
+
+          let cursorY = startY + titleHeight;
+          pdf.setFontSize(8);
+          pdf.setTextColor(107, 114, 128);
+          weekdayNames.forEach((day, index) => {
+            pdf.text(day, startX + index * cellWidth + cellWidth / 2, cursorY + 3, {
+              align: "center",
+            });
+          });
+
+          cursorY += weekHeight;
+          let cellIndex = 0;
+
+          for (let row = 0; row < rows; row += 1) {
+            for (let col = 0; col < 7; col += 1) {
+              const x = startX + col * cellWidth;
+              const y = cursorY + row * cellHeight;
+              const dayNumber = cellIndex - firstDay + 1;
+              const isValidDay = dayNumber > 0 && dayNumber <= totalDays;
+
+              if (isValidDay) {
+                const dateKey = formatDateKey(
+                  new Date(Date.UTC(date.getFullYear(), date.getMonth(), dayNumber))
+                );
+                const highlights = highlightedDatesMap.get(dateKey);
+                const category = highlights ? highlights[0]?.category : null;
+                const colors = category ? categoryColors[category] : null;
+
+                if (colors) {
+                  pdf.setFillColor(colors.fill[0], colors.fill[1], colors.fill[2]);
+                  pdf.roundedRect(x + 0.4, y + 0.4, cellWidth - 0.8, cellHeight - 0.8, 1, 1, "F");
+                } else {
+                  pdf.setDrawColor(229, 231, 235);
+                  pdf.rect(x + 0.4, y + 0.4, cellWidth - 0.8, cellHeight - 0.8);
+                }
+
+                pdf.setFontSize(8);
+                if (colors) {
+                  pdf.setTextColor(colors.text[0], colors.text[1], colors.text[2]);
+                } else {
+                  pdf.setTextColor(75, 85, 99);
+                }
+                pdf.text(String(dayNumber), x + cellWidth / 2, y + cellHeight / 2 + 2.2, {
+                  align: "center",
+                });
+              }
+
+              cellIndex += 1;
+            }
+          }
+
+          return titleHeight + weekHeight + rows * cellHeight;
+        };
+
+        checkNewPage(120);
+
+        pdf.setFontSize(14);
+        pdf.setTextColor(31, 41, 55);
+        pdf.setFont(undefined, "bold");
+        pdf.text("Renewal Calendar Report", margin, yPosition);
+        pdf.setFont(undefined, "normal");
+        yPosition += 7;
+
+        const legendItems = [
+          { label: "Not Urgent", color: [225, 219, 254] },
+          { label: "Urgently", color: [147, 51, 234] },
+          { label: "Very Urgently", color: [107, 33, 168] },
+        ];
+
+        let legendX = margin;
+        const legendY = yPosition;
+        legendItems.forEach((item) => {
+          pdf.setFillColor(item.color[0], item.color[1], item.color[2]);
+          pdf.circle(legendX + 2, legendY + 2, 2, "F");
+          pdf.setFontSize(9);
+          pdf.setTextColor(75, 85, 99);
+          pdf.text(item.label, legendX + 6, legendY + 3);
+          legendX += 45;
+        });
+        yPosition += 10;
+
+        const calendarGap = 8;
+        const calendarWidth = (pageWidth - margin * 2 - calendarGap) / 2;
+        const calendarTop = yPosition;
+
+        const leftHeight = drawCalendar(calendarStartDate, margin, calendarTop, calendarWidth);
+        const rightHeight = drawCalendar(
+          nextMonthDate,
+          margin + calendarWidth + calendarGap,
+          calendarTop,
+          calendarWidth
+        );
+
+        yPosition = calendarTop + Math.max(leftHeight, rightHeight) + 8;
+
+        const highlightRows = Array.from(highlightedDatesMap.entries())
+          .sort(([dateA], [dateB]) => new Date(dateA) - new Date(dateB))
+          .flatMap(([dateKey, details]) =>
+            (details || []).map(({ subscription, category }) => [
+              formatPdfDate(dateKey),
+              subscription.SubscriptionName || "Unknown",
+              categoryLabels[category] || category,
+              subscription.SubscriptionFrequency || "N/A",
+              formatValue(subscription.SubscriptionContractAmount?.Value ?? 0),
+            ])
+          )
+          .slice(0, 10);
+
+        if (highlightRows.length > 0) {
+          pdf.setFontSize(12);
+          pdf.setTextColor(31, 41, 55);
+          pdf.setFont(undefined, "bold");
+          pdf.text("Highlighted Renewal Dates", margin, yPosition);
+          pdf.setFont(undefined, "normal");
+          yPosition += 6;
+
+          autoTable(pdf, {
+            startY: yPosition,
+            head: [["Date", "Subscription", "Category", "Frequency", "Amount"]],
+            body: highlightRows,
+            margin: { left: margin, right: margin },
+            headStyles: {
+              fillColor: [234, 236, 240],
+              textColor: [55, 65, 81],
+              fontStyle: "bold",
+              fontSize: 9,
+            },
+            bodyStyles: {
+              fontSize: 9,
+              textColor: [55, 65, 81],
+            },
+            alternateRowStyles: {
+              fillColor: [249, 250, 251],
+            },
+          });
+
+          yPosition = pdf.lastAutoTable.finalY + 12;
+        } else {
+          pdf.setFontSize(9);
+          pdf.setTextColor(107, 114, 128);
+          pdf.text("No highlighted renewal dates available.", margin, yPosition + 5);
+          yPosition += 12;
+        }
+      };
+
+      if (activeTab === "standard") {
+        fileName = "Standard_Reports";
+
+        // Add title
+        pdf.setFontSize(20);
+        pdf.setTextColor(31, 41, 55);
+        pdf.setFont(undefined, "bold");
+        pdf.text("Standard Reports", margin, yPosition);
+        pdf.setFont(undefined, "normal");
+        yPosition += 15;
+
+        // Draw KPI Cards (2x2 grid)
+        const cardWidth = (pageWidth - margin * 2 - 10) / 2;
+        const cardHeight = 35;
+
+        // Card colors (RGB)
+        const colors = [
+          { r: 212, g: 241, b: 244 }, // Teal
+          { r: 191, g: 241, b: 255 }, // Blue
+          { r: 225, g: 255, b: 187 }, // Green
+          { r: 207, g: 225, b: 255 }, // Purple
+        ];
+
+        // Row 1
+        drawCard(
+          margin,
+          yPosition,
+          cardWidth,
+          cardHeight,
+          colors[0],
+          "Total Active Cost",
+          formatValue(TopCards.totalContractAmount)
+        );
+        drawCard(
+          margin + cardWidth + 10,
+          yPosition,
+          cardWidth,
+          cardHeight,
+          colors[1],
+          "Active Subscriptions",
+          String(TopCards.ActiveCount)
+        );
+        yPosition += cardHeight + 8;
+
+        // Row 2
+        drawCard(
+          margin,
+          yPosition,
+          cardWidth,
+          cardHeight,
+          colors[2],
+          "Upcoming Renewal",
+          formatValue(TopCards.totalContractAmountFuture)
+        );
+        drawCard(
+          margin + cardWidth + 10,
+          yPosition,
+          cardWidth,
+          cardHeight,
+          colors[3],
+          "Cost Savings Identified",
+          "0"
+        );
+        yPosition += cardHeight + 15;
+
+        // Add Monthly Spend Chart
+        const chartCanvas = standardReportsRef.current?.querySelector("canvas");
+        addChartImage("Monthly Spend", chartCanvas);
+
+        // Filter subscriptions
+        const allSubscriptions = subscriptionTableData || [];
+        const activeSubscriptions = allSubscriptions.filter((s) => s.activityStatus === "Active");
+        const expiredSubscriptions = allSubscriptions.filter((s) => s.activityStatus === "Expired");
+
+        // Table headers
+        const headers = [
+          "Subscription Name",
+          "Vendor Name",
+          "Amount",
+          "Start Date",
+          "End Date",
+          "Frequency",
+          "Status",
+        ];
+
+        // All Subscriptions Table
+        const allData = allSubscriptions.map((s) => [
+          s.subscriptionName || "",
+          s.vendorName || "",
+          formatValue(s.subscriptionAmount),
+          formatPdfDate(s.startDate),
+          formatPdfDate(s.endDate),
+          s.paymentFrequency || "",
+          s.activityStatus || "",
+        ]);
+        addTable("All Subscriptions", headers, allData);
+
+        // Active Subscriptions Table
+        const activeData = activeSubscriptions.map((s) => [
+          s.subscriptionName || "",
+          s.vendorName || "",
+          formatValue(s.subscriptionAmount),
+          formatPdfDate(s.startDate),
+          formatPdfDate(s.endDate),
+          s.paymentFrequency || "",
+          s.activityStatus || "",
+        ]);
+        addTable("Active Subscriptions", headers, activeData);
+
+        // Expired Subscriptions Table
+        const expiredData = expiredSubscriptions.map((s) => [
+          s.subscriptionName || "",
+          s.vendorName || "",
+          formatValue(s.subscriptionAmount),
+          formatPdfDate(s.startDate),
+          formatPdfDate(s.endDate),
+          s.paymentFrequency || "",
+          s.activityStatus || "",
+        ]);
+        addTable("Expired Subscriptions", headers, expiredData);
+      } else if (activeTab === "financial") {
+        fileName = "Financial_Reports";
+
+        // Add title
+        pdf.setFontSize(20);
+        pdf.setTextColor(31, 41, 55);
+        pdf.setFont(undefined, "bold");
+        pdf.text("Financial Reports", margin, yPosition);
+        pdf.setFont(undefined, "normal");
+        yPosition += 15;
+
+        // Get all chart canvases
+        const chartCanvases = financialRef.current?.querySelectorAll("canvas") || [];
+        const chartTitles = [
+          "Spend by Department",
+          "Spend by Subscription Type",
+          "Budget vs Actual Report",
+          "Most Expensive Subscriptions",
+        ];
+
+        const vendorLegendItems = (vendorCountData || []).map((entry, index) => {
+          const label = entry.vendor ?? entry.name ?? entry.vendorName ?? "Unknown vendor";
+          const colors = [
+            [204, 214, 235],
+            [225, 255, 187],
+            [29, 34, 93],
+            [191, 241, 255],
+            [207, 225, 255],
+            [212, 241, 244],
+            [225, 219, 254],
+            [29, 34, 93],
+            [8, 145, 178],
+            [204, 214, 235],
+            [225, 219, 254],
+          ];
+          const color = colors[index % colors.length];
+          return { label, color };
+        });
+
+        // Spend by Department (index 0)
+        addChartImage(chartTitles[0], chartCanvases[0]);
+
+        // Spend by Vendor (index 1)
+        addDonutChartWithLegend("Spend by Vendor", chartCanvases[1], vendorLegendItems);
+
+        // Spend by Subscription Type (index 2)
+        addChartImage(chartTitles[1], chartCanvases[2]);
+
+        // Budget vs Actual (index 3)
+        addChartImage(chartTitles[2], chartCanvases[3]);
+
+        // Most Expensive Subscriptions (index 4)
+        addChartImage(chartTitles[3], chartCanvases[4]);
+
+        // Usage Analysis (index 5)
+        const usageLegendItems = [
+          { label: "80%", color: [29, 34, 93] },
+          { label: "20%", color: [212, 173, 247] },
+        ];
+        addDonutChartWithLegend("Usage Analysis", chartCanvases[5], usageLegendItems);
+
+        // Spend by Category Table
+        const categoryHeaders = ["Category", "Actual Spend", "Number of Subscriptions"];
+        const categoryData = (categorySummary || []).map((row) => [
+          row.category || "",
+          formatValue(row.accumulatedAmount),
+          String(row.count || 0),
+        ]);
+        addTable("Spend by Category", categoryHeaders, categoryData);
+
+        // Spend by Department Table
+        const deptHeaders = ["Team", "Actual Spend", "Budget"];
+        const deptData = (spendByDepartmentChartData || [])
+          .flat()
+          .filter(Boolean)
+          .map((record) => [
+            record?.department ?? record?.name ?? record?.DepartmentNames?.Name ?? "Unknown",
+            formatValue(
+              record?.value ?? record?.amount ?? record?.SubscriptionContractAmount?.Value ?? 0
+            ),
+            formatValue(
+              Number(
+                record?.DepartmentNames?.Budget?.Value ??
+                  record?.DepartmentNames?.Budget ??
+                  record?.budget ??
+                  0
+              ) || 0
+            ),
+          ]);
+        addTable("Spend by Department", deptHeaders, deptData);
+      } else if (activeTab === "renewal") {
+        fileName = "Renewal_Expiration_Reports";
+
+        // Add title
+        pdf.setFontSize(20);
+        pdf.setTextColor(31, 41, 55);
+        pdf.setFont(undefined, "bold");
+        pdf.text("Renewal & Expiration Reports", margin, yPosition);
+        pdf.setFont(undefined, "normal");
+        yPosition += 15;
+
+        // Renewal Calendar Report
+        addRenewalCalendarReport();
+
+        // Add Chart
+        const chartCanvas = renewalRef.current?.querySelector("canvas");
+        addChartImage("Renewal Costs and Usage Evaluation", chartCanvas);
+
+        // Nearing Renewal Table
+        const renewalHeaders = ["Name", "Amount", "Start Date", "End Date", "Frequency", "Status"];
+        const renewalTableData = (nearingRenewalData || []).map((row) => [
+          row.SubscriptionName || row.name || "Unknown",
+          formatValue(row.SubscriptionContractAmount?.Value ?? row.subscriptionAmount ?? 0),
+          formatPdfDate(row.SubscriptionStartDate || row.startDate),
+          formatPdfDate(row.SubscriptionEndDate || row.endDate),
+          row.SubscriptionFrequency || row.paymentFrequency || "N/A",
+          row.status === 0 ? "Active" : row.activityStatus || "Inactive",
+        ]);
+        addTable("Subscriptions Nearing Renewal", renewalHeaders, renewalTableData);
+
+        // Expired Subscriptions Table
+        const expiredHeaders = ["Name", "Amount", "Start Date", "End Date", "Frequency", "Status"];
+        const expiredTableData = (expiredSubscriptionsData || []).map((row) => [
+          row.SubscriptionName || "Unknown",
+          formatValue(row.SubscriptionContractAmount?.Value ?? 0),
+          formatPdfDate(row.SubscriptionStartDate),
+          formatPdfDate(row.SubscriptionEndDate),
+          row.SubscriptionFrequency || "N/A",
+          "Expired",
+        ]);
+        addTable("Expired Subscriptions", expiredHeaders, expiredTableData);
+      }
+
+      // Save PDF
+      pdf.save(`${fileName}_${new Date().toISOString().split("T")[0]}.pdf`);
+    } catch (error) {
+      console.error("Error exporting to PDF:", error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportToExcel = () => {
+    console.log("here is activeTab", activeTab);
+    console.log("Export to Excel");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+      {showExportModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+          onClick={() => setShowExportModal(false)}
+        >
+          <div
+            className="relative w-[90%] max-w-sm rounded-[32px] bg-white px-6 py-8 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100"
+              onClick={() => setShowExportModal(false)}
+            >
+              <FiX className="h-4 w-4 text-gray-600" />
+            </button>
+            <h2 className="text-center text-xl font-semibold text-slate-900">
+              Choose Export Format
+            </h2>
+            <div className="mt-6 flex flex-col gap-3">
+              <button
+                className="rounded-full bg-[#7C57FF] px-3 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#6b43ff] disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => {
+                  handleExportToPDF();
+                  setShowExportModal(false);
+                }}
+                disabled={isExporting}
+              >
+                {isExporting ? "Exporting..." : "Export to PDF"}
+              </button>
+              <div className="flex items-center justify-center text-xs font-semibold text-gray-400">
+                OR
+              </div>
+              <button
+                className="rounded-full bg-[#9BF52F] px-3 py-3 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-[#8de700] disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => {
+                  handleExportToExcel();
+                  setShowExportModal(false);
+                }}
+                disabled={isExporting}
+              >
+                Export to Excel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
         <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">Reports Dashboard</h1>
@@ -331,7 +1083,10 @@ const Report = () => {
             <FiUpload className="w-4 h-4" />
             Share
           </button>
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-[#1D225D] text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all text-sm font-medium shadow-sm">
+          <button
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#1D225D] text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all text-sm font-medium shadow-sm"
+            onClick={() => setShowExportModal(true)}
+          >
             <FiDownload className="w-4 h-4" />
             Export
           </button>
@@ -357,7 +1112,9 @@ const Report = () => {
             <TableSkeleton rows={5} columns={7} showTabs={true} />
           </div>
         ) : (
-          <StandardReports formatCurrency={formatCurrency} formatDate={formatDate} />
+          <div ref={standardReportsRef}>
+            <StandardReports formatCurrency={formatCurrency} formatDate={formatDate} />
+          </div>
         ))}
 
       {/* Financial Tab Content */}
@@ -389,7 +1146,9 @@ const Report = () => {
             </div>
           </div>
         ) : (
-          <Financial />
+          <div ref={financialRef}>
+            <Financial />
+          </div>
         ))}
 
       {/* Renewal and Expiration Tab Content */}
@@ -409,7 +1168,9 @@ const Report = () => {
             <TableSkeleton rows={4} columns={1} />
           </div>
         ) : (
-          <RenewalAndExpiration formatCurrency={formatCurrency} formatDate={formatDate} />
+          <div ref={renewalRef}>
+            <RenewalAndExpiration formatCurrency={formatCurrency} formatDate={formatDate} />
+          </div>
         ))}
 
       {isFilterOpen && (
