@@ -10,7 +10,7 @@ import {
   checkVendorActivityLines,
   SearchSubscriptionNameOnBlur,
   deleteVendorWithActivityLines,
-} from "../../lib/utils/vendors";
+} from "../../lib/utils/Vendors.js";
 import {
   InputSkeleton,
   ButtonSkeleton,
