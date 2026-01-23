@@ -1,3 +1,9 @@
+let deleteTargetRow = null;
+let deleteRecordId = null;
+let deleteAllVendorId = null;
+let deleteAllVendorRow = null;
+let deleteAllActivityIds = [];
+
 let filters = {
   status: 0,
   subscriptionName: null,
@@ -309,6 +315,270 @@ export function SearchSubscriptionNameOnBlur(event) {
   // Call the function to get the subscription data with updated filters
   getRelationshipSubsLines(1, filters);
 }
+
+function createErrorMessage(inputElement, message) {
+  // Remove old error message
+  const oldMsg = inputElement.parentElement.querySelector(".error-msg");
+  if (oldMsg) oldMsg.remove();
+
+  // Create new error message
+  const msg = document.createElement("p");
+  msg.className = "error-msg text-red-500 text-xs mt-1";
+  msg.innerText = message;
+
+  // Append after the input
+  inputElement.parentElement.appendChild(msg);
+}
+
+function removeErrorAndClass(inputElement) {
+  // Remove error class
+  if (inputElement) {
+    inputElement.classList.remove("invalid-field");
+    // Remove error message
+    const oldMsg = inputElement.parentElement.querySelector(".error-msg");
+    if (oldMsg) oldMsg.remove();
+  }
+}
+
+function openPopup(e) {
+  const el = document.getElementById(e);
+  if (!el) {
+    console.warn(`openPopup: element '${e}' not found`);
+    return;
+  }
+  el.classList.add("active");
+}
+
+function closePopup(e) {
+  const el = document.getElementById(e);
+  if (!el) {
+    console.warn(`closePopup: element '${e}' not found`);
+    return;
+  }
+  el.classList.remove("active");
+}
+
+function showSuccessMessage(message) {
+  // Remove existing success message if any
+  const existingMsg = document.getElementById("vendor-success-message");
+  if (existingMsg) {
+    existingMsg.remove();
+  }
+
+  // Create success message element
+  const successMsg = document.createElement("div");
+  successMsg.id = "vendor-success-message";
+  successMsg.className =
+    "fixed top-4 right-4 z-[2000] bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in";
+  successMsg.innerHTML = `
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+    </svg>
+    <span>${message}</span>
+  `;
+
+  // Add animation styles if not already added
+  if (!document.getElementById("vendor-success-styles")) {
+    const style = document.createElement("style");
+    style.id = "vendor-success-styles";
+    style.textContent = `
+      @keyframes slide-in {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      .animate-slide-in {
+        animation: slide-in 0.3s ease-out;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  document.body.appendChild(successMsg);
+
+  // Auto remove after 3 seconds
+  setTimeout(() => {
+    if (successMsg.parentElement) {
+      successMsg.style.transition = "opacity 0.3s ease-out, transform 0.3s ease-out";
+      successMsg.style.opacity = "0";
+      successMsg.style.transform = "translateX(100%)";
+      setTimeout(() => {
+        if (successMsg.parentElement) {
+          successMsg.remove();
+        }
+      }, 300);
+    }
+  }, 3000);
+}
+
+export function AddNewVendor(onSuccess, onError, onClose) {
+  // Clear previous errors
+  const vendorNameInput = document.getElementById("addVendorRecord_name");
+  const accountManagerEmailInput = document.getElementById("addVendorRecord_managerEmail");
+  const accountManagerPhoneInput = document.getElementById("addVendorRecord_managerPhone");
+
+  // Remove all previous error messages and classes
+  removeErrorAndClass(vendorNameInput);
+  removeErrorAndClass(accountManagerEmailInput);
+  removeErrorAndClass(accountManagerPhoneInput);
+
+  const vendorName = vendorNameInput ? vendorNameInput.value.trim() : "";
+  const accountManagerName = document.getElementById("addVendorRecord_managerName")
+    ? document.getElementById("addVendorRecord_managerName").value.trim()
+    : "";
+  const accountManagerEmail = accountManagerEmailInput ? accountManagerEmailInput.value.trim() : "";
+  let accountManagerPhone = accountManagerPhoneInput ? accountManagerPhoneInput.value.trim() : "";
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const phoneRegex = /^\+?[\d\s\-()]+$/;
+
+  // ---------------------
+  // VALIDATION
+  // ---------------------
+  let hasError = false;
+
+  if (!vendorName) {
+    if (vendorNameInput) {
+      vendorNameInput.classList.add("invalid-field");
+      createErrorMessage(vendorNameInput, "Vendor Name is required.");
+    }
+    hasError = true;
+  }
+
+  if (accountManagerEmail && !emailRegex.test(accountManagerEmail)) {
+    if (accountManagerEmailInput) {
+      accountManagerEmailInput.classList.add("invalid-field");
+      createErrorMessage(accountManagerEmailInput, "Please enter a valid email address.");
+    }
+    hasError = true;
+  }
+
+  if (accountManagerPhone && !phoneRegex.test(accountManagerPhone)) {
+    if (accountManagerPhoneInput) {
+      accountManagerPhoneInput.classList.add("invalid-field");
+      createErrorMessage(
+        accountManagerPhoneInput,
+        "Phone number must contain only numbers, spaces, hyphens, parentheses, and + sign."
+      );
+    }
+    hasError = true;
+  }
+
+  if (hasError) {
+    return;
+  }
+
+  // Clean phone - remove all non-digit characters except +
+  accountManagerPhone = accountManagerPhone.replace(/[^\d+]/g, "");
+
+  // -----------------------------------------------
+  // PREPARE RECORD
+  // -----------------------------------------------
+  const record = {
+    yiic_vendorname: vendorName,
+    yiic_accountmanagername: accountManagerName,
+    yiic_accountmanageremail: accountManagerEmail,
+    yiic_accountmanagerphone: accountManagerPhone,
+    "yiic_Account_yiic_subscriptionsactivity@odata.bind":
+      "/accounts(f0983e34-d2c5-ee11-9079-00224827e0df)",
+  };
+
+  // Create vendor record with callbacks
+  createVendorRecord(record, onSuccess, onError, onClose);
+}
+
+const createVendorRecord = async (record, onSuccess, onError, onClose) => {
+  try {
+    const response = await fetch(
+      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/createVendor",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
+        },
+        body: JSON.stringify(record),
+      }
+    );
+
+    // Check if response is successful (200-299 range, including 201)
+    if (response.status >= 200 && response.status < 300) {
+      // Try to parse JSON, but handle cases where response might be empty
+      let data = null;
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        try {
+          data = await response.json();
+        } catch (e) {
+          // Response might be empty, that's okay for 201
+          console.log("Response body is empty or not JSON, which is fine for 201 status");
+        }
+      }
+
+      console.log("Vendor created successfully:", data || "No response body");
+
+      // Show success message
+      showSuccessMessage("Vendor created successfully!");
+
+      // Clear form fields
+      const vendorNameInput = document.getElementById("addVendorRecord_name");
+      const accountManagerNameInput = document.getElementById("addVendorRecord_managerName");
+      const accountManagerEmailInput = document.getElementById("addVendorRecord_managerEmail");
+      const accountManagerPhoneInput = document.getElementById("addVendorRecord_managerPhone");
+
+      if (vendorNameInput) vendorNameInput.value = "";
+      if (accountManagerNameInput) accountManagerNameInput.value = "";
+      if (accountManagerEmailInput) accountManagerEmailInput.value = "";
+      if (accountManagerPhoneInput) accountManagerPhoneInput.value = "";
+
+      // Remove any error messages
+      removeErrorAndClass(vendorNameInput);
+      removeErrorAndClass(accountManagerEmailInput);
+      removeErrorAndClass(accountManagerPhoneInput);
+
+      // Call success callback
+      if (onSuccess) {
+        onSuccess(data);
+      }
+
+      // Close modal
+      if (onClose) {
+        onClose();
+      }
+    } else {
+      // Handle error response
+      let errorMessage = "Failed to create vendor";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch (e) {
+        errorMessage = `Failed to create vendor. Status: ${response.status}`;
+      }
+
+      console.error("Error creating vendor:", errorMessage);
+
+      if (onError) {
+        onError(errorMessage);
+      } else {
+        alert(errorMessage);
+      }
+    }
+  } catch (error) {
+    console.error("Error creating vendor:", error);
+    const errorMessage = error.message || "Failed to create vendor. Please try again.";
+
+    if (onError) {
+      onError(errorMessage);
+    } else {
+      alert(errorMessage);
+    }
+  }
+};
 
 export function SearchSubscriptionName(event) {
   // Check if the 'Enter' key is pressed
@@ -699,14 +969,386 @@ function handleGetVendorSuccess(result, pageNumber) {
     handleGetVendorError();
   }
 }
+function resetDeleteContext() {
+  deleteTargetRow = null;
+  deleteRecordId = null;
+  deleteAllVendorId = null;
+  deleteAllVendorRow = null;
+  deleteAllActivityIds = [];
+}
 
-function handleVendorDelete(vendorId, row) {
-  // TODO: Implement vendor delete functionality
-  console.log("Delete vendor:", vendorId);
-  if (confirm("Are you sure you want to delete this vendor?")) {
-    // Delete logic here
-    row.remove();
+export function DeleteSubscriptionActivityLine() {
+  openPopup("popup_loading");
+
+  if (!deleteRecordId) {
+    console.error("deleteRecordId is not defined");
+    closePopup("popup_loading");
+    return;
   }
+
+  const apiUrl = `https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/deleteSubscriptionActivityLine/${deleteRecordId}`;
+
+  fetch(apiUrl, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
+    },
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json(); // assuming API returns JSON; remove if no body
+    })
+    .then(() => {
+      if (deleteTargetRow) deleteTargetRow.remove();
+      closePopup("popup_loading");
+      resetDeleteContext();
+      const modalEl = document.getElementById("deleteActivityLineConfirmModal");
+      if (modalEl) {
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+      }
+    })
+    .catch((xhr) => {
+      console.error("Error deleting single activity line:", xhr);
+      closePopup("popup_loading");
+    });
+}
+
+// React-compatible delete vendor function
+export async function checkVendorActivityLines(vendorId) {
+  try {
+    const apiUrl = `https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/getSubscriptionActivityLinesBySubscriptionActivity?subscriptionActivityId=${vendorId}`;
+
+    const response = await fetch(apiUrl, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const activityLines = Array.isArray(data) ? data : data.value || [];
+
+    return {
+      hasActivityLines: activityLines.length > 0,
+      activityLines: activityLines,
+      count: activityLines.length,
+    };
+  } catch (error) {
+    console.error("Error fetching activity lines:", error);
+    throw error;
+  }
+}
+
+// Delete vendor API function
+export async function deleteVendorAPI(vendorId) {
+  try {
+    const apiUrl = `https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/deleteVendor/${vendorId}`;
+
+    const response = await fetch(apiUrl, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to delete vendor: ${response.status} - ${errorText}`);
+    }
+
+    // Try to parse JSON, but handle empty responses
+    let data = null;
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      try {
+        data = await response.json();
+      } catch (e) {
+        // Empty response is fine for DELETE operations
+        console.log("Delete response is empty, which is normal");
+      }
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    console.error("Error deleting vendor:", error);
+    throw error;
+  }
+}
+
+// Delete activity line API function
+export async function deleteActivityLineAPI(activityLineId) {
+  try {
+    const apiUrl = `https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/deleteSubscriptionActivityLine/${activityLineId}`;
+
+    const response = await fetch(apiUrl, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to delete activity line: ${response.status} - ${errorText}`);
+    }
+
+    let data = null;
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      try {
+        data = await response.json();
+      } catch (e) {
+        console.log("Delete response is empty, which is normal");
+      }
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    console.error("Error deleting activity line:", error);
+    throw error;
+  }
+}
+
+// Delete vendor with all activity lines
+export async function deleteVendorWithActivityLines(vendorId, activityLineIds, onProgress) {
+  try {
+    // Delete all activity lines first
+    if (activityLineIds && activityLineIds.length > 0) {
+      for (let i = 0; i < activityLineIds.length; i++) {
+        const activityLineId = activityLineIds[i];
+        await deleteActivityLineAPI(activityLineId);
+
+        if (onProgress) {
+          onProgress(i + 1, activityLineIds.length);
+        }
+
+        // Small delay to avoid overwhelming the server
+        if (i < activityLineIds.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      }
+    }
+
+    // Then delete the vendor
+    await deleteVendorAPI(vendorId);
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting vendor with activity lines:", error);
+    throw error;
+  }
+}
+
+// Legacy function for backward compatibility
+function handleVendorDelete(vendorId, row) {
+  const subscriptionActivityId = vendorId; // VendorId is used dynamically
+  const apiUrl = `https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/getSubscriptionActivityLinesBySubscriptionActivity?subscriptionActivityId=${subscriptionActivityId}`;
+
+  fetch(apiUrl, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
+    },
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then((data) => {
+      const activityLines = data; // Assuming the API returns an array directly
+
+      if (activityLines.length > 0) {
+        showActivityLinesDeleteModal(activityLines, subscriptionActivityId, row);
+      } else {
+        showDeleteConfirmationModal(subscriptionActivityId, row);
+      }
+    })
+    .catch((error) => {
+      console.error("Error fetching activity lines:", error);
+    });
+}
+
+function showSingleLineDeleteConfirmation(activityId, tableRow) {
+  const modal = new bootstrap.Modal(document.getElementById("deleteActivityLineConfirmModal"));
+  deleteRecordId = activityId;
+  deleteTargetRow = tableRow;
+  modal.show();
+}
+
+function showActivityLinesDeleteModal(activityLines, vendorId, vendorRow) {
+  const tableBody = document.getElementById("activityLineTableBody");
+  tableBody.innerHTML = "";
+
+  activityLines.forEach((line) => {
+    const tr = document.createElement("tr");
+    const trashIcon = document.createElement("i");
+    trashIcon.className = "fa fa-trash";
+    trashIcon.style.color = "red";
+    trashIcon.style.cursor = "pointer";
+    trashIcon.style.fontSize = "19px";
+    trashIcon.title = "Delete this line";
+    trashIcon.onclick = function () {
+      showSingleLineDeleteConfirmation(line.activityid, tr);
+    };
+
+    const tdName = document.createElement("td");
+    tdName.textContent = line.yiic_subscriptionname;
+    const tdAction = document.createElement("td");
+    tdAction.appendChild(trashIcon);
+
+    tr.appendChild(tdName);
+    tr.appendChild(tdAction);
+    tableBody.appendChild(tr);
+  });
+
+  deleteAllVendorId = vendorId;
+  deleteAllVendorRow = vendorRow;
+  deleteAllActivityIds = activityLines.map((l) => l.activityid);
+
+  document.getElementById("deleteAllActivityLinesBtn").onclick = function () {
+    const modal = new bootstrap.Modal(document.getElementById("deleteAllConfirmModal"));
+    modal.show();
+  };
+
+  $("#deleteActivityLinesModal").modal("show");
+}
+
+export function deleteAllActivityLines(activityIds, vendorId, vendorRow) {
+  openPopup("popup_loading");
+  let deleteCount = 0;
+
+  activityIds.forEach((id, index) => {
+    setTimeout(() => {
+      const apiUrl = `https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/deleteSubscriptionActivityLine/${id}`;
+
+      fetch(apiUrl, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
+        },
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json(); // remove if API does not return a body
+        })
+        .then(() => {
+          deleteCount++;
+          if (deleteCount === activityIds.length) {
+            deleteVendorinCaseOfAll(vendorId, vendorRow);
+            const modalEl = document.getElementById("deleteActivityLinesModal");
+            if (modalEl) {
+              const modal = bootstrap.Modal.getInstance(modalEl);
+              if (modal) modal.hide();
+            }
+          }
+        })
+        .catch((xhr) => {
+          closePopup("popup_loading");
+          console.error("Error deleting activity line:", xhr);
+        });
+    }, index * 300); // keeps original staggered deletion
+  });
+}
+
+export function deleteVendor() {
+  openPopup("popup_loading");
+
+  if (!deleteRecordId) {
+    console.error("deleteRecordId is not defined");
+    closePopup("popup_loading");
+    return;
+  }
+
+  const apiUrl = `https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/deleteVendor/${deleteRecordId}`;
+
+  fetch(apiUrl, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
+    },
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json(); // remove if API does not return body
+    })
+    .then(() => {
+      if (deleteTargetRow) deleteTargetRow.remove();
+      resetDeleteContext();
+      const modalEl = document.getElementById("deleteVendorConfirmModal");
+      if (modalEl) {
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+      }
+      closePopup("popup_loading");
+      showSuccessAlert("The vendor was deleted successfully!");
+      // successBox("Vendor and associated records deleted.");
+    })
+    .catch((error) => {
+      console.error("Error deleting vendor:", error);
+      closePopup("popup_loading");
+    });
+}
+
+function deleteVendorinCaseOfAll(vendorId, row) {
+  if (!vendorId) {
+    console.error("vendorId is not defined");
+    closePopup("popup_loading");
+    return;
+  }
+
+  const apiUrl = `https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/deleteVendor/${vendorId}`;
+
+  fetch(apiUrl, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
+    },
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json(); // remove if API does not return body
+    })
+    .then(() => {
+      if (row) row.remove();
+      resetDeleteContext();
+      closePopup("popup_loading");
+      showSuccessAlert("The vendor was deleted successfully!");
+      // successBox("Vendor and associated records deleted.");
+    })
+    .catch((xhr) => {
+      closePopup("popup_loading");
+      console.error("Error deleting vendor:", xhr);
+    });
+}
+
+function showDeleteConfirmationModal(recordId, row) {
+  deleteTargetRow = row;
+  deleteRecordId = recordId;
+  const modal = new bootstrap.Modal(document.getElementById("deleteVendorConfirmModal"));
+  modal.show();
 }
 
 function setNullGrid() {
@@ -734,211 +1376,249 @@ function handleGetVendorError() {
   setNullGrid(); // Reset the grid or handle error state
 }
 
-export function populateForm() {
-  "use strict"; // Enable strict mode for better error checking and prevention
-  // fetchDepartments("departmentWrapper2");
-  // Open a loading popup while fetching data
-  openPopup("popup_loading");
-  var UnitMap = {
-    0: "Active",
-    1: "InActive",
-    2: "Canceled",
-    3: "Scheduled",
-  };
+export function updateVendor(onSuccess, onError, onClose) {
+  "use strict";
 
-  // Get the selected radio button for the row selector
-  //  var selectedRadio = document.querySelector('input[name="row-selector"]:checked');
-  // var selectedRow = document.querySelector('tr.highlight');
+  try {
+    // Show loading popup when updating
+    openPopup("popup_loading");
 
-  var selectedRow = document.querySelector("#Subscriptions tbody tr.highlight");
+    // Get the selected row
+    const selectedRow = document.querySelector("#Subscriptions tbody tr.highlight");
+    if (!selectedRow) {
+      const message = "Please select a row to update.";
+      closePopup("popup_loading");
+      alert(message);
+      if (onError) onError(message);
+      return;
+    }
 
-  document.getElementById("subscriptionLimitMessage").style.display = "none";
-  //document.getElementById("editdescriptionLimitMessage").style.display = "none";
+    const activityID = selectedRow.cells[5].textContent.trim(); // adjust if needed
 
-  removeErrorAndClass("editContractAmount");
-  removeErrorAndClass("editNumUsers");
-  removeErrorAndClass("editNumLicenses");
-  removeErrorAndClass("editFrequencyNumber");
-  removeErrorAndClass("departmentSelect2");
-  removeErrorAndClass("editLastDueDate");
-  //if (selectedRadio)
-  if (selectedRow) {
-    var subActivityLineID = selectedRow.cells[12].textContent.trim();
-    // Traverse up the DOM to find the closest row element
-    // var row = selectedRadio.closest('tr');
+    // Get updated values from the modal
+    const vendorNameField = document.getElementById("editVendor_name");
+    const accountManagerName = document
+      .getElementById("editVendor_accountManagerName")
+      .value.trim();
+    const accountManagerEmail = document
+      .getElementById("editVendor_accountManagerEmail")
+      .value.trim();
+    let accountManagerPhone = document
+      .getElementById("editVendor_accountManagerPhone")
+      .value.trim();
 
-    // // Get the SubActivityLineID cell from the last cell in the row
-    // var subActivityLineIDCell = row.cells[row.cells.length - 1]; // Last cell in the row
+    const vendorName = vendorNameField.value.trim();
 
-    // // Retrieve and trim the SubActivityLineID value
-    // var subActivityLineID = subActivityLineIDCell.textContent.trim();
+    // Validate Vendor Name
+    if (vendorName === "") {
+      vendorNameField.classList.add("invalid-field");
+      const message = "Vendor Name is required.";
+      createErrorMessage(vendorNameField, message);
+      closePopup("popup_loading");
+      if (onError) onError(message);
+      return;
+    }
 
-    // Make an AJAX request to fetch subscription activity lines
-    webapi.safeAjax({
-      type: "GET",
-      // url: "/_api/yiic_subscriptionsactivitylines?$select=activityid,statecode,yiic_isitautorenewcontract,yiic_doyourequireapartnerforrenewal,yiic_nooflicenses,yiic_subscriptionfrequencyunit,yiic_subscriptionfrequencynumber,yiic_noofcurrentusers,modifiedon,description,yiic_activityid,yiic_subscriptionname,yiic_subscriptioncontractamount,yiic_subscriptionfrequency,yiic_lastduedate,yiic_nextduedate,yiic_subscriptionstartdate,yiic_subscriptionenddate,_yiic_subscriptionactivity_value&$expand=yiic_Subscriptionactivity_yiic_subscriptionsactivityline($select=activityid,yiic_accountmanageremail,yiic_accountmanagername,modifiedon,subject,yiic_accountmanagerphone,yiic_subscriptionamount,yiic_vendorname,yiic_activityid,_yiic_account_value)&$filter=(activityid eq " + subActivityLineID + " and modifiedon le '" + encodeURIComponent(new Date().toISOString()) + "')",
-      url:
-        "/_api/yiic_subscriptionsactivitylines?" +
-        "$select=activityid,statecode,yiic_isitautorenewcontract,yiic_doyourequireapartnerforrenewal,yiic_nooflicenses," +
-        "yiic_subscriptionfrequencyunit,yiic_subscriptionfrequencynumber,yiic_noofcurrentusers,modifiedon,description," +
-        "yiic_activityid,yiic_subscriptionname,yiic_subscriptioncontractamount,yiic_subscriptionfrequency,yiic_lastduedate," +
-        "yiic_nextduedate,yiic_subscriptionstartdate,yiic_subscriptionenddate,_yiic_subscriptionactivity_value," +
-        "_yiic_subscriptiondepartment_value" + // ADD THIS
-        "&$expand=" +
-        "yiic_Subscriptionactivity_yiic_subscriptionsactivityline(" +
-        "$select=activityid,yiic_accountmanageremail,yiic_accountmanagername,modifiedon,subject,yiic_accountmanagerphone," +
-        "yiic_subscriptionamount,yiic_vendorname,yiic_activityid,_yiic_account_value)," +
-        "yiic_SubscriptionDepartment_yiic_subscriptionsactivityline(" + // ADD THIS
-        "$select=yiic_budget,yiic_name)" +
-        "&$filter=(activityid eq " +
-        subActivityLineID +
-        " and modifiedon le '" +
-        encodeURIComponent(new Date().toISOString()) +
-        "')",
+    const accountId = window.APP_CONFIG?.primaryAccountId;
 
-      contentType: "application/json; charset=utf-8",
-      success: function (data) {
-        if (data) {
-          // Access the first activity line from the returned data
-          var activityLine = data.value[0];
-          var subscription = activityLine.yiic_Subscriptionactivity_yiic_subscriptionsactivityline;
-          var department = activityLine.yiic_SubscriptionDepartment_yiic_subscriptionsactivityline;
+    // Validate Email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (accountManagerEmail && !emailRegex.test(accountManagerEmail)) {
+      const emailInput = document.getElementById("editVendor_accountManagerEmail");
+      if (emailInput) {
+        emailInput.classList.add("invalid-field");
+        createErrorMessage(emailInput, "Enter a valid email address.");
+      }
+      closePopup("popup_loading");
+      if (onError) onError("Enter a valid email address.");
+      return;
+    }
 
-          const preselectedDepartmentId = activityLine._yiic_subscriptiondepartment_value;
-          const preselectedDepartmentName = department?.yiic_name;
-          const departmentWrapper = document.getElementById("departmentWrapper2");
-          if (preselectedDepartmentName != null) {
-            // Set the newly added subscription as selected
-            var placeholder = departmentWrapper.querySelector(".optionName");
-            placeholder.textContent = preselectedDepartmentName;
-            departmentWrapper.classList.remove("show-options");
-            departmentWrapper.setAttribute("data-selected-value", preselectedDepartmentId);
-          } else {
-            departmentWrapper.setAttribute("data-selected-value", "");
-            var placeholder = departmentWrapper.querySelector(".optionName");
-            placeholder.textContent = "Select Department";
-          }
+    // Validate Phone
+    const phoneRegex = /^\+?\d+$/;
+    if (accountManagerPhone && !phoneRegex.test(accountManagerPhone)) {
+      const phoneInput = document.getElementById("editVendor_accountManagerPhone");
+      if (phoneInput) {
+        phoneInput.classList.add("invalid-field");
+        createErrorMessage(phoneInput, "Only numbers allowed, optionally starting with '+'.");
+      }
+      closePopup("popup_loading");
+      if (onError) onError("Only numbers allowed, optionally starting with '+'.");
+      return;
+    }
 
-          // Populate form fields with the retrieved data
-          document.getElementById("editContractAmount").value =
-            activityLine.yiic_subscriptioncontractamount !== null
-              ? activityLine.yiic_subscriptioncontractamount.toString()
-              : "";
-          document.getElementById("editDescription").value =
-            activityLine.description !== null ? activityLine.description : "";
-          enforceEditCharacterLimit("editDescription", "editDescriptionCounter", 2000);
+    // Sanitize phone
+    accountManagerPhone = accountManagerPhone.replace(/\D/g, "");
 
-          // document.getElementById('editStartDate').value = activityLine.yiic_subscriptionstartdate !== null ? activityLine.yiic_subscriptionstartdate.substring(0, 10) : '';
-          document.getElementById("editEndDate").value =
-            activityLine.yiic_subscriptionenddate !== null
-              ? activityLine.yiic_subscriptionenddate.substring(0, 10)
-              : "";
+    // Create update object
+    const updateData = {
+      yiic_vendorname: vendorName,
+      yiic_accountmanagername: accountManagerName,
+      yiic_accountmanageremail: accountManagerEmail,
+      yiic_accountmanagerphone: accountManagerPhone,
+    };
 
-          // Get the start date value
-          var startDate =
-            activityLine.yiic_subscriptionstartdate !== null
-              ? activityLine.yiic_subscriptionstartdate.substring(0, 10)
-              : "";
-          document.getElementById("editStartDate").value = startDate;
-
-          // Get the end date field
-          var endDateField = document.getElementById("editEndDate");
-
-          // If start date is empty, disable end date
-          if (!startDate) {
-            endDateField.disabled = true; // Disable the field
-          } else {
-            // Set the end date value and enable the field
-            endDateField.disabled = false;
-          }
-
-          document.getElementById("editFrequencyNumber").value =
-            activityLine.yiic_subscriptionfrequencynumber !== null
-              ? activityLine.yiic_subscriptionfrequencynumber
-              : "";
-          document.getElementById("editFrequencyUnit").value =
-            activityLine.yiic_subscriptionfrequencyunit;
-          document.getElementById("editNumLicenses").value = activityLine.yiic_nooflicenses || "";
-          document.getElementById("editActivityStatus").value = UnitMap[activityLine.statecode];
-          //document.getElementById('reminderIntervalUnit').value = activityLine.yiic_reminderintervalunit;
-          document.getElementById("editSubscriptionFrequency").value =
-            activityLine.yiic_subscriptionfrequency !== null
-              ? activityLine.yiic_subscriptionfrequency
-              : "";
-          document.getElementById("editLastDueDate").value =
-            activityLine.yiic_lastduedate !== null
-              ? activityLine.yiic_lastduedate.substring(0, 10)
-              : "";
-          document.getElementById("editNumUsers").value =
-            activityLine.yiic_noofcurrentusers !== null ? activityLine.yiic_noofcurrentusers : "";
-          document.getElementById("editNextDueDate").value =
-            activityLine.yiic_nextduedate !== null
-              ? activityLine.yiic_nextduedate.substring(0, 10)
-              : "";
-          //document.getElementById('reminderIntervalDays').value = activityLine.yiic_reminderintervaldays || '';
-          //document.getElementById('reminderInterval').value = activityLine.yiic_reminderinterval || '';
-          document.getElementById("activityLineID").value = activityLine.activityid || "";
-          document.getElementById("editSubactivityID").value = activityLine.yiic_activityid || "";
-          document.getElementById("editActivityID").value =
-            subscription.yiic_activityid !== null ? subscription.yiic_activityid : "";
-          document.getElementById("editAccountManagerName").value =
-            subscription.yiic_accountmanagername || "";
-          document.getElementById("editSubscriptionActivity").value = subscription.subject || "";
-          document.getElementById("editAccountManagerEmail").value =
-            subscription.yiic_accountmanageremail || "";
-          document.getElementById("editAccountManagerPhone").value =
-            subscription.yiic_accountmanagerphone || "";
-          document.getElementById("editSubscriptionAmount").value =
-            subscription.yiic_subscriptionamount !== null
-              ? subscription.yiic_subscriptionamount
-              : "";
-          //document.getElementById('editVendorName').value = subscription.yiic_vendorname || '';
-          const vendorField = document.getElementById("editVendorName");
-          vendorField.value = subscription.yiic_vendorname || "";
-          vendorField.setAttribute("data-subactivity-id", subscription.activityid);
-
-          document.getElementById("editLastUpdated").value =
-            activityLine.modifiedon !== null ? activityLine.modifiedon.substring(0, 10) : "";
-          document.getElementById("editSubscriptionName").value =
-            activityLine.yiic_subscriptionname !== null ? activityLine.yiic_subscriptionname : "";
-
-          // Set checkbox states based on boolean values
-          document.getElementById("editRequirePartnerId").checked =
-            activityLine.yiic_doyourequireapartnerforrenewal === true;
-          document.getElementById("editRequirePartnernoId").checked =
-            activityLine.yiic_doyourequireapartnerforrenewal === false;
-          document.getElementById("editAutorenewyes").checked =
-            activityLine.yiic_isitautorenewcontract === true;
-          document.getElementById("editAutoRenewNo").checked =
-            activityLine.yiic_isitautorenewcontract === false;
-
-          // Fetch account details for the related subscription
-          webapi.safeAjax({
-            type: "GET",
-            url: "/_api/accounts(" + subscription._yiic_account_value + ")?$select=name",
-            contentType: "application/json; charset=utf-8",
-            success: function (data) {
-              if (data) {
-                // Populate the account view field
-                var account = data;
-                document.getElementById("editAccount").value = account.name || "";
-              }
-            },
-            error: function (err) {
-              alert("Couldn't complete request, please try again!");
-            },
-          });
-
-          // Close the loading popup after data is populated
-          closePopup("popup_loading");
-        }
-      },
-      error: function (err) {
-        console.error("Error fetching subscription activity lines:", err);
-        closePopup("popup_loading"); // Close the loading popup in case of error
-      },
+    /*
+    checkIfVendorExists(accountId, vendorName, activityID, function () {
+      // Duplicate check skipped → directly updating
+      updateVendorRecord(
+        activityID,
+        updateData,
+        selectedRow,
+        onSuccess,
+        onError,
+        onClose,
+      );
     });
+    */
+
+    // Duplicate check skipped → directly updating
+    updateVendorRecord(activityID, updateData, selectedRow, onSuccess, onError, onClose);
+  } catch (error) {
+    console.error("Error preparing vendor update:", error);
+    closePopup("popup_loading");
+    if (onError) {
+      onError(error.message || "Failed to update vendor. Please try again.");
+    } else {
+      alert("Failed to update vendor. Please try again.");
+    }
   }
+}
+
+function updateVendorRecord(activityID, updateData, selectedRow, onSuccess, onError, onClose) {
+  fetch(
+    "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/updateVendor/" +
+      activityID,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
+      },
+      body: JSON.stringify(updateData),
+    }
+  )
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("API request failed");
+      }
+      return response.json();
+    })
+    .then(() => {
+      selectedRow.cells[1].textContent = updateData.yiic_vendorname;
+      selectedRow.cells[2].textContent = updateData.yiic_accountmanageremail;
+
+      // Show success message
+      showSuccessMessage("Vendor updated successfully!");
+
+      closePopup("popup_loading");
+      if (onSuccess) onSuccess();
+      if (onClose) onClose();
+    })
+    .catch((error) => {
+      console.error("Error updating vendor:", error);
+      closePopup("popup_loading");
+      if (onError) {
+        onError(error.message || "Failed to update vendor. Please try again.");
+      } else {
+        alert("Failed to update vendor. Please try again.");
+      }
+    });
+}
+
+export function populateForm() {
+  "use strict";
+
+  // Show loading popup when fetching data
+  openPopup("popup_loading");
+
+  // Get the selected row
+  const selectedRow = document.querySelector("#Subscriptions tbody tr.highlight");
+
+  if (!selectedRow) {
+    alert("Please select a vendor to edit.");
+    closePopup("popup_loading");
+    return;
+  }
+
+  // Get the ActivityID / VendorId from hidden cell
+  const activityID = selectedRow.cells[5]?.textContent.trim();
+
+  if (!activityID) {
+    alert("Could not find ActivityID.");
+    closePopup("popup_loading");
+    return;
+  }
+
+  // Reset modal fields
+  const editVendorNameInput = document.getElementById("editVendor_name");
+  const editVendorManagerNameInput = document.getElementById("editVendor_accountManagerName");
+  const editVendorManagerEmailInput = document.getElementById("editVendor_accountManagerEmail");
+  const editVendorManagerPhoneInput = document.getElementById("editVendor_accountManagerPhone");
+
+  if (editVendorNameInput) editVendorNameInput.value = "";
+  if (editVendorManagerNameInput) editVendorManagerNameInput.value = "";
+  if (editVendorManagerEmailInput) editVendorManagerEmailInput.value = "";
+  if (editVendorManagerPhoneInput) editVendorManagerPhoneInput.value = "";
+
+  // Reset error states
+  const nameLimitMsg = document.getElementById("editVendor_nameLimitMessage");
+  const managerNameLimitMsg = document.getElementById("editVendor_accountManagerNameLimitMessage");
+  const managerEmailLimitMsg = document.getElementById(
+    "editVendor_accountManagerEmailLimitMessage"
+  );
+  const managerPhoneLimitMsg = document.getElementById(
+    "editVendor_accountManagerPhoneLimitMessage"
+  );
+
+  if (nameLimitMsg) nameLimitMsg.style.display = "none";
+  if (managerNameLimitMsg) managerNameLimitMsg.style.display = "none";
+  if (managerEmailLimitMsg) managerEmailLimitMsg.style.display = "none";
+  if (managerPhoneLimitMsg) managerPhoneLimitMsg.style.display = "none";
+
+  removeErrorAndClass(editVendorNameInput);
+  removeErrorAndClass(editVendorManagerNameInput);
+  removeErrorAndClass(editVendorManagerEmailInput);
+  removeErrorAndClass(editVendorManagerPhoneInput);
+
+  // ✅ NEW API URL
+  const apiUrl = `https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/getVendorDetails/${activityID}`;
+
+  fetch(apiUrl, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
+    },
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then((result) => {
+      // Populate modal fields (API response mapping)
+      document.getElementById("editVendor_name").value =
+        result.vendorName || result.yiic_vendorname || "";
+
+      document.getElementById("editVendor_accountManagerName").value =
+        result.accountManagerName || result.yiic_accountmanagername || "";
+
+      document.getElementById("editVendor_accountManagerEmail").value =
+        result.accountManagerEmail || result.yiic_accountmanageremail || "";
+
+      document.getElementById("editVendor_accountManagerPhone").value =
+        result.accountManagerPhone || result.yiic_accountmanagerphone || "";
+
+      // Close loading popup after data is fetched and populated
+      closePopup("popup_loading");
+    })
+    .catch((error) => {
+      console.error("Error fetching vendor data:", error);
+      closePopup("popup_loading");
+      alert("Failed to load vendor data. Please try again.");
+    });
 }
 
 function setGrid(subscriptions) {
@@ -1041,7 +1721,16 @@ function setGrid(subscriptions) {
 
             deleteIcon.onclick = function (e) {
               e.stopPropagation();
-              handleVendorDelete(subscription.vendorId, row);
+              // Dispatch custom event for React to handle
+              const deleteEvent = new CustomEvent("vendorDeleteRequest", {
+                detail: {
+                  vendorId: subscription.vendorId,
+                  vendorName: subscription.vendorName,
+                  row: row,
+                },
+                bubbles: true,
+              });
+              document.dispatchEvent(deleteEvent);
             };
 
             statusWrapper.appendChild(deleteIcon);

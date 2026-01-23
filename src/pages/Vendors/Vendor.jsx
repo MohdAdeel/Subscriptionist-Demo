@@ -1,11 +1,16 @@
 import {
   getFilters,
   populateForm,
+  AddNewVendor,
+  updateVendor,
+  deleteVendorAPI,
   handleStatusChange,
   SearchSubscriptionName,
   getRelationshipSubsLines,
+  checkVendorActivityLines,
   SearchSubscriptionNameOnBlur,
-} from "../../lib/utils/Vendors";
+  deleteVendorWithActivityLines,
+} from "../../lib/utils/vendors";
 import {
   InputSkeleton,
   ButtonSkeleton,
@@ -13,7 +18,10 @@ import {
   TableHeaderSkeleton,
 } from "../../components/SkeletonLoader";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import AddVendorModal from "./component/AddVendorModal.jsx";
+import EditVendorModal from "./component/EditVendorModal.jsx";
+import { useEffect, useRef, useState, useCallback } from "react";
+import DeleteVendorModal from "./component/DeleteVendorModal.jsx";
 import { FiSearch, FiBell, FiCalendar, FiUser } from "react-icons/fi";
 
 const Vendor = () => {
@@ -30,13 +38,172 @@ const Vendor = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [descriptionCount, setDescriptionCount] = useState(0);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [showAddVendorModal, setShowAddVendorModal] = useState(false);
+  const [showEditVendorModal, setShowEditVendorModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteVendorId, setDeleteVendorId] = useState(null);
+  const [deleteVendorName, setDeleteVendorName] = useState("");
+  const [deleteActivityLines, setDeleteActivityLines] = useState([]);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDescriptionChange = (e) => {
     setDescriptionCount(e.target.value.length);
   };
 
   const openModal = () => {
-    setShowModal(true);
+    setShowEditVendorModal(true);
+  };
+
+  const openAddVendorModal = () => {
+    setShowAddVendorModal(true);
+  };
+
+  const closeAddVendorModal = () => {
+    setShowAddVendorModal(false);
+  };
+
+  const handleVendorSuccess = () => {
+    // Refresh the vendor list after successful creation
+    getRelationshipSubsLines(1, getFilters()).finally(() => {
+      // Check if table is empty
+      const tbody = document.getElementById("subscription-grid-body");
+      if (tbody) {
+        const rows = tbody.querySelectorAll("tr");
+        setIsEmpty(rows.length === 0);
+      }
+    });
+  };
+
+  const handleVendorError = (errorMessage) => {
+    alert(errorMessage || "Failed to create vendor. Please try again.");
+  };
+
+  const handleAddNewVendor = () => {
+    AddNewVendor(handleVendorSuccess, handleVendorError, closeAddVendorModal);
+  };
+
+  // Delete vendor handlers
+  const handleDeleteClick = useCallback(async (vendorId, vendorName) => {
+    try {
+      setDeleteVendorId(vendorId);
+      setDeleteVendorName(vendorName || "");
+      setIsDeleting(false);
+
+      // Check if vendor has activity lines
+      const activityInfo = await checkVendorActivityLines(vendorId);
+      setDeleteActivityLines(activityInfo.activityLines || []);
+      setShowDeleteModal(true);
+    } catch (error) {
+      console.error("Error checking vendor activity lines:", error);
+      alert("Failed to check vendor details. Please try again.");
+    }
+  }, []);
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteVendorId) return;
+
+    setIsDeleting(true);
+
+    try {
+      const activityLineIds = deleteActivityLines.map((line) => line.activityid);
+
+      if (activityLineIds.length > 0) {
+        // Delete vendor with activity lines
+        await deleteVendorWithActivityLines(deleteVendorId, activityLineIds, (current, total) => {
+          console.log(`Deleting activity line ${current} of ${total}`);
+        });
+      } else {
+        // Delete vendor only
+        await deleteVendorAPI(deleteVendorId);
+      }
+
+      // Show success message
+      showSuccessMessage("Vendor deleted successfully!");
+
+      // Close modal
+      setShowDeleteModal(false);
+      setDeleteVendorId(null);
+      setDeleteVendorName("");
+      setDeleteActivityLines([]);
+
+      // Refresh the vendor list
+      getRelationshipSubsLines(1, getFilters()).finally(() => {
+        const tbody = document.getElementById("subscription-grid-body");
+        if (tbody) {
+          const rows = tbody.querySelectorAll("tr");
+          setIsEmpty(rows.length === 0);
+        }
+      });
+    } catch (error) {
+      console.error("Error deleting vendor:", error);
+      alert(error.message || "Failed to delete vendor. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    if (!isDeleting) {
+      setShowDeleteModal(false);
+      setDeleteVendorId(null);
+      setDeleteVendorName("");
+      setDeleteActivityLines([]);
+    }
+  };
+
+  // Success message function (reuse from vendors.js)
+  const showSuccessMessage = (message) => {
+    const existingMsg = document.getElementById("vendor-success-message");
+    if (existingMsg) {
+      existingMsg.remove();
+    }
+
+    const successMsg = document.createElement("div");
+    successMsg.id = "vendor-success-message";
+    successMsg.className =
+      "fixed top-4 right-4 z-[2000] bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-slide-in";
+    successMsg.innerHTML = `
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+      </svg>
+      <span>${message}</span>
+    `;
+
+    if (!document.getElementById("vendor-success-styles")) {
+      const style = document.createElement("style");
+      style.id = "vendor-success-styles";
+      style.textContent = `
+        @keyframes slide-in {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-in {
+          animation: slide-in 0.3s ease-out;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    document.body.appendChild(successMsg);
+
+    setTimeout(() => {
+      if (successMsg.parentElement) {
+        successMsg.style.transition = "opacity 0.3s ease-out, transform 0.3s ease-out";
+        successMsg.style.opacity = "0";
+        successMsg.style.transform = "translateX(100%)";
+        setTimeout(() => {
+          if (successMsg.parentElement) {
+            successMsg.remove();
+          }
+        }, 300);
+      }
+    }, 3000);
   };
 
   useEffect(() => {
@@ -86,11 +253,12 @@ const Vendor = () => {
     };
   }, [isLoading]);
 
+  // When edit modal opens, load vendor data into fields
   useEffect(() => {
-    if (showModal) {
-      populateForm(selectedRowId);
+    if (showEditVendorModal) {
+      populateForm();
     }
-  }, [showModal]);
+  }, [showEditVendorModal]);
 
   // Add row selection highlighting using React state
   useEffect(() => {
@@ -160,6 +328,20 @@ const Vendor = () => {
       observer.disconnect();
     };
   }, [selectedRowId]);
+
+  // Listen for delete vendor events from setGrid
+  useEffect(() => {
+    const handleDeleteRequest = async (event) => {
+      const { vendorId, vendorName } = event.detail;
+      await handleDeleteClick(vendorId, vendorName);
+    };
+
+    document.addEventListener("vendorDeleteRequest", handleDeleteRequest);
+
+    return () => {
+      document.removeEventListener("vendorDeleteRequest", handleDeleteRequest);
+    };
+  }, [handleDeleteClick]);
 
   const handleDatePickerClick = () => {
     if (!showDatePicker) {
@@ -270,13 +452,56 @@ const Vendor = () => {
               >
                 Edit
               </button>
-              <button className="px-3 sm:px-4 md:px-[18px] py-2 sm:py-2.5 rounded-lg sm:rounded-[10px] border-none bg-[#1d225d] text-white text-xs sm:text-sm font-semibold cursor-pointer hover:bg-[#15195a] transition-colors whitespace-nowrap w-full sm:w-auto">
+              <button
+                className="px-4 py-2 rounded-lg bg-[#1d225d] text-white text-sm font-semibold hover:bg-[#15195a]"
+                onClick={openAddVendorModal}
+              >
                 Add Vendor
               </button>
             </>
           )}
         </div>
+        {showAddVendorModal && (
+          <AddVendorModal closeModal={closeAddVendorModal} AddNewVendor={handleAddNewVendor} />
+        )}
       </div>
+
+      {/* Edit Vendor Modal */}
+      <EditVendorModal
+        isOpen={showEditVendorModal}
+        onClose={() => setShowEditVendorModal(false)}
+        onUpdate={() =>
+          updateVendor(
+            () => {
+              // Refresh list on success
+              getRelationshipSubsLines(1, getFilters()).finally(() => {
+                const tbody = document.getElementById("subscription-grid-body");
+                if (tbody) {
+                  const rows = tbody.querySelectorAll("tr");
+                  setIsEmpty(rows.length === 0);
+                }
+              });
+            },
+            (errorMessage) => {
+              if (errorMessage) {
+                alert(errorMessage);
+              }
+            },
+            () => setShowEditVendorModal(false)
+          )
+        }
+      />
+
+      {/* Delete Vendor Modal */}
+      <DeleteVendorModal
+        isOpen={showDeleteModal}
+        onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
+        vendorName={deleteVendorName}
+        isLoading={isDeleting}
+        hasActivityLines={deleteActivityLines.length > 0}
+        activityLinesCount={deleteActivityLines.length}
+      />
 
       {/* Table and Charts Side by Side */}
       <div className="mt-4 sm:mt-6 md:mt-8 flex flex-col lg:flex-row gap-4 lg:gap-6">
