@@ -1,7 +1,15 @@
 import { create } from "zustand";
 
+const initialFilters = {
+  startDate: null,
+  endDate: null,
+  amount1: null,
+  amount2: null,
+  status: null,
+};
+
 export const useReportsPageStore = create((set) => ({
-  filters: {},
+  filters: initialFilters,
   reports: [],
   loading: false,
   error: null,
@@ -40,7 +48,10 @@ export const useReportsPageStore = create((set) => ({
   // Active tab for subscription table: 'all' | 'active' | 'expired'
   activeSubscriptionTab: "all",
 
-  setFilters: (filters) => set({ filters }),
+  setFilters: (updates) =>
+    set((state) => ({
+      filters: { ...state.filters, ...updates },
+    })),
   setReports: (reports) => set({ reports }),
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
@@ -50,7 +61,7 @@ export const useReportsPageStore = create((set) => ({
   setActiveSubscriptionTab: (activeSubscriptionTab) => set({ activeSubscriptionTab }),
   resetReportsPage: () =>
     set({
-      filters: {},
+      filters: initialFilters,
       reports: [],
       loading: false,
       error: null,

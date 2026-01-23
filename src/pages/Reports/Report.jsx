@@ -9,14 +9,15 @@ import {
   FiCalendar,
 } from "react-icons/fi";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import ExcelJS from "exceljs";
+import autoTable from "jspdf-autotable";
 import Financial from "./components/Financial";
 import { useActivityLines } from "../../hooks";
 import { useReportsPageStore } from "../../stores";
 import { useState, useEffect, useRef } from "react";
 import StandardReports from "./components/StandardReports";
 import RenewalAndExpiration from "./components/RenewalAndExpiration";
+import { applyFilters, clearFilters } from "../../lib/utils/reportsPage";
 import { TableSkeleton, ChartSkeleton, KPICardSkeleton } from "../../components/SkeletonLoader";
 
 const Report = () => {
@@ -41,6 +42,7 @@ const Report = () => {
   const MIN_HIGH_SPEND = 0;
   const MAX_HIGH_SPEND = 800000;
   const [highSpendValue, setHighSpendValue] = useState(MAX_HIGH_SPEND);
+  const setReportFilters = useReportsPageStore((state) => state.setFilters);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
@@ -545,6 +547,10 @@ const Report = () => {
       )} - ${formatDateForDisplay(endDate)}`;
       setDateRangeText(formattedRange);
       setShowDatePicker(false);
+      setReportFilters({
+        startDate: formatDateKey(startDate),
+        endDate: formatDateKey(endDate),
+      });
     }
   };
 
@@ -552,6 +558,7 @@ const Report = () => {
     setStartDate(null);
     setEndDate(null);
     setDateRangeText("");
+    setReportFilters({ startDate: null, endDate: null });
   };
 
   const navigateMonth = (direction) => {
@@ -631,6 +638,10 @@ const Report = () => {
       </div>
     );
   };
+
+  useEffect(() => {
+    setReportFilters({ amount2: highSpendValue });
+  }, [highSpendValue, setReportFilters]);
 
   const getNextMonth = () => {
     const next = new Date(currentMonth);
@@ -1868,10 +1879,29 @@ const Report = () => {
               </div>
 
               <div className="flex items-center justify-between pt-2">
-                <button className="text-sm font-medium text-gray-500 hover:text-gray-700">
+                <button
+                  className="text-sm font-medium text-gray-500 hover:text-gray-700"
+                  onClick={() => {
+                    // Reset local UI state
+                    setStartDate(null);
+                    setEndDate(null);
+                    setDateRangeText("");
+                    setHighSpendValue(MAX_HIGH_SPEND);
+                    // Clear filters and re-process data
+                    clearFilters();
+                    // Close filter panel
+                    setIsFilterOpen(false);
+                  }}
+                >
                   Clear Filters
                 </button>
-                <button className="rounded-lg bg-[#1D225D] px-4 py-2 text-sm font-medium text-white hover:bg-[#161A4C]">
+                <button
+                  className="rounded-lg bg-[#1D225D] px-4 py-2 text-sm font-medium text-white hover:bg-[#161A4C]"
+                  onClick={() => {
+                    applyFilters();
+                    setIsFilterOpen(false);
+                  }}
+                >
                   Apply Filters
                 </button>
               </div>

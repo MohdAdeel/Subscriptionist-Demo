@@ -1,8 +1,8 @@
 import {
   parseFrequency,
   groupByVendorName,
-  filterMonthlySubsinRange,
   clearMonthlySubscription,
+  filterMonthlySubsinRange,
   removeObjectsWithSameTime,
   generateSimilarRecordsbyYear,
   generateSimilarRecordsbyMonth,
@@ -10,7 +10,8 @@ import {
 } from "./sharedUtils";
 import { useReportsPageStore } from "../../stores";
 
-let subscriptionArray = [];
+const getReportFilters = () => useReportsPageStore.getState().filters;
+const updateReportFilters = (updates) => useReportsPageStore.getState().setFilters(updates);
 let filtersForFinance = {
   startDate: null,
   endDate: null,
@@ -25,7 +26,13 @@ let filtersforRenewal = {
   amount2: null,
   status: null,
 };
+let subscriptionArray = [];
 let monthlyRenewal = [];
+let monthlySubscription = [];
+let SubscriptionJSonBackup = [];
+let SubscriptionJSon = [];
+let startMonthIndex = 0;
+let endMonthIndex = 11;
 var startDateForRen = new Date();
 var endDateForRen = new Date(startDateForRen.getFullYear(), 11, 31);
 let startDateforRenwal = 0;
@@ -74,9 +81,9 @@ export const handleActivityLinesSuccess = (originalData) => {
   const transformedLines = transformAzureResponseToBlobFormat(lines);
 
   const transformedData = groupByVendorName(transformedLines);
-  const SubscriptionJSonBackup = transformedData;
+  SubscriptionJSonBackup = transformedData;
   countByVendorName(SubscriptionJSonBackup);
-  const SubscriptionJSon = JSON.parse(JSON.stringify(SubscriptionJSonBackup));
+  SubscriptionJSon = JSON.parse(JSON.stringify(SubscriptionJSonBackup));
   modifySubscriptionsWithChartLimit(SubscriptionJSon);
 
   var sortedSubscriptions = modifyRenewalCalendarReport(SubscriptionJSon);
@@ -131,7 +138,9 @@ export function mergeRecordsByMonth() {
   // Create an object to store merged records
   let mergedRecords = {};
 
-  subscriptionArray = JSON.parse(JSON.stringify(filterMonthlySubsinRange())); // Filtering subscriptions that are in range for, say, on load 12 months
+  subscriptionArray = JSON.parse(
+    JSON.stringify(filterMonthlySubsinRange(startMonthIndex, endMonthIndex))
+  ); // Filtering subscriptions based on user-selected date range
 
   // Get current active tab from store (React best practice - no DOM manipulation)
   const { activeSubscriptionTab } = useReportsPageStore.getState();
@@ -169,16 +178,9 @@ export function mergeRecordsByMonth() {
   // Update store with processed data (React best practice)
   setSubscriptionTableDataInStore(status, subscriptionArray);
   setStandardReportCards(subscriptionArray);
-  setMonthlySpendChartData(flattenedArray);
+  // Pass dynamic month indices for proper chart label generation
+  setMonthlySpendChartData(flattenedArray, startMonthIndex, endMonthIndex);
 }
-
-let filters = {
-  startDate: null,
-  endDate: null,
-  amount1: null,
-  amount2: null,
-  status: null,
-};
 
 export function setStandardReportCards(arraySubs) {
   const { setTopCards } = useReportsPageStore.getState();
@@ -191,6 +193,7 @@ export function setStandardReportCards(arraySubs) {
 
   var todayForRen = new Date();
   var endOfYear = null;
+  const filters = getReportFilters();
   if (filters.startDate == null && filters.endDate == null) {
     endOfYear = new Date(todayForRen.getFullYear(), 11, 31); // December 31st of the current year
   } else {
@@ -1088,4 +1091,109 @@ function fillExpiredSubscriptionsTable(subscriptions) {
   });
   const { setExpiredSubscriptionsData } = useReportsPageStore.getState();
   setExpiredSubscriptionsData(filteredSubscriptions);
+}
+
+export function applyFilters() {
+  // Get selected range values (amount1 and Amount2) from user
+  const filters = getReportFilters();
+  var minRangeInput = filters.amount1;
+  var maxRangeInput = filters.amount2;
+  const filterUpdates = {};
+  if (minRangeInput && maxRangeInput) {
+    filterUpdates.amount1 = minRangeInput || null; // Set amount1
+    filterUpdates.amount2 = maxRangeInput || null; // Set amount2
+  }
+  // Get date range (StartDate and EndDate) - these are already strings in "YYYY-MM-DD" format
+  const startDateValue = filters.startDate;
+  const endDateValue = filters.endDate;
+
+  if (startDateValue && endDateValue) {
+    // Dates are already in correct format from the store, use them directly
+    filterUpdates.startDate = startDateValue;
+    filterUpdates.endDate = endDateValue;
+    setUserValuesForStand(startDateValue, endDateValue);
+  } else {
+    startMonthIndex = 0;
+    endMonthIndex = 11;
+    filterUpdates.startDate = null;
+    filterUpdates.endDate = null;
+    // Re-render charts with default date range when filters are cleared
+    handleFilteredCharts();
+  }
+}
+
+/**
+ * Clears all filters and re-processes data with default values
+ * This resets the charts to show full year data without re-fetching from API
+ */
+export function clearFilters() {
+  // Reset filters in store
+  updateReportFilters({
+    startDate: null,
+    endDate: null,
+    amount1: null,
+    amount2: null,
+    status: null,
+  });
+
+  // Reset month indices to full year
+  startMonthIndex = 0;
+  endMonthIndex = 11;
+
+  // Re-process data with default filters
+  handleFilteredCharts();
+}
+
+function setUserValuesForStand(StartDate, EndDate) {
+  console.log("here is StartDate", StartDate, "EndDate", EndDate);
+  var currentYear = new Date().getFullYear();
+
+  // Check and parse StartDate
+  if (StartDate) {
+    var startDate = new Date(StartDate);
+    var startMonth = startDate.getMonth(); // Month index (0-11)
+
+    if (startDate.getFullYear() === currentYear) {
+      startMonthIndex = startMonth; // Current year, normal index
+    } else if (startDate.getFullYear() < currentYear) {
+      startMonthIndex = startMonth - 12; // Previous years, negative index
+    } else {
+      startMonthIndex = startMonth + 12; // Future years, positive index
+    }
+  }
+
+  // Check and parse EndDate
+  if (EndDate) {
+    var endDate = new Date(EndDate);
+    var endMonth = endDate.getMonth(); // Month index (0-11)
+
+    if (endDate.getFullYear() === currentYear) {
+      endMonthIndex = endMonth; // Current year, normal index
+    } else if (endDate.getFullYear() < currentYear) {
+      endMonthIndex = endMonth - 12; // Previous years, negative index
+    } else {
+      endMonthIndex = endMonth + 12; // Future years, positive index
+    }
+  }
+
+  // getMonthlySpendApi(); //change this to handleActivityLinesSuccess
+  handleFilteredCharts();
+}
+
+function handleFilteredCharts() {
+  SubscriptionJSon = JSON.parse(JSON.stringify(SubscriptionJSonBackup));
+  console.log("here is from handleFilteredCharts", SubscriptionJSon);
+  // IMPORTANT: Use clearMonthlySubscription() to clear the array in sharedUtils.js
+  // The local monthlySubscription variable in this file is NOT the one used by generateSimilarRecordsbyMonth
+  clearMonthlySubscription();
+  monthlyDepartments = [];
+  monthlyRenewal = [];
+  nearingRenewal = [];
+  modifySubscriptionsWithChartLimit(SubscriptionJSon);
+  modifyDepartmentChartLimit(SubscriptionJSon);
+  modifyRenewalSubscriptionsWithChartLimit(SubscriptionJSon);
+  var sortedSubscriptions = modifyRenewalCalendarReport(SubscriptionJSon);
+  var categorizedSubscriptions = categorizeSubscriptionsByUrgency(sortedSubscriptions);
+  const { setCategorizedSubscriptions } = useReportsPageStore.getState();
+  setCategorizedSubscriptions(categorizedSubscriptions);
 }

@@ -296,19 +296,18 @@ export function generateSimilarRecordsbyYear(record) {
   }
 }
 
-export function filterMonthlySubsinRange() {
+export function filterMonthlySubsinRange(startMonthIdx = 0, endMonthIdx = 11) {
   const currentDate = new Date();
-  const startMonthIndex = 0; // January
-  const endMonthIndex = 11; // December
-  const startDate = new Date(currentDate.getFullYear(), startMonthIndex, 1); // January 1st
-  const endDate = new Date(currentDate.getFullYear(), endMonthIndex + 1, 0); // December 31st
+  // Use passed parameters instead of hardcoded values to support date filtering
+  const startDate = new Date(currentDate.getFullYear(), startMonthIdx, 1);
+  const endDate = new Date(currentDate.getFullYear(), endMonthIdx + 1, 0);
 
   var tempMonthly = [];
 
   monthlySubscription.forEach(function (record) {
     var subscriptionstartDate = new Date(record.SubscriptionStartDate);
 
-    // Filter records that fall within the full year range
+    // Filter records that fall within the specified date range
     if (subscriptionstartDate >= startDate && subscriptionstartDate <= endDate) {
       // Create a deep copy to prevent reference issues
       tempMonthly.push(JSON.parse(JSON.stringify(record)));
