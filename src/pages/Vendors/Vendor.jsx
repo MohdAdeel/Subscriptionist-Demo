@@ -5,7 +5,7 @@ import {
   SearchSubscriptionName,
   getRelationshipSubsLines,
   SearchSubscriptionNameOnBlur,
-} from "../../lib/utils/vendors";
+} from "../../lib/utils/Vendors";
 import {
   InputSkeleton,
   ButtonSkeleton,
