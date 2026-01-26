@@ -1,3 +1,13 @@
+import {
+  createVendor as createVendorAPI,
+  getVendorData,
+  getVendorDetails,
+  updateVendor as updateVendorAPICall,
+  deleteVendor as deleteVendorAPICall,
+  getSubscriptionActivityLinesBySubscriptionActivity,
+  deleteSubscriptionActivityLine,
+} from "../api/vendor/vendor";
+
 let deleteTargetRow = null;
 let deleteRecordId = null;
 let deleteAllVendorId = null;
@@ -494,79 +504,37 @@ export function AddNewVendor(onSuccess, onError, onClose) {
 
 const createVendorRecord = async (record, onSuccess, onError, onClose) => {
   try {
-    const response = await fetch(
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/createVendor",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
-        },
-        body: JSON.stringify(record),
-      }
-    );
+    const data = await createVendorAPI(record);
 
-    // Check if response is successful (200-299 range, including 201)
-    if (response.status >= 200 && response.status < 300) {
-      // Try to parse JSON, but handle cases where response might be empty
-      let data = null;
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        try {
-          data = await response.json();
-        } catch (e) {
-          // Response might be empty, that's okay for 201
-          console.log("Response body is empty or not JSON, which is fine for 201 status");
-        }
-      }
+    console.log("Vendor created successfully:", data || "No response body");
 
-      console.log("Vendor created successfully:", data || "No response body");
+    // Show success message
+    showSuccessMessage("Vendor created successfully!");
 
-      // Show success message
-      showSuccessMessage("Vendor created successfully!");
+    // Clear form fields
+    const vendorNameInput = document.getElementById("addVendorRecord_name");
+    const accountManagerNameInput = document.getElementById("addVendorRecord_managerName");
+    const accountManagerEmailInput = document.getElementById("addVendorRecord_managerEmail");
+    const accountManagerPhoneInput = document.getElementById("addVendorRecord_managerPhone");
 
-      // Clear form fields
-      const vendorNameInput = document.getElementById("addVendorRecord_name");
-      const accountManagerNameInput = document.getElementById("addVendorRecord_managerName");
-      const accountManagerEmailInput = document.getElementById("addVendorRecord_managerEmail");
-      const accountManagerPhoneInput = document.getElementById("addVendorRecord_managerPhone");
+    if (vendorNameInput) vendorNameInput.value = "";
+    if (accountManagerNameInput) accountManagerNameInput.value = "";
+    if (accountManagerEmailInput) accountManagerEmailInput.value = "";
+    if (accountManagerPhoneInput) accountManagerPhoneInput.value = "";
 
-      if (vendorNameInput) vendorNameInput.value = "";
-      if (accountManagerNameInput) accountManagerNameInput.value = "";
-      if (accountManagerEmailInput) accountManagerEmailInput.value = "";
-      if (accountManagerPhoneInput) accountManagerPhoneInput.value = "";
+    // Remove any error messages
+    removeErrorAndClass(vendorNameInput);
+    removeErrorAndClass(accountManagerEmailInput);
+    removeErrorAndClass(accountManagerPhoneInput);
 
-      // Remove any error messages
-      removeErrorAndClass(vendorNameInput);
-      removeErrorAndClass(accountManagerEmailInput);
-      removeErrorAndClass(accountManagerPhoneInput);
+    // Call success callback
+    if (onSuccess) {
+      onSuccess(data);
+    }
 
-      // Call success callback
-      if (onSuccess) {
-        onSuccess(data);
-      }
-
-      // Close modal
-      if (onClose) {
-        onClose();
-      }
-    } else {
-      // Handle error response
-      let errorMessage = "Failed to create vendor";
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorData.error || errorMessage;
-      } catch (e) {
-        errorMessage = `Failed to create vendor. Status: ${response.status}`;
-      }
-
-      console.error("Error creating vendor:", errorMessage);
-
-      if (onError) {
-        onError(errorMessage);
-      } else {
-        alert(errorMessage);
-      }
+    // Close modal
+    if (onClose) {
+      onClose();
     }
   } catch (error) {
     console.error("Error creating vendor:", error);
@@ -642,25 +610,7 @@ export function handleStatusChange(event) {
 }
 
 async function callGetVendorDataAzureFunction(requestBody) {
-  const url =
-    "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/GetVendorData";
-
-  const key = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-functions-key": key, // ✅ correct
-    },
-    body: JSON.stringify(requestBody),
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-
-  return response.json();
+  return getVendorData(requestBody);
 }
 
 export function getRelationshipSubsLines(number, filters, onSuccess, onError) {
@@ -986,21 +936,7 @@ export function DeleteSubscriptionActivityLine() {
     return;
   }
 
-  const apiUrl = `https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/deleteSubscriptionActivityLine/${deleteRecordId}`;
-
-  fetch(apiUrl, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
-    },
-  })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json(); // assuming API returns JSON; remove if no body
-    })
+  deleteSubscriptionActivityLine(deleteRecordId)
     .then(() => {
       if (deleteTargetRow) deleteTargetRow.remove();
       closePopup("popup_loading");
@@ -1020,22 +956,7 @@ export function DeleteSubscriptionActivityLine() {
 // React-compatible delete vendor function
 export async function checkVendorActivityLines(vendorId) {
   try {
-    const apiUrl = `https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/getSubscriptionActivityLinesBySubscriptionActivity?subscriptionActivityId=${vendorId}`;
-
-    const response = await fetch(apiUrl, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const activityLines = Array.isArray(data) ? data : data.value || [];
+    const activityLines = await getSubscriptionActivityLinesBySubscriptionActivity(vendorId);
 
     return {
       hasActivityLines: activityLines.length > 0,
@@ -1051,34 +972,7 @@ export async function checkVendorActivityLines(vendorId) {
 // Delete vendor API function
 export async function deleteVendorAPI(vendorId) {
   try {
-    const apiUrl = `https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/deleteVendor/${vendorId}`;
-
-    const response = await fetch(apiUrl, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to delete vendor: ${response.status} - ${errorText}`);
-    }
-
-    // Try to parse JSON, but handle empty responses
-    let data = null;
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-      try {
-        data = await response.json();
-      } catch (e) {
-        // Empty response is fine for DELETE operations
-        console.log("Delete response is empty, which is normal");
-      }
-    }
-
-    return { success: true, data };
+    return await deleteVendorAPICall(vendorId);
   } catch (error) {
     console.error("Error deleting vendor:", error);
     throw error;
@@ -1088,32 +982,7 @@ export async function deleteVendorAPI(vendorId) {
 // Delete activity line API function
 export async function deleteActivityLineAPI(activityLineId) {
   try {
-    const apiUrl = `https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/deleteSubscriptionActivityLine/${activityLineId}`;
-
-    const response = await fetch(apiUrl, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to delete activity line: ${response.status} - ${errorText}`);
-    }
-
-    let data = null;
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-      try {
-        data = await response.json();
-      } catch (e) {
-        console.log("Delete response is empty, which is normal");
-      }
-    }
-
-    return { success: true, data };
+    return await deleteSubscriptionActivityLine(activityLineId);
   } catch (error) {
     console.error("Error deleting activity line:", error);
     throw error;
@@ -1153,24 +1022,9 @@ export async function deleteVendorWithActivityLines(vendorId, activityLineIds, o
 // Legacy function for backward compatibility
 function handleVendorDelete(vendorId, row) {
   const subscriptionActivityId = vendorId; // VendorId is used dynamically
-  const apiUrl = `https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/getSubscriptionActivityLinesBySubscriptionActivity?subscriptionActivityId=${subscriptionActivityId}`;
 
-  fetch(apiUrl, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
-    },
-  })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json();
-    })
-    .then((data) => {
-      const activityLines = data; // Assuming the API returns an array directly
-
+  getSubscriptionActivityLinesBySubscriptionActivity(subscriptionActivityId)
+    .then((activityLines) => {
       if (activityLines.length > 0) {
         showActivityLinesDeleteModal(activityLines, subscriptionActivityId, row);
       } else {
@@ -1233,21 +1087,7 @@ export function deleteAllActivityLines(activityIds, vendorId, vendorRow) {
 
   activityIds.forEach((id, index) => {
     setTimeout(() => {
-      const apiUrl = `https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/deleteSubscriptionActivityLine/${id}`;
-
-      fetch(apiUrl, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
-        },
-      })
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          return response.json(); // remove if API does not return a body
-        })
+      deleteSubscriptionActivityLine(id)
         .then(() => {
           deleteCount++;
           if (deleteCount === activityIds.length) {
@@ -1276,21 +1116,7 @@ export function deleteVendor() {
     return;
   }
 
-  const apiUrl = `https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/deleteVendor/${deleteRecordId}`;
-
-  fetch(apiUrl, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
-    },
-  })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json(); // remove if API does not return body
-    })
+  deleteVendorAPICall(deleteRecordId)
     .then(() => {
       if (deleteTargetRow) deleteTargetRow.remove();
       resetDeleteContext();
@@ -1300,7 +1126,7 @@ export function deleteVendor() {
         if (modal) modal.hide();
       }
       closePopup("popup_loading");
-      showSuccessAlert("The vendor was deleted successfully!");
+      showSuccessMessage("The vendor was deleted successfully!");
       // successBox("Vendor and associated records deleted.");
     })
     .catch((error) => {
@@ -1316,26 +1142,12 @@ function deleteVendorinCaseOfAll(vendorId, row) {
     return;
   }
 
-  const apiUrl = `https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/deleteVendor/${vendorId}`;
-
-  fetch(apiUrl, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
-    },
-  })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json(); // remove if API does not return body
-    })
+  deleteVendorAPICall(vendorId)
     .then(() => {
       if (row) row.remove();
       resetDeleteContext();
       closePopup("popup_loading");
-      showSuccessAlert("The vendor was deleted successfully!");
+      showSuccessMessage("The vendor was deleted successfully!");
       // successBox("Vendor and associated records deleted.");
     })
     .catch((xhr) => {
@@ -1486,24 +1298,7 @@ export function updateVendor(onSuccess, onError, onClose) {
 }
 
 function updateVendorRecord(activityID, updateData, selectedRow, onSuccess, onError, onClose) {
-  fetch(
-    "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/updateVendor/" +
-      activityID,
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
-      },
-      body: JSON.stringify(updateData),
-    }
-  )
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("API request failed");
-      }
-      return response.json();
-    })
+  updateVendorAPICall(activityID, updateData)
     .then(() => {
       selectedRow.cells[1].textContent = updateData.yiic_vendorname;
       selectedRow.cells[2].textContent = updateData.yiic_accountmanageremail;
@@ -1581,22 +1376,7 @@ export function populateForm() {
   removeErrorAndClass(editVendorManagerEmailInput);
   removeErrorAndClass(editVendorManagerPhoneInput);
 
-  // ✅ NEW API URL
-  const apiUrl = `https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/getVendorDetails/${activityID}`;
-
-  fetch(apiUrl, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
-    },
-  })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json();
-    })
+  getVendorDetails(activityID)
     .then((result) => {
       // Populate modal fields (API response mapping)
       document.getElementById("editVendor_name").value =
