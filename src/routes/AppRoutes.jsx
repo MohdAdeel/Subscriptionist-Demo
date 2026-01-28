@@ -6,6 +6,7 @@ import Report from "../pages/Reports/Report";
 import Vendor from "../pages/Vendors/Vendor";
 import Login from "../pages/Login/Login";
 import ProtectedRoutes from "./ProtectedRoutes";
+import BudgetManagement from "../pages/Subscriptions/BudgetManagement";
 
 function AppRoutes() {
   return (
@@ -14,6 +15,7 @@ function AppRoutes() {
       <Route element={<ProtectedRoutes />}>
         <Route path="/" element={<Home />} />
         <Route path="/subscriptions" element={<Subscription />} />
+        <Route path="/budget-management" element={<BudgetManagement />} />
         <Route path="/reports" element={<Report />} />
         <Route path="/vendors" element={<Vendor />} />
         {/* <Route path="/budget-management" element={<BudgetManagement />} /> */}

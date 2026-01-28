@@ -1,7 +1,4 @@
-import {
-  populateForm,
-  getRelationshipSubsLines,
-} from "../../lib/utils/subscriptions";
+import { populateForm, getRelationshipSubsLines } from "../../lib/utils/subscriptions";
 import {
   InputSkeleton,
   ButtonSkeleton,
@@ -11,12 +8,14 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { FiSearch, FiBell, FiCalendar, FiUser } from "react-icons/fi";
+import AddSubscriptionModal from "./AddSubscriptionModal";
 
 const SubscriptionInventory = () => {
   const navigate = useNavigate();
   const skeletonRef = useRef(null);
   const datePickerRef = useRef(null);
   const tableWrapperRef = useRef(null);
+  const [open, setOpen] = useState(false);
   const [endDate, setEndDate] = useState(null);
   const [isEmpty, setIsEmpty] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -119,19 +118,11 @@ const SubscriptionInventory = () => {
       const rowId = row.getAttribute("data-row-id") || `row-${row.rowIndex}`;
 
       // Remove all selection classes
-      row.classList.remove(
-        "bg-[#e8ebff]",
-        "border-l-[3px]",
-        "border-l-[#1d225d]"
-      );
+      row.classList.remove("bg-[#e8ebff]", "border-l-[3px]", "border-l-[#1d225d]");
 
       // Add selection classes if this row is selected
       if (selectedRowId === rowId) {
-        row.classList.add(
-          "bg-[#e8ebff]",
-          "border-l-[3px]",
-          "border-l-[#1d225d]"
-        );
+        row.classList.add("bg-[#e8ebff]", "border-l-[3px]", "border-l-[#1d225d]");
       }
     });
   }, [selectedRowId]);
@@ -146,21 +137,12 @@ const SubscriptionInventory = () => {
       if (selectedRowId) {
         const allRows = tbody.querySelectorAll("tr");
         allRows.forEach((row) => {
-          const rowId =
-            row.getAttribute("data-row-id") || `row-${row.rowIndex}`;
+          const rowId = row.getAttribute("data-row-id") || `row-${row.rowIndex}`;
 
-          row.classList.remove(
-            "bg-[#e8ebff]",
-            "border-l-[3px]",
-            "border-l-[#1d225d]"
-          );
+          row.classList.remove("bg-[#e8ebff]", "border-l-[3px]", "border-l-[#1d225d]");
 
           if (selectedRowId === rowId) {
-            row.classList.add(
-              "bg-[#e8ebff]",
-              "border-l-[3px]",
-              "border-l-[#1d225d]"
-            );
+            row.classList.add("bg-[#e8ebff]", "border-l-[3px]", "border-l-[#1d225d]");
           }
         });
       }
@@ -357,10 +339,8 @@ const SubscriptionInventory = () => {
 
             let dayClass =
               "aspect-square flex items-center justify-center text-[10px] xs:text-xs sm:text-sm font-medium text-gray-700 cursor-pointer rounded sm:rounded-lg transition-all duration-200 relative bg-white border border-transparent";
-            if (isPast)
-              dayClass += " text-gray-300 cursor-not-allowed bg-gray-50";
-            if (isToday)
-              dayClass += " bg-blue-50 border-blue-500 text-blue-900 font-bold";
+            if (isPast) dayClass += " text-gray-300 cursor-not-allowed bg-gray-50";
+            if (isToday) dayClass += " bg-blue-50 border-blue-500 text-blue-900 font-bold";
             if (isStart)
               dayClass +=
                 " bg-gradient-to-br from-[#1d225d] to-[#3b4b8a] text-white font-bold border-[#1d225d] shadow-md z-[3] rounded-r-none";
@@ -432,9 +412,7 @@ const SubscriptionInventory = () => {
           ) : (
             <>
               <div className="flex flex-col gap-1.5 w-full md:flex-1 md:min-w-[150px] md:max-w-[250px]">
-                <label className="text-xs sm:text-[13px] text-[#555]">
-                  Subscription Name
-                </label>
+                <label className="text-xs sm:text-[13px] text-[#555]">Subscription Name</label>
                 <div className="flex items-center bg-white rounded-lg p-2 w-full relative">
                   <FiSearch className="mr-2 text-[#999] text-sm sm:text-base flex-shrink-0" />
                   <input
@@ -446,9 +424,7 @@ const SubscriptionInventory = () => {
               </div>
 
               <div className="flex flex-col gap-1.5 w-full md:flex-1 md:min-w-[150px] md:max-w-[250px]">
-                <label className="text-xs sm:text-[13px] text-[#555]">
-                  Due Date
-                </label>
+                <label className="text-xs sm:text-[13px] text-[#555]">Due Date</label>
                 <div
                   className="flex items-center bg-white rounded-lg p-2 w-full relative"
                   data-date-input
@@ -484,8 +460,8 @@ const SubscriptionInventory = () => {
                             {!startDate
                               ? "Select start date"
                               : !endDate
-                              ? "Select end date"
-                              : "Date range selected"}
+                                ? "Select end date"
+                                : "Date range selected"}
                           </p>
                         </div>
                         <button
@@ -552,9 +528,7 @@ const SubscriptionInventory = () => {
               </div>
 
               <div className="flex flex-col gap-1.5 w-full md:flex-1 md:min-w-[150px] md:max-w-[250px]">
-                <label className="text-xs sm:text-[13px] text-[#555]">
-                  Vendor Name
-                </label>
+                <label className="text-xs sm:text-[13px] text-[#555]">Vendor Name</label>
                 <div className="flex items-center bg-white rounded-lg p-2 w-full">
                   <select
                     id="Vendoroptions"
@@ -566,9 +540,7 @@ const SubscriptionInventory = () => {
               </div>
 
               <div className="flex flex-col gap-1.5 w-full md:flex-1 md:min-w-[150px] md:max-w-[250px]">
-                <label className="text-xs sm:text-[13px] text-[#555]">
-                  Status
-                </label>
+                <label className="text-xs sm:text-[13px] text-[#555]">Status</label>
                 <div className="flex items-center bg-white rounded-lg p-2 w-full">
                   <select
                     id="Statusoptions"
@@ -615,9 +587,17 @@ const SubscriptionInventory = () => {
                 <span className="hidden sm:inline">Budget Management</span>
                 <span className="sm:hidden">Budget</span>
               </button>
-              <button className="px-3 sm:px-4 md:px-[18px] py-2 sm:py-2.5 rounded-lg sm:rounded-[10px] border-none bg-[#1d225d] text-white text-xs sm:text-sm font-semibold cursor-pointer hover:bg-[#15195a] transition-colors whitespace-nowrap w-full sm:w-auto">
+              <button
+                className="px-3 sm:px-4 md:px-[18px] py-2 sm:py-2.5 rounded-lg sm:rounded-[10px]
+  border-none bg-[#1d225d] text-white text-xs sm:text-sm font-semibold
+  cursor-pointer hover:bg-[#15195a] transition-colors whitespace-nowrap
+  w-full sm:w-auto"
+                onClick={() => setOpen(true)}
+              >
                 Add Subscription
               </button>
+              <AddSubscriptionModal open={open} setOpen={setOpen} />
+
             </>
           )}
         </div>
@@ -691,10 +671,7 @@ const SubscriptionInventory = () => {
                 {/* Rows injected by JS */}
                 {!isLoading && isEmpty && (
                   <tr>
-                    <td
-                      colSpan="10"
-                      className="text-center py-12 sm:py-[60px] px-3 sm:px-5"
-                    >
+                    <td colSpan="10" className="text-center py-12 sm:py-[60px] px-3 sm:px-5">
                       <div className="flex flex-col items-center justify-center text-gray-600">
                         <p className="m-0 text-sm sm:text-base font-medium">
                           No subscriptions available
@@ -718,12 +695,13 @@ const SubscriptionInventory = () => {
       {/* MODAL */}
       {showModal && (
         <div className="fixed top-0 left-0 w-screen h-screen bg-black/50 flex justify-center items-center z-[1000] p-3 sm:p-4 md:p-6">
-          <div className="bg-white rounded-lg sm:rounded-[14px]
+          <div
+            className="bg-white rounded-lg sm:rounded-[14px]
                 w-full max-w-[1200px]
                 
                 flex flex-col
-                overflow-hidden">
-
+                overflow-hidden"
+          >
             <div className="flex flex-col h-full" id="formcontentid">
               {/* HEADER */}
               <div className="p-3 sm:p-4 md:p-[18px_28px] border-b border-gray-200 flex justify-between items-center gap-3 sm:gap-4">
@@ -776,12 +754,8 @@ const SubscriptionInventory = () => {
                           type="number"
                           step="0.01"
                           className="h-9 sm:h-10 text-xs sm:text-sm rounded-md border border-gray-300 text-gray-900 w-full box-border py-1.5 px-2 sm:px-2.5 focus:border-[#7259f6] focus:outline-none focus:shadow-[0_0_0_1px_#7259f6]"
-                          onBlur={() =>
-                            window.checkAndFormatDecimal?.(editContractAmount)
-                          }
-                          onInput={() =>
-                            window.checkAndRemoveError?.(editContractAmount)
-                          }
+                          onBlur={() => window.checkAndFormatDecimal?.(editContractAmount)}
+                          onInput={() => window.checkAndRemoveError?.(editContractAmount)}
                         />
                       </div>
 
@@ -797,35 +771,29 @@ const SubscriptionInventory = () => {
                           onChange={handleDescriptionChange}
                         />
                         <small className="text-[10px] sm:text-xs text-gray-500 flex justify-end">
-                          <span id="editDescriptionCounter">
-                            {descriptionCount}
-                          </span>
+                          <span id="editDescriptionCounter">{descriptionCount}</span>
                           /2000
                         </small>
                       </div>
 
-                      {["editStartDate", "editEndDate", "editLastDueDate"].map(
-                        (id) => (
-                          <div className="mb-3.5 relative" key={id}>
-                            <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                              {id
-                                .replace("edit", "")
-                                .replace(/([A-Z])/g, " $1")}
-                            </label>
-                            <input
-                              type="date"
-                              id={id}
-                              className="h-9 sm:h-10 text-xs sm:text-sm rounded-md border border-gray-300 text-gray-900 w-full box-border py-1.5 px-2 sm:px-2.5 pl-8 sm:pl-10 cursor-pointer focus:border-[#7259f6] focus:outline-none focus:shadow-[0_0_0_1px_#7259f6]"
-                              onClick={() => window.openDatePicker?.(id)}
-                            />
-                            <img
-                              src="/calender_icon.png"
-                              alt="calendar"
-                              className="absolute left-2 sm:left-3 top-[37px] w-4 h-4 sm:w-[18px] sm:h-[18px] pointer-events-none"
-                            />
-                          </div>
-                        )
-                      )}
+                      {["editStartDate", "editEndDate", "editLastDueDate"].map((id) => (
+                        <div className="mb-3.5 relative" key={id}>
+                          <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
+                            {id.replace("edit", "").replace(/([A-Z])/g, " $1")}
+                          </label>
+                          <input
+                            type="date"
+                            id={id}
+                            className="h-9 sm:h-10 text-xs sm:text-sm rounded-md border border-gray-300 text-gray-900 w-full box-border py-1.5 px-2 sm:px-2.5 pl-8 sm:pl-10 cursor-pointer focus:border-[#7259f6] focus:outline-none focus:shadow-[0_0_0_1px_#7259f6]"
+                            onClick={() => window.openDatePicker?.(id)}
+                          />
+                          <img
+                            src="/calender_icon.png"
+                            alt="calendar"
+                            className="absolute left-2 sm:left-3 top-[37px] w-4 h-4 sm:w-[18px] sm:h-[18px] pointer-events-none"
+                          />
+                        </div>
+                      ))}
 
                       <div className="mb-3.5 relative">
                         <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
@@ -891,17 +859,10 @@ const SubscriptionInventory = () => {
                           className="h-9 sm:h-10 text-xs sm:text-sm rounded-md border border-gray-300 text-gray-900 w-full box-border py-1.5 px-2 sm:px-2.5 focus:border-[#7259f6] focus:outline-none focus:shadow-[0_0_0_1px_#7259f6]"
                           pattern="^-?\d{1,12}(\.\d{0,2})?$"
                           onKeyPress={(e) =>
-                            e.currentTarget.value.length === 12 &&
-                            e.preventDefault()
+                            e.currentTarget.value.length === 12 && e.preventDefault()
                           }
-                          onInput={() =>
-                            window.checkAndRemoveError?.(editNumLicenses)
-                          }
-                          onBlur={() =>
-                            window.checkAndRemoveErrorifnotvalid?.(
-                              editNumLicenses
-                            )
-                          }
+                          onInput={() => window.checkAndRemoveError?.(editNumLicenses)}
+                          onBlur={() => window.checkAndRemoveErrorifnotvalid?.(editNumLicenses)}
                           id="editNumLicenses"
                           placeholder="Enter Number of Licenses"
                         />
@@ -921,15 +882,10 @@ const SubscriptionInventory = () => {
                           className="h-9 sm:h-10 text-xs sm:text-sm rounded-md border border-gray-300 text-gray-900 w-full box-border py-1.5 px-2 sm:px-2.5 focus:border-[#7259f6] focus:outline-none focus:shadow-[0_0_0_1px_#7259f6]"
                           pattern="^-?\d{1,12}(\.\d{0,2})?$"
                           onKeyPress={(e) =>
-                            e.currentTarget.value.length === 12 &&
-                            e.preventDefault()
+                            e.currentTarget.value.length === 12 && e.preventDefault()
                           }
-                          onInput={() =>
-                            window.checkAndRemoveError?.(editNumUsers)
-                          }
-                          onBlur={() =>
-                            window.checkAndRemoveErrorifnotvalid?.(editNumUsers)
-                          }
+                          onInput={() => window.checkAndRemoveError?.(editNumUsers)}
+                          onBlur={() => window.checkAndRemoveErrorifnotvalid?.(editNumUsers)}
                           id="editNumUsers"
                           placeholder="Enter Number of Current Users"
                         />
@@ -1082,50 +1038,39 @@ const SubscriptionInventory = () => {
               </div>
 
               {/* FOOTER */}
-              <div className="p-3 sm:p-4 md:p-[18px_28px]
+              <div
+                className="p-3 sm:p-4 md:p-[18px_28px]
                 border-t border-gray-200
                 flex flex-col sm:flex-row
                 items-center justify-center
                 gap-3
-                shrink-0">
-
-
-
-
-<button
-  type="button"
-  className="w-full sm:w-auto
+                shrink-0"
+              >
+                <button
+                  type="button"
+                  className="w-full sm:w-auto
              px-6 h-10 sm:h-[42px]
              rounded-lg bg-white border border-gray-300
              text-sm sm:text-base font-medium
              whitespace-nowrap
              hover:bg-gray-50"
-  onClick={closeModal}
->
-  Close
-</button>
+                  onClick={closeModal}
+                >
+                  Close
+                </button>
 
-
-
-
-
-<button
-  type="button"
-  className="w-full sm:w-auto
+                <button
+                  type="button"
+                  className="w-full sm:w-auto
              px-7 h-10 sm:h-[42px]
              rounded-lg bg-[#1b1f6a] text-white
              text-sm sm:text-base font-semibold
              whitespace-nowrap
              hover:bg-[#15195a]"
-  onClick={() => window.updateActivityLine?.()}
->
-  Save changes
-</button>
-
-
-
-
-
+                  onClick={() => window.updateActivityLine?.()}
+                >
+                  Save changes
+                </button>
               </div>
             </div>
           </div>

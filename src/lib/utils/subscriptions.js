@@ -58,10 +58,7 @@ export async function getRelationshipSubsLines(number, filters) {
     // Pass data to your table handler
     handleGetSubscriptionSuccess(result, number);
   } catch (error) {
-    console.error(
-      "Azure Function call failed, falling back to error handler:",
-      error
-    );
+    console.error("Azure Function call failed, falling back to error handler:", error);
     handleGetSubscriptionError();
   }
 }
@@ -104,10 +101,7 @@ export function handleGetSubscriptionSuccess(result, pageNumber) {
     generatePagination(totalPages, pageNumber);
 
     // Create the subscription array in the format that setGrid expects
-    var subscriptionArray = createSubscriptionArrayFromAzureResponse(
-      activityLines,
-      subscriptions
-    );
+    var subscriptionArray = createSubscriptionArrayFromAzureResponse(activityLines, subscriptions);
 
     console.log("Final subscriptionArray for setGrid:", subscriptionArray);
 
@@ -136,10 +130,7 @@ function showLoader() {
   }
 }
 
-function createSubscriptionArrayFromAzureResponse(
-  activityLines,
-  subscriptions
-) {
+function createSubscriptionArrayFromAzureResponse(activityLines, subscriptions) {
   // Create a map of subscriptions by SubscriptionId
   const subscriptionMap = {};
   subscriptions.forEach((sub) => {
@@ -362,15 +353,7 @@ function formatDate(dateString) {
   var year = date.getFullYear();
 
   // Format the date components to ensure two digits for day and month
-  return (
-    (day < 10 ? "0" : "") +
-    day +
-    "." +
-    (month < 10 ? "0" : "") +
-    month +
-    "." +
-    year
-  );
+  return (day < 10 ? "0" : "") + day + "." + (month < 10 ? "0" : "") + month + "." + year;
 }
 
 function applyTooltip(cell, text, maxWidth = "150px") {
@@ -415,276 +398,248 @@ function formatFrequency(frequency) {
 
 // enforceEditCharacterLimit("editDescription", "editDescriptionCounter", 2000);
 
-// export function updateActivityLine() {
-//   "use strict"; // Enable strict mode for better error checking and performance
+export function updateActivityLine() {
+  "use strict"; // Enable strict mode for better error checking and performance
 
-//   ensureAzureServices();
-//   // Validate due date and department before proceeding
-//   if (!validateDueDateAndDepartment()) {
-//     closePopup("popup_loading");
-//     return; // Prevent submission if validation fails
-//   }
+  ensureAzureServices();
+  // Validate due date and department before proceeding
+  if (!validateDueDateAndDepartment()) {
+    closePopup("popup_loading");
+    return; // Prevent submission if validation fails
+  }
 
-//   // Get the activity line ID
-//   var subActivityLineID = document.getElementById("activityLineID").value;
-//   if (!subActivityLineID) {
-//     alert("No activity line selected.");
-//     closePopup("popup_loading");
-//     return;
-//   }
+  // Get the activity line ID
+  var subActivityLineID = document.getElementById("activityLineID").value;
+  if (!subActivityLineID) {
+    alert("No activity line selected.");
+    closePopup("popup_loading");
+    return;
+  }
 
-//   // Get and validate numeric inputs
-//   var numUsersValue = document.getElementById("editNumUsers");
-//   var numUsers = parseFloat(numUsersValue.value);
-//   if (isNaN(numUsers)) {
-//     numUsers = null;
-//   }
+  // Get and validate numeric inputs
+  var numUsersValue = document.getElementById("editNumUsers");
+  var numUsers = parseFloat(numUsersValue.value);
+  if (isNaN(numUsers)) {
+    numUsers = null;
+  }
 
-//   var numLicensesValue = document.getElementById("editNumLicenses");
-//   var numLicenses = parseFloat(numLicensesValue.value);
-//   if (isNaN(numLicenses)) {
-//     numLicenses = null;
-//   }
+  var numLicensesValue = document.getElementById("editNumLicenses");
+  var numLicenses = parseFloat(numLicensesValue.value);
+  if (isNaN(numLicenses)) {
+    numLicenses = null;
+  }
 
-//   // Get boolean values from radio buttons
-//   var requirePartnerOption = document.querySelector(
-//     'input[id="editRequirePartnerId"]:checked, input[id="editRequirePartnernoId"]:checked'
-//   );
-//   var requirePartnerValue = requirePartnerOption
-//     ? requirePartnerOption.value
-//     : "";
-//   var doYouRequireAPartnerForRenewal = requirePartnerValue === "true";
+  // Get boolean values from radio buttons
+  var requirePartnerOption = document.querySelector(
+    'input[id="editRequirePartnerId"]:checked, input[id="editRequirePartnernoId"]:checked'
+  );
+  var requirePartnerValue = requirePartnerOption ? requirePartnerOption.value : "";
+  var doYouRequireAPartnerForRenewal = requirePartnerValue === "true";
 
-//   var autoRenewOption = document.querySelector(
-//     'input[id="editAutorenewyes"]:checked, input[id="editAutoRenewNo"]:checked'
-//   );
-//   var autoRenewContractValue = autoRenewOption ? autoRenewOption.value : "";
-//   var autoRenewContract = autoRenewContractValue === "true";
+  var autoRenewOption = document.querySelector(
+    'input[id="editAutorenewyes"]:checked, input[id="editAutoRenewNo"]:checked'
+  );
+  var autoRenewContractValue = autoRenewOption ? autoRenewOption.value : "";
+  var autoRenewContract = autoRenewContractValue === "true";
 
-//   // Format dates to ISO string
-//   var formattedStartDate = formatDateToISOString(
-//     document.getElementById("editStartDate").value
-//   );
-//   var formattedEndDate = formatDateToISOString(
-//     document.getElementById("editEndDate").value
-//   );
-//   var formattedLastDueDate = formatDateToISOString(
-//     document.getElementById("editLastDueDate").value
-//   );
-//   var formattedNextDueDate = formatDateToISOString(
-//     document.getElementById("editNextDueDate").value
-//   );
+  // Format dates to ISO string
+  var formattedStartDate = formatDateToISOString(document.getElementById("editStartDate").value);
+  var formattedEndDate = formatDateToISOString(document.getElementById("editEndDate").value);
+  var formattedLastDueDate = formatDateToISOString(
+    document.getElementById("editLastDueDate").value
+  );
+  var formattedNextDueDate = formatDateToISOString(
+    document.getElementById("editNextDueDate").value
+  );
 
-//   // Get frequency unit value
-//   var frequencyUnitValue = document.getElementById("editFrequencyUnit").value;
-//   if (frequencyUnitValue) {
-//     frequencyUnitValue = parseInt(frequencyUnitValue);
-//   }
+  // Get frequency unit value
+  var frequencyUnitValue = document.getElementById("editFrequencyUnit").value;
+  if (frequencyUnitValue) {
+    frequencyUnitValue = parseInt(frequencyUnitValue);
+  }
 
-//   // Validate contract amount
-//   var contractAmountValue = document.getElementById("editContractAmount");
-//   var contractAmount = parseFloat(contractAmountValue.value);
-//   var minAmount = 0;
-//   var maxAmount = 1000000;
+  // Validate contract amount
+  var contractAmountValue = document.getElementById("editContractAmount");
+  var contractAmount = parseFloat(contractAmountValue.value);
+  var minAmount = 0;
+  var maxAmount = 1000000;
 
-//   if (contractAmount < minAmount || contractAmount > maxAmount) {
-//     contractAmountValue.classList.add("invalid-field");
-//     createErrorMessage(
-//       contractAmountValue,
-//       "Please enter a contract amount between $0 and $1 million"
-//     );
-//     return;
-//   }
+  if (contractAmount < minAmount || contractAmount > maxAmount) {
+    contractAmountValue.classList.add("invalid-field");
+    createErrorMessage(
+      contractAmountValue,
+      "Please enter a contract amount between $0 and $1 million"
+    );
+    return;
+  }
 
-//   // Validate frequency number
-//   var frequncynumber = document.getElementById("editFrequencyNumber");
-//   var freqnumber = parseFloat(frequncynumber.value);
-//   if (freqnumber < 0 || freqnumber > 1000) {
-//     frequncynumber.classList.add("invalid-field");
-//     createErrorMessage(
-//       frequncynumber,
-//       "Please enter a frequency number between 0 and 1000."
-//     );
-//     return;
-//   }
+  // Validate frequency number
+  var frequncynumber = document.getElementById("editFrequencyNumber");
+  var freqnumber = parseFloat(frequncynumber.value);
+  if (freqnumber < 0 || freqnumber > 1000) {
+    frequncynumber.classList.add("invalid-field");
+    createErrorMessage(frequncynumber, "Please enter a frequency number between 0 and 1000.");
+    return;
+  }
 
-//   // Validate licenses
-//   if (numLicenses < 0 || numLicenses > 100000) {
-//     numLicensesValue.classList.add("invalid-field");
-//     createErrorMessage(
-//       numLicensesValue,
-//       "Please enter a number between 0 to 100,000"
-//     );
-//     return;
-//   }
+  // Validate licenses
+  if (numLicenses < 0 || numLicenses > 100000) {
+    numLicensesValue.classList.add("invalid-field");
+    createErrorMessage(numLicensesValue, "Please enter a number between 0 to 100,000");
+    return;
+  }
 
-//   // Validate users
-//   if (numUsers < 0 || numUsers > 100000) {
-//     numUsersValue.classList.add("invalid-field");
-//     createErrorMessage(
-//       numUsersValue,
-//       "Please enter a number between 0 to 100,000"
-//     );
-//     return;
-//   }
+  // Validate users
+  if (numUsers < 0 || numUsers > 100000) {
+    numUsersValue.classList.add("invalid-field");
+    createErrorMessage(numUsersValue, "Please enter a number between 0 to 100,000");
+    return;
+  }
 
-//   // Get department information
-//   var departmentWrapper = document.getElementById("departmentWrapper2");
-//   var departmentId = departmentWrapper.getAttribute("data-selected-value");
-//   var departmentName =
-//     departmentWrapper.querySelector(".optionName").textContent;
+  // Get department information
+  var departmentWrapper = document.getElementById("departmentWrapper2");
+  var departmentId = departmentWrapper.getAttribute("data-selected-value");
+  var departmentName = departmentWrapper.querySelector(".optionName").textContent;
 
-//   // Open loading popup
-//   openPopup("popup_loading");
+  // Open loading popup
+  openPopup("popup_loading");
 
-//   // Prepare the request data
-//   var requestData = {
-//     ActivityAutoNumber: document.getElementById("editActivityID").value,
-//     activityLineId: subActivityLineID,
-//     subsname: document.getElementById("editSubscriptionName").value,
-//     description: document.getElementById("editDescription").value,
-//     subsstartdate: formattedStartDate,
-//     subsenddate: formattedEndDate,
-//     subsfrequencynumber:
-//       document.getElementById("editFrequencyNumber").value === ""
-//         ? null
-//         : document.getElementById("editFrequencyNumber").value,
-//     subsfrequencyunit: frequencyUnitValue,
-//     autorenewcontract: autoRenewContract,
-//     licenses: numLicenses,
-//     currentusers: numUsers,
-//     doyourequireapart: doYouRequireAPartnerForRenewal,
-//     subscontractamount:
-//       document.getElementById("editContractAmount").value === ""
-//         ? null
-//         : document.getElementById("editContractAmount").value,
-//     subsfrequency: document.getElementById("editSubscriptionFrequency").value,
-//     lastduedate: formattedLastDueDate,
-//     nextduedate: formattedNextDueDate,
-//     department: departmentId,
-//     departmentName: departmentName,
-//   };
+  // Prepare the request data
+  var requestData = {
+    ActivityAutoNumber: document.getElementById("editActivityID").value,
+    activityLineId: subActivityLineID,
+    subsname: document.getElementById("editSubscriptionName").value,
+    description: document.getElementById("editDescription").value,
+    subsstartdate: formattedStartDate,
+    subsenddate: formattedEndDate,
+    subsfrequencynumber:
+      document.getElementById("editFrequencyNumber").value === ""
+        ? null
+        : document.getElementById("editFrequencyNumber").value,
+    subsfrequencyunit: frequencyUnitValue,
+    autorenewcontract: autoRenewContract,
+    licenses: numLicenses,
+    currentusers: numUsers,
+    doyourequireapart: doYouRequireAPartnerForRenewal,
+    subscontractamount:
+      document.getElementById("editContractAmount").value === ""
+        ? null
+        : document.getElementById("editContractAmount").value,
+    subsfrequency: document.getElementById("editSubscriptionFrequency").value,
+    lastduedate: formattedLastDueDate,
+    nextduedate: formattedNextDueDate,
+    department: departmentId,
+    departmentName: departmentName,
+  };
 
-//   console.log("Request Data to be sent for updateActivityLine:", requestData);
+  console.log("Request Data to be sent for updateActivityLine:", requestData);
 
-//   // Optionally, also log it as formatted JSON for easier viewing
-//   console.log("Formatted JSON:\n", JSON.stringify(requestData, null, 4));
+  // Optionally, also log it as formatted JSON for easier viewing
+  console.log("Formatted JSON:\n", JSON.stringify(requestData, null, 4));
 
-//   const vendorField = document.getElementById("editVendorName");
-//   const subActivityId = vendorField.getAttribute("data-subactivity-id");
+  const vendorField = document.getElementById("editVendorName");
+  const subActivityId = vendorField.getAttribute("data-subactivity-id");
 
-//   // Check for duplicates first
-//   checkDuplicateSubscription(
-//     document.getElementById("editSubscriptionName").value,
-//     subActivityId,
-//     subActivityLineID // exclude itself
-//   ).then((duplicate) => {
-//     if (duplicate) {
-//       const subscriptionName = document.getElementById(
-//         "editSubscriptionName"
-//       ).value;
-//       const vendorName =
-//         duplicate.yiic_Subscriptionactivity_yiic_subscriptionsactivityline
-//           ?.yiic_vendorname || "this vendor";
+  // Check for duplicates first
+  checkDuplicateSubscription(
+    document.getElementById("editSubscriptionName").value,
+    subActivityId,
+    subActivityLineID // exclude itself
+  ).then((duplicate) => {
+    if (duplicate) {
+      const subscriptionName = document.getElementById("editSubscriptionName").value;
+      const vendorName =
+        duplicate.yiic_Subscriptionactivity_yiic_subscriptionsactivityline?.yiic_vendorname ||
+        "this vendor";
 
-//       document.getElementById(
-//         "duplicateMessage"
-//       ).innerHTML = `A subscription named <strong>${subscriptionName}</strong> already exists for vendor <strong>${vendorName}</strong>.`;
+      document.getElementById("duplicateMessage").innerHTML =
+        `A subscription named <strong>${subscriptionName}</strong> already exists for vendor <strong>${vendorName}</strong>.`;
 
-//       closePopup("popup_loading");
+      closePopup("popup_loading");
 
-//       // Show duplicate modal
-//       const modal = new bootstrap.Modal(
-//         document.getElementById("duplicateSubscriptionModal")
-//       );
-//       modal.show();
-//       // When duplicate modal opens → bring it above the edit modal
-//       $("#duplicateModal").on("shown.bs.modal", function () {
-//         var zIndex = 1050 + 10 * $(".modal:visible").length;
-//         $(this).css("z-index", zIndex);
+      // Show duplicate modal
+      const modal = new bootstrap.Modal(document.getElementById("duplicateSubscriptionModal"));
+      modal.show();
+      // When duplicate modal opens → bring it above the edit modal
+      $("#duplicateModal").on("shown.bs.modal", function () {
+        var zIndex = 1050 + 10 * $(".modal:visible").length;
+        $(this).css("z-index", zIndex);
 
-//         setTimeout(function () {
-//           $(".modal-backdrop")
-//             .not(".modal-stack")
-//             .css("z-index", zIndex - 1)
-//             .addClass("modal-stack");
-//         }, 0);
-//       });
+        setTimeout(function () {
+          $(".modal-backdrop")
+            .not(".modal-stack")
+            .css("z-index", zIndex - 1)
+            .addClass("modal-stack");
+        }, 0);
+      });
 
-//       // When duplicate modal closes → clean backdrop & keep edit modal active
-//       $("#duplicateModal").on("hidden.bs.modal", function () {
-//         // Remove the extra backdrop
-//         $(".modal-backdrop.modal-stack").remove();
+      // When duplicate modal closes → clean backdrop & keep edit modal active
+      $("#duplicateModal").on("hidden.bs.modal", function () {
+        // Remove the extra backdrop
+        $(".modal-backdrop.modal-stack").remove();
 
-//         // KEEP the edit modal "modal-open"
-//         if ($(".modal:visible").length) {
-//           $("body").addClass("modal-open");
-//         }
-//       });
+        // KEEP the edit modal "modal-open"
+        if ($(".modal:visible").length) {
+          $("body").addClass("modal-open");
+        }
+      });
 
-//       // Ensure duplicate modal’s backdrop is above the edit modal’s backdrop
-//       // setTimeout(() => {
-//       //     document.querySelectorAll('.modal-backdrop')
-//       //         .forEach(b => b.style.zIndex = 9998);
-//       // }, 200);
+      // Ensure duplicate modal’s backdrop is above the edit modal’s backdrop
+      // setTimeout(() => {
+      //     document.querySelectorAll('.modal-backdrop')
+      //         .forEach(b => b.style.zIndex = 9998);
+      // }, 200);
 
-//       return;
-//     }
+      return;
+    }
 
-//     // Perform Azure update
-//     callUpdateSubscriptionActivityLineAzureFunction(requestData)
-//       .then(() => {
-//         closePopup("popup_loading");
-//         $("#editModalCenter").modal("hide");
-//         updateUIAfterSuccess(requestData);
-//         EditSuccessbox();
-//       })
-//       .catch((error) => {
-//         closePopup("popup_loading");
-//         $("#editModalCenter").modal("hide");
-//         console.error("Azure Function call failed:", error);
-//         EditSuccessbox();
-//       });
-//   });
-// }
+    // Perform Azure update
+    callUpdateSubscriptionActivityLineAzureFunction(requestData)
+      .then(() => {
+        closePopup("popup_loading");
+        $("#editModalCenter").modal("hide");
+        updateUIAfterSuccess(requestData);
+        EditSuccessbox();
+      })
+      .catch((error) => {
+        closePopup("popup_loading");
+        $("#editModalCenter").modal("hide");
+        console.error("Azure Function call failed:", error);
+        EditSuccessbox();
+      });
+  });
+}
 
-// async function callUpdateSubscriptionActivityLineAzureFunction(requestData) {
-//   try {
-//     // Get Azure Function key and base URL from the global services
-//     const [baseUrl, funcKey] = await Promise.all([
-//       baseUrlService.getBaseUrl(),
-//       azureKeyService.getAzureFunctionKey(),
-//     ]);
+async function callUpdateSubscriptionActivityLineAzureFunction(requestData) {
+  try {
+    // Hardcoded Azure Function URL
+    const azureFunctionUrl =
+      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/UpdateSubscriptionActivityLine";
 
-//     // Construct the Azure Function URL
-//     const azureFunctionUrl = `${baseUrl}/UpdateSubscriptionActivityLine`;
+    console.log("Calling Azure Function to update subscription activity line...");
 
-//     console.log(
-//       "Calling Azure Function to update subscription activity line..."
-//     );
+    // Make the API call
+    const response = await fetch(azureFunctionUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
+      },
+      body: JSON.stringify(requestData),
+    });
 
-//     // Make the API call
-//     const response = await fetch(azureFunctionUrl, {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//         "Ocp-Apim-Subscription-Key": funcKey,
-//       },
-//       body: JSON.stringify(requestData),
-//     });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
 
-//     if (!response.ok) {
-//       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-//     }
-
-//     const result = await response.json();
-//     console.log("Azure Function call successful:", result);
-//     return result;
-//   } catch (error) {
-//     console.error("Azure Function call failed:", error);
-//     throw error;
-//   }
-// }
+    const result = await response.json();
+    console.log("Azure Function call successful:", result);
+    return result;
+  } catch (error) {
+    console.error("Azure Function call failed:", error);
+    throw error;
+  }
+}
 
 function DeleteSubscriptionActivityLine() {
   openPopup("popup_loading");
@@ -704,9 +659,7 @@ function DeleteSubscriptionActivityLine() {
       deleteTargetRow.remove();
       deleteTargetRow = null;
       deleteRecordId = null;
-      const modal = bootstrap.Modal.getInstance(
-        document.getElementById("deleteConfirmModal")
-      );
+      const modal = bootstrap.Modal.getInstance(document.getElementById("deleteConfirmModal"));
       modal.hide();
       closePopup("popup_loading");
       showSuccessAlert("The activity line was deleted successfully!");
@@ -753,20 +706,15 @@ function removeErrorAndClass(inputid) {
 }
 
 export function populateForm() {
-  "use strict"; // Enable strict mode for better error checking and prevention
-  // fetchDepartments("departmentWrapper2");
-  // Open a loading popup while fetching data
+  "use strict";
   openPopup("popup_loading");
+
   var UnitMap = {
     0: "Active",
     1: "InActive",
     2: "Canceled",
     3: "Scheduled",
   };
-
-  // Get the selected radio button for the row selector
-  //  var selectedRadio = document.querySelector('input[name="row-selector"]:checked');
-  // var selectedRow = document.querySelector('tr.highlight');
 
   var selectedRow = document.querySelector("#Subscriptions tbody tr.highlight");
 
@@ -775,40 +723,22 @@ export function populateForm() {
     subLimitMsg.style.display = "none";
   }
 
-  //document.getElementById("editdescriptionLimitMessage").style.display = "none";
-
   removeErrorAndClass("editContractAmount");
   removeErrorAndClass("editNumUsers");
   removeErrorAndClass("editNumLicenses");
   removeErrorAndClass("editFrequencyNumber");
   removeErrorAndClass("departmentSelect2");
   removeErrorAndClass("editLastDueDate");
-  //if (selectedRadio)
+
   if (selectedRow) {
     var subActivityLineID = selectedRow.cells[12].textContent.trim();
     console.log("Selected SubActivityLineID:", subActivityLineID);
 
-    // Build the URL
+    // 🔴 URL CHANGED (Azure API)
     var url =
-      "/_api/yiic_subscriptionsactivitylines?" +
-      "$select=activityid,statecode,yiic_isitautorenewcontract,yiic_doyourequireapartnerforrenewal,yiic_nooflicenses," +
-      "yiic_subscriptionfrequencyunit,yiic_subscriptionfrequencynumber,yiic_noofcurrentusers,modifiedon,description," +
-      "yiic_activityid,yiic_subscriptionname,yiic_subscriptioncontractamount,yiic_subscriptionfrequency,yiic_lastduedate," +
-      "yiic_nextduedate,yiic_subscriptionstartdate,yiic_subscriptionenddate,_yiic_subscriptionactivity_value," +
-      "_yiic_subscriptiondepartment_value" +
-      "&$expand=" +
-      "yiic_Subscriptionactivity_yiic_subscriptionsactivityline(" +
-      "$select=activityid,yiic_accountmanageremail,yiic_accountmanagername,modifiedon,subject,yiic_accountmanagerphone," +
-      "yiic_subscriptionamount,yiic_vendorname,yiic_activityid,_yiic_account_value)," +
-      "yiic_SubscriptionDepartment_yiic_subscriptionsactivityline(" +
-      "$select=yiic_budget,yiic_name)" +
-      "&$filter=(activityid eq " +
-      subActivityLineID +
-      " and modifiedon le '" +
-      encodeURIComponent(new Date().toISOString()) +
-      "')";
+      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/Getsubscriptionactivityline?activityId=" +
+      subActivityLineID;
 
-    // First fetch - subscription activity lines
     fetch(url, {
       method: "GET",
       headers: {
@@ -825,153 +755,126 @@ export function populateForm() {
       })
       .then((data) => {
         console.log("Fetched subscription data:", data);
-        if (data && data.value && data.value.length > 0) {
-          // Access the first activity line from the returned data
-          var activityLine = data.value[0];
-          var subscription =
-            activityLine.yiic_Subscriptionactivity_yiic_subscriptionsactivityline;
-          var department =
-            activityLine.yiic_SubscriptionDepartment_yiic_subscriptionsactivityline;
+        if (data) {
+          var activityLine = data;
+          var subscription = activityLine.subscription;
+          var department = activityLine.department;
 
-          const preselectedDepartmentId =
-            activityLine._yiic_subscriptiondepartment_value;
+          const preselectedDepartmentId = activityLine.departmentId;
           const preselectedDepartmentName = department?.yiic_name;
-          const departmentWrapper =
-            document.getElementById("departmentWrapper2");
+          const departmentWrapper = document.getElementById("departmentWrapper2");
 
           if (preselectedDepartmentName != null) {
-            // Set the newly added subscription as selected
             var placeholder = departmentWrapper.querySelector(".optionName");
             placeholder.textContent = preselectedDepartmentName;
             departmentWrapper.classList.remove("show-options");
-            departmentWrapper.setAttribute(
-              "data-selected-value",
-              preselectedDepartmentId
-            );
+            departmentWrapper.setAttribute("data-selected-value", preselectedDepartmentId);
           } else {
             departmentWrapper.setAttribute("data-selected-value", "");
             var placeholder = departmentWrapper.querySelector(".optionName");
             placeholder.textContent = "Select Department";
           }
 
-          // Populate form fields with the retrieved data
           document.getElementById("editContractAmount").value =
             activityLine.yiic_subscriptioncontractamount !== null
               ? activityLine.yiic_subscriptioncontractamount.toString()
               : "";
+
           document.getElementById("editDescription").value =
             activityLine.description !== null ? activityLine.description : "";
-          enforceEditCharacterLimit(
-            "editDescription",
-            "editDescriptionCounter",
-            2000
-          );
+          enforceEditCharacterLimit("editDescription", "editDescriptionCounter", 2000);
 
-          // document.getElementById('editStartDate').value = activityLine.yiic_subscriptionstartdate !== null ? activityLine.yiic_subscriptionstartdate.substring(0, 10) : '';
           document.getElementById("editEndDate").value =
             activityLine.yiic_subscriptionenddate !== null
               ? activityLine.yiic_subscriptionenddate.substring(0, 10)
               : "";
 
-          // Get the start date value
           var startDate =
             activityLine.yiic_subscriptionstartdate !== null
               ? activityLine.yiic_subscriptionstartdate.substring(0, 10)
               : "";
           document.getElementById("editStartDate").value = startDate;
 
-          // Get the end date field
           var endDateField = document.getElementById("editEndDate");
-
-          // If start date is empty, disable end date
-          if (!startDate) {
-            endDateField.disabled = true; // Disable the field
-          } else {
-            // Set the end date value and enable the field
-            endDateField.disabled = false;
-          }
+          endDateField.disabled = !startDate;
 
           document.getElementById("editFrequencyNumber").value =
             activityLine.yiic_subscriptionfrequencynumber !== null
               ? activityLine.yiic_subscriptionfrequencynumber
               : "";
+
           document.getElementById("editFrequencyUnit").value =
             activityLine.yiic_subscriptionfrequencyunit;
-          document.getElementById("editNumLicenses").value =
-            activityLine.yiic_nooflicenses || "";
-          document.getElementById("editActivityStatus").value =
-            UnitMap[activityLine.statecode];
-          //document.getElementById('reminderIntervalUnit').value = activityLine.yiic_reminderintervalunit;
+
+          document.getElementById("editNumLicenses").value = activityLine.yiic_nooflicenses || "";
+
+          document.getElementById("editActivityStatus").value = UnitMap[activityLine.statecode];
+
           document.getElementById("editSubscriptionFrequency").value =
             activityLine.yiic_subscriptionfrequency !== null
               ? activityLine.yiic_subscriptionfrequency
               : "";
+
           document.getElementById("editLastDueDate").value =
             activityLine.yiic_lastduedate !== null
               ? activityLine.yiic_lastduedate.substring(0, 10)
               : "";
+
           document.getElementById("editNumUsers").value =
-            activityLine.yiic_noofcurrentusers !== null
-              ? activityLine.yiic_noofcurrentusers
-              : "";
+            activityLine.yiic_noofcurrentusers !== null ? activityLine.yiic_noofcurrentusers : "";
+
           document.getElementById("editNextDueDate").value =
             activityLine.yiic_nextduedate !== null
               ? activityLine.yiic_nextduedate.substring(0, 10)
               : "";
-          //document.getElementById('reminderIntervalDays').value = activityLine.yiic_reminderintervaldays || '';
-          //document.getElementById('reminderInterval').value = activityLine.yiic_reminderinterval || '';
-          document.getElementById("activityLineID").value =
-            activityLine.activityid || "";
-          document.getElementById("editSubactivityID").value =
-            activityLine.yiic_activityid || "";
+
+          document.getElementById("activityLineID").value = activityLine.activityid || "";
+
+          document.getElementById("editSubactivityID").value = activityLine.yiic_activityid || "";
+
           document.getElementById("editActivityID").value =
-            subscription.yiic_activityid !== null
-              ? subscription.yiic_activityid
-              : "";
+            subscription.yiic_activityid !== null ? subscription.yiic_activityid : "";
+
           document.getElementById("editAccountManagerName").value =
             subscription.yiic_accountmanagername || "";
-          document.getElementById("editSubscriptionActivity").value =
-            subscription.subject || "";
+
+          document.getElementById("editSubscriptionActivity").value = subscription.subject || "";
+
           document.getElementById("editAccountManagerEmail").value =
             subscription.yiic_accountmanageremail || "";
+
           document.getElementById("editAccountManagerPhone").value =
             subscription.yiic_accountmanagerphone || "";
+
           document.getElementById("editSubscriptionAmount").value =
             subscription.yiic_subscriptionamount !== null
               ? subscription.yiic_subscriptionamount
               : "";
-          //document.getElementById('editVendorName').value = subscription.yiic_vendorname || '';
+
           const vendorField = document.getElementById("editVendorName");
           vendorField.value = subscription.yiic_vendorname || "";
-          vendorField.setAttribute(
-            "data-subactivity-id",
-            subscription.activityid
-          );
+          vendorField.setAttribute("data-subactivity-id", subscription.activityid);
 
           document.getElementById("editLastUpdated").value =
-            activityLine.modifiedon !== null
-              ? activityLine.modifiedon.substring(0, 10)
-              : "";
-          document.getElementById("editSubscriptionName").value =
-            activityLine.yiic_subscriptionname !== null
-              ? activityLine.yiic_subscriptionname
-              : "";
+            activityLine.modifiedon !== null ? activityLine.modifiedon.substring(0, 10) : "";
 
-          // Set checkbox states based on boolean values
+          document.getElementById("editSubscriptionName").value =
+            activityLine.yiic_subscriptionname !== null ? activityLine.yiic_subscriptionname : "";
+
           document.getElementById("editRequirePartnerId").checked =
             activityLine.yiic_doyourequireapartnerforrenewal === true;
+
           document.getElementById("editRequirePartnernoId").checked =
             activityLine.yiic_doyourequireapartnerforrenewal === false;
+
           document.getElementById("editAutorenewyes").checked =
             activityLine.yiic_isitautorenewcontract === true;
+
           document.getElementById("editAutoRenewNo").checked =
             activityLine.yiic_isitautorenewcontract === false;
-
-          // Fetch account details for the related subscription - Second fetch
           var accountUrl =
-            "/_api/accounts(" +
-            subscription._yiic_account_value +
-            ")?$select=name";
+            "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/accounts/" +
+            subscription.accountId;
 
           return fetch(accountUrl, {
             method: "GET",
@@ -985,27 +888,21 @@ export function populateForm() {
         }
       })
       .then((response) => {
-        console.log("Account fetch response status:", response.status);
         if (!response.ok) {
           throw new Error("Network response was not ok for account data");
         }
         return response.json();
       })
       .then((accountData) => {
-        console.log("Fetched account data:", accountData);
         if (accountData) {
-          // Populate the account view field
-          var account = accountData;
-          document.getElementById("editAccount").value = account.name || "";
+          document.getElementById("editAccount").value = accountData.name || "";
         }
-
-        // Close the loading popup after data is populated
         closePopup("popup_loading");
       })
       .catch((error) => {
         console.error("Error fetching data:", error);
         alert("Couldn't complete request, please try again!");
-        closePopup("popup_loading"); // Close the loading popup in case of error
+        closePopup("popup_loading");
       });
   }
 }
@@ -1023,10 +920,7 @@ export function applyFilters() {
   var filteredSubscriptions = subscriptionArray
     .map(function (subscription) {
       // Check if the subscription matches the selected vendor
-      if (
-        selectedVendor !== "option1" &&
-        subscription.VendorName !== selectedVendor
-      ) {
+      if (selectedVendor !== "option1" && subscription.VendorName !== selectedVendor) {
         return null; // Skip if vendor doesn't match
       }
 
@@ -1037,9 +931,7 @@ export function applyFilters() {
         var toDate = new Date(dateRange[1]);
 
         // Filter activity lines based on selected date range
-        var matchingDueDates = subscription.activityLines.filter(function (
-          activity
-        ) {
+        var matchingDueDates = subscription.activityLines.filter(function (activity) {
           var lastDueDate = new Date(activity.LastDue);
           return lastDueDate >= fromDate && lastDueDate <= toDate;
         });
@@ -1052,9 +944,7 @@ export function applyFilters() {
 
       // Check if the subscription matches the selected status
       if (selectedStatus !== "4" && selectedStatus !== "null") {
-        var filteredActivityLines = subscription.activityLines.filter(function (
-          activity
-        ) {
+        var filteredActivityLines = subscription.activityLines.filter(function (activity) {
           return activity.Status === parseInt(selectedStatus);
         });
 
@@ -1069,10 +959,7 @@ export function applyFilters() {
         id: subscription.id,
         ActivityID: subscription.ActivityID,
         VendorName: subscription.VendorName,
-        activityLines:
-          matchingDueDates ||
-          filteredActivityLines ||
-          subscription.activityLines,
+        activityLines: matchingDueDates || filteredActivityLines || subscription.activityLines,
       };
     })
     .filter(function (subscription) {
@@ -1086,9 +973,7 @@ export function applyFilters() {
 function showDeleteConfirmationModal(recordId, row) {
   deleteTargetRow = row;
   deleteRecordId = recordId;
-  const modal = new bootstrap.Modal(
-    document.getElementById("deleteConfirmModal")
-  );
+  const modal = new bootstrap.Modal(document.getElementById("deleteConfirmModal"));
   modal.show();
 }
 
@@ -1119,11 +1004,9 @@ function setGrid(subscriptions) {
       });
 
       allActivities.sort((a, b) =>
-        (a.activity.SubName || "").localeCompare(
-          b.activity.SubName || "",
-          undefined,
-          { sensitivity: "base" }
-        )
+        (a.activity.SubName || "").localeCompare(b.activity.SubName || "", undefined, {
+          sensitivity: "base",
+        })
       );
 
       allActivities.forEach(({ subscription, activity }) => {
@@ -1198,12 +1081,8 @@ function setGrid(subscriptions) {
 
           const wasSelected = row.classList.contains("highlight");
 
-          tableBody
-            .querySelectorAll("tr")
-            .forEach((r) => r.classList.remove("highlight"));
-          tableBody
-            .querySelectorAll('input[type="radio"]')
-            .forEach((rb) => (rb.checked = false));
+          tableBody.querySelectorAll("tr").forEach((r) => r.classList.remove("highlight"));
+          tableBody.querySelectorAll('input[type="radio"]').forEach((rb) => (rb.checked = false));
 
           if (!wasSelected) {
             row.classList.add("highlight");
@@ -1240,12 +1119,8 @@ function setGrid(subscriptions) {
 
           const wasSelected = row.classList.contains("highlight");
 
-          tableBody
-            .querySelectorAll("tr")
-            .forEach((r) => r.classList.remove("highlight"));
-          tableBody
-            .querySelectorAll('input[type="radio"]')
-            .forEach((rb) => (rb.checked = false));
+          tableBody.querySelectorAll("tr").forEach((r) => r.classList.remove("highlight"));
+          tableBody.querySelectorAll('input[type="radio"]').forEach((rb) => (rb.checked = false));
 
           if (!wasSelected) {
             row.classList.add("highlight");
@@ -1266,12 +1141,8 @@ function setGrid(subscriptions) {
             console.warn("Edit/View button not found");
             return;
           }
-          tableBody
-            .querySelectorAll("tr")
-            .forEach((r) => r.classList.remove("highlight"));
-          tableBody
-            .querySelectorAll('input[type="radio"]')
-            .forEach((rb) => (rb.checked = false));
+          tableBody.querySelectorAll("tr").forEach((r) => r.classList.remove("highlight"));
+          tableBody.querySelectorAll('input[type="radio"]').forEach((rb) => (rb.checked = false));
 
           row.classList.add("highlight");
           radioBtn.checked = true;
@@ -1289,3 +1160,1075 @@ function setGrid(subscriptions) {
     resolve(); // grid fully built
   });
 }
+
+let totalSubsBudgetpagecount = 0;
+var BudgetArray = [];
+var budgetStart = 1;
+var budgetEnd = 4;
+let subscriptionBudgetStart = 1;
+let subscriptionBudgetEnd = 4;
+let departmentBudgetStart = 1;
+let departmentBudgetEnd = 4;
+let totalDepartBudgetpagecount = 0;
+
+export function validateAndCallSubscriptionFunction(event) {
+  if (event.key === "Enter") {
+    const input = document.getElementById("subscriptionPageInput");
+    const inputValue = Number(input.value.trim());
+
+    if (
+      input.value.trim() === "" ||
+      isNaN(inputValue) ||
+      inputValue <= 0 ||
+      /[^\d]/.test(input.value)
+    ) {
+      return;
+    }
+
+    // Check if the input is a valid number
+    if (!isNaN(inputValue) && inputValue !== "" && inputValue != 0 && inputValue > 0) {
+      if (inputValue > totalSubsBudgetpagecount) {
+        //  input.style.border = "1px solid red";
+        return;
+      }
+      input.style.border = "1px solid black";
+      budgetEnd = inputValue;
+      budgetStart = budgetEnd - 3;
+      if (budgetStart < 1) {
+        budgetStart = 1;
+      }
+      if (budgetEnd < 4) {
+        budgetEnd = 4;
+      }
+      const activeTab = document.querySelector("#budgetTab .nav-link.active").id;
+
+      getBudgetData(inputValue);
+    } else {
+      if (inputValue != 0) {
+        // If not a valid number, set the border color to red
+        // input.style.border = "1px solid red";
+      }
+
+      return; // Exit the function
+    }
+  }
+}
+
+function handleSubscriptionPageClick(element) {
+  const input = document.getElementById("subscriptionPageInput");
+  if (input) {
+    input.value = "";
+  }
+
+  const activeLinks = document.querySelectorAll("#subscriptionPagination a");
+  activeLinks.forEach((link) => link.classList.remove("active"));
+
+  element.classList.add("active");
+
+  const pageNumber = +element.textContent.trim();
+  getBudgetData(pageNumber);
+}
+
+function setBudgetNullGrid(tableBodyId) {
+  //var tableBody = document.querySelector("#BudgetSubscriptions tbody");
+
+  var tableBody = document.querySelector(`#${tableBodyId} tbody`);
+
+  tableBody.innerHTML = "";
+
+  var paragraph = document.createElement("p");
+  var row = document.createElement("tr");
+  var cell = document.createElement("td");
+
+  cell.colSpan = 6; // total visible columns in your budget table
+  cell.style.textAlign = "center";
+  cell.style.color = "#8d8888";
+  cell.style.fontSize = "14px";
+  cell.style.padding = "10px";
+
+  paragraph.textContent = "No results found";
+
+  cell.appendChild(paragraph);
+  row.appendChild(cell);
+  tableBody.appendChild(row);
+}
+
+function generateSubscriptionPagination(totalPages, activePageNumber = 1) {
+  const paginationDiv = document.getElementById("subscriptionPagination");
+  if (!paginationDiv) {
+    console.warn("Pagination container not found");
+    return;
+  }
+
+  while (paginationDiv.firstChild) {
+    paginationDiv.removeChild(paginationDiv.firstChild);
+  }
+
+  if (subscriptionBudgetStart > subscriptionBudgetEnd) {
+    subscriptionBudgetStart = 1;
+    subscriptionBudgetEnd = 4;
+    return;
+  }
+
+  const pageStart = subscriptionBudgetStart;
+  const pageEnd = Math.min(subscriptionBudgetEnd, totalPages);
+
+  // Prev Arrow
+  const prevArrow = document.createElement("a");
+  prevArrow.href = "#";
+  prevArrow.classList.add("prev");
+  prevArrow.innerHTML = "&lsaquo;";
+  prevArrow.onclick = function (e) {
+    e.preventDefault();
+    const input = document.getElementById("subscriptionPageInput");
+    if (input) {
+      input.value = "";
+    }
+
+    if (activePageNumber !== 1) {
+      if (subscriptionBudgetStart !== 1) {
+        subscriptionBudgetStart -= 1;
+        subscriptionBudgetEnd -= 1;
+      }
+      getBudgetData(activePageNumber - 1);
+    }
+  };
+  paginationDiv.appendChild(prevArrow);
+  if (activePageNumber === 1) {
+    prevArrow.setAttribute("disabled", "true");
+    prevArrow.style.backgroundColor = "#DCDCEE";
+  }
+
+  // Page Numbers
+  for (let i = pageStart; i <= pageEnd; i++) {
+    const pageLink = document.createElement("a");
+    pageLink.href = "#";
+    pageLink.textContent = i;
+    pageLink.onclick = function (e) {
+      e.preventDefault();
+      handleSubscriptionPageClick(this);
+    };
+    if (i === activePageNumber) {
+      pageLink.classList.add("active");
+    }
+    paginationDiv.appendChild(pageLink);
+  }
+
+  // Next Arrow
+  const nextArrow = document.createElement("a");
+  nextArrow.href = "#";
+  nextArrow.classList.add("next");
+  nextArrow.innerHTML = "&rsaquo;";
+  nextArrow.onclick = function (e) {
+    e.preventDefault();
+    const input = document.getElementById("subscriptionPageInput");
+    if (input) {
+      input.value = "";
+    }
+
+    if (activePageNumber < totalPages) {
+      if (subscriptionBudgetEnd !== totalPages && totalPages >= 4) {
+        subscriptionBudgetStart += 1;
+        subscriptionBudgetEnd += 1;
+      }
+      getBudgetData(activePageNumber + 1);
+    }
+  };
+  paginationDiv.appendChild(nextArrow);
+  if (activePageNumber === totalPages) {
+    nextArrow.setAttribute("disabled", "true");
+    nextArrow.style.backgroundColor = "#d3d3d3";
+    nextArrow.style.pointerEvents = "none";
+  }
+}
+
+export async function callgetBudgetData(requestData) {
+  try {
+    const baseUrl =
+      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api";
+
+    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
+
+    const azureFunctionUrl = `${baseUrl}/GetbudgetData?code=${funcKey}`;
+
+    const response = await fetch(azureFunctionUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...requestData,
+        pagesize: 8,
+        budgetType: "subscription",
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(err);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Budget API call failed:", error);
+    throw error;
+  }
+}
+
+export function getBudgetData(number) {
+  "use strict";
+
+  openPopup("popup_loading");
+  const input = document.getElementById("subscriptionPageInput");
+  if (input) {
+    input.value = "";
+  }
+
+  const contactId = "030ef119-c1c1-ee11-9079-00224827e8f9"; // Replace with actual contact ID logic
+
+  const requestData = {
+    contactId: contactId,
+    pagenumber: number,
+  };
+
+  // Call your async Azure Function wrapper
+  callgetBudgetData(requestData)
+    .then((result) => {
+      console.log("Function call successful:", result);
+
+      // Azure Function result is already JSON, no need to parse
+      const subsBudget = result.SubscriptionBudget || [];
+      const count = result.SubscriptionBudgetCount || 0;
+
+      const itemsPerPage = 8; // Items per page
+      const totalPages = Math.ceil(count / itemsPerPage);
+      totalSubsBudgetpagecount = totalPages;
+
+      generateSubscriptionPagination(totalPages, number);
+
+      BudgetArray = subsBudget;
+
+      // Update the grid
+      if (subsBudget.length === 0) {
+        setBudgetNullGrid("BudgetSubscriptions");
+      } else {
+        setBudgetGrid(BudgetArray);
+      }
+
+      closePopup("popup_loading"); // Hide loading popup
+    })
+    .catch((error) => {
+      console.error("Azure Function call failed:", error);
+      closePopup("popup_loading");
+      setBudgetGrid(BudgetArray);
+    });
+}
+
+function setBudgetGrid(subscriptions) {
+  "use strict";
+
+  var tableBody = document.querySelector("#BudgetSubscriptions");
+  if (!tableBody) {
+    console.warn("Budget table body not found");
+    return;
+  }
+  tableBody.innerHTML = "";
+
+  if (subscriptions && subscriptions.length > 0) {
+    subscriptions.sort((a, b) => {
+      return (a.SubName || "").localeCompare(b.SubName || "", undefined, {
+        sensitivity: "base",
+      });
+    });
+
+    subscriptions.forEach((subscription) => {
+      var row = tableBody.insertRow();
+
+      var radioCell = row.insertCell(0);
+      var BudgetNameCell = row.insertCell(1);
+      var BudgetAmmountCell = row.insertCell(2);
+      var subscriptionNameCell = row.insertCell(3);
+      var subscriptionAmountCell = row.insertCell(4);
+      var subActivityLineIDCell = row.insertCell(5);
+
+      var radioBtn = document.createElement("input");
+      radioBtn.type = "radio";
+      radioBtn.name = "row-selector";
+
+      radioCell.appendChild(radioBtn);
+      radioCell.style.display = "none";
+
+      applyTooltip(subscriptionNameCell, subscription.SubName || "");
+      subscriptionNameCell.style.color = "#4B8FFF";
+      applyTooltip(BudgetNameCell, subscription.BudgetName || "");
+      applyTooltip(
+        subscriptionAmountCell,
+        subscription.SubAmount !== null ? "$" + subscription.SubAmount : ""
+      );
+
+      applyTooltip(
+        BudgetAmmountCell,
+        subscription.BudgetAmount !== null ? "$" + subscription.BudgetAmount : ""
+      );
+      BudgetAmmountCell.style.color = "#7259F6";
+
+      subActivityLineIDCell.textContent = subscription.BudgetId || "";
+      subActivityLineIDCell.classList.add("hidden");
+
+      radioBtn.style.display = "none"; // Instead of hiding radioCell
+
+      row.onclick = function () {
+        console.log("Row clicked"); // Debug
+        var wasSelected = row.classList.contains("highlight");
+        tableBody.querySelectorAll("tr").forEach((r) => r.classList.remove("highlight"));
+        tableBody.querySelectorAll('input[type="radio"]').forEach((rb) => (rb.checked = false));
+
+        if (!wasSelected) {
+          row.classList.add("highlight");
+          radioBtn.checked = true;
+        }
+      };
+
+      radioBtn.onclick = function (event) {
+        event.stopPropagation();
+        var wasSelected = row.classList.contains("highlight");
+        var rows = tableBody.querySelectorAll("tr");
+        rows.forEach((r) => r.classList.remove("highlight"));
+
+        var radioButtons = tableBody.querySelectorAll('input[type="radio"]');
+        radioButtons.forEach((radioButton) => (radioButton.checked = false));
+
+        if (!wasSelected) {
+          row.classList.add("highlight");
+          radioBtn.checked = true;
+        }
+      };
+
+      row.ondblclick = function () {
+        var rows = tableBody.querySelectorAll("tr");
+        rows.forEach((r) => r.classList.remove("highlight"));
+        tableBody.querySelectorAll('input[type="radio"]').forEach((rb) => (rb.checked = false));
+
+        row.classList.add("highlight");
+        radioBtn.checked = true;
+
+        $("#EditBudget").modal("show");
+
+        populateBudgetForm();
+      };
+    });
+  } else {
+    setBudgetNullGrid("BudgetSubscriptions");
+  }
+}
+
+export function validateAndCallDepartmentFunction(event) {
+  if (event.key === "Enter") {
+    const departmentInput = document.getElementById("departmentPageInput");
+    if (departmentInput) {
+      departmentInput.value = "";
+    }
+
+    const inputValue = Number(input.value.trim());
+
+    if (
+      input.value.trim() === "" ||
+      isNaN(inputValue) ||
+      inputValue <= 0 ||
+      /[^\d]/.test(input.value)
+    ) {
+      return;
+    }
+
+    // Check if the input is a valid number
+    if (!isNaN(inputValue) && inputValue !== "" && inputValue != 0 && inputValue > 0) {
+      if (inputValue > totalDepartBudgetpagecount) {
+        //  input.style.border = "1px solid red";
+        return;
+      }
+      input.style.border = "1px solid black";
+      budgetEnd = inputValue;
+      budgetStart = budgetEnd - 3;
+      if (budgetStart < 1) {
+        budgetStart = 1;
+      }
+      if (budgetEnd < 4) {
+        budgetEnd = 4;
+      }
+      const activeTab = document.querySelector("#budgetTab .nav-link.active").id;
+
+      getDepartmentBudgetData(inputValue);
+    } else {
+      if (inputValue != 0) {
+        // If not a valid number, set the border color to red
+        // input.style.border = "1px solid red";
+      }
+
+      return; // Exit the function
+    }
+  }
+}
+
+function handleDepartmentPageClick(element) {
+  const departmentInput = document.getElementById("departmentPageInput");
+  if (departmentInput) {
+    departmentInput.value = "";
+  }
+
+  const activeLinks = document.querySelectorAll("#departmentPagination a");
+  activeLinks.forEach((link) => link.classList.remove("active"));
+
+  element.classList.add("active");
+
+  const pageNumber = +element.textContent.trim();
+  getDepartmentBudgetData(pageNumber);
+}
+
+function generateDepartmentPagination(totalPages, activePageNumber = 1) {
+  const paginationDiv = document.getElementById("departmentPagination");
+  if (!paginationDiv) {
+    console.warn("departmentPagination not found in DOM");
+    return;
+  }
+
+  while (paginationDiv.firstChild) {
+    paginationDiv.removeChild(paginationDiv.firstChild);
+  }
+
+  if (departmentBudgetStart > departmentBudgetEnd) {
+    departmentBudgetStart = 1;
+    departmentBudgetEnd = 4;
+    return;
+  }
+
+  const pageStart = departmentBudgetStart;
+  const pageEnd = Math.min(departmentBudgetEnd, totalPages);
+
+  // Prev Arrow
+  const prevArrow = document.createElement("a");
+  prevArrow.href = "#";
+  prevArrow.classList.add("prev");
+  prevArrow.innerHTML = "&lsaquo;";
+  prevArrow.onclick = function (e) {
+    e.preventDefault();
+    const departmentInput = document.getElementById("departmentPageInput");
+    if (departmentInput) {
+      departmentInput.value = "";
+    }
+
+    if (activePageNumber !== 1) {
+      if (departmentBudgetStart !== 1) {
+        departmentBudgetStart -= 1;
+        departmentBudgetEnd -= 1;
+      }
+      getDepartmentBudgetData(activePageNumber - 1);
+    }
+  };
+  paginationDiv.appendChild(prevArrow);
+  if (activePageNumber === 1) {
+    prevArrow.setAttribute("disabled", "true");
+    prevArrow.style.backgroundColor = "#DCDCEE";
+  }
+
+  // Page Numbers
+  for (let i = pageStart; i <= pageEnd; i++) {
+    const pageLink = document.createElement("a");
+    pageLink.href = "#";
+    pageLink.textContent = i;
+    pageLink.onclick = function (e) {
+      e.preventDefault();
+      handleDepartmentPageClick(this);
+    };
+    if (i === activePageNumber) {
+      pageLink.classList.add("active");
+    }
+    paginationDiv.appendChild(pageLink);
+  }
+
+  // Next Arrow
+  const nextArrow = document.createElement("a");
+  nextArrow.href = "#";
+  nextArrow.classList.add("next");
+  nextArrow.innerHTML = "&rsaquo;";
+  nextArrow.onclick = function (e) {
+    e.preventDefault();
+    const departmentInput = document.getElementById("departmentPageInput");
+    if (departmentInput) {
+      departmentInput.value = "";
+    }
+
+    if (activePageNumber < totalPages) {
+      if (departmentBudgetEnd !== totalPages && totalPages >= 4) {
+        departmentBudgetStart += 1;
+        departmentBudgetEnd += 1;
+      }
+      getDepartmentBudgetData(activePageNumber + 1);
+    }
+  };
+  paginationDiv.appendChild(nextArrow);
+  if (activePageNumber === totalPages) {
+    nextArrow.setAttribute("disabled", "true");
+    nextArrow.style.backgroundColor = "#d3d3d3";
+    nextArrow.style.pointerEvents = "none";
+  }
+}
+
+export function getDepartmentBudgetData(number) {
+  "use strict";
+
+  openPopup("popup_loading");
+  const departmentInput = document.getElementById("departmentPageInput");
+  if (departmentInput) {
+    departmentInput.value = "";
+  }
+
+  const contactId = "030ef119-c1c1-ee11-9079-00224827e8f9";
+  const requestData = {
+    contactId: contactId,
+    pagenumber: number,
+  };
+
+  callgetBudgetData(requestData) // This should call your Azure Function
+    .then((result) => {
+      console.log("Function call successful:", result);
+
+      const depBudget = result.DepartmentBudget || [];
+      const count = result.DepartmentCount || 0;
+
+      const itemsPerPage = 8;
+      const totalPages = Math.ceil(count / itemsPerPage);
+      totalDepartBudgetpagecount = totalPages;
+
+      generateDepartmentPagination(totalPages, number);
+
+      BudgetArray = depBudget;
+
+      // Update the grid
+      if (depBudget.length === 0) {
+        setBudgetNullGrid("DepartmentBudgets");
+      } else {
+        setDepartmentGrid(BudgetArray);
+      }
+
+      closePopup("popup_loading");
+    })
+    .catch((error) => {
+      console.error("Azure Function call failed:", error);
+      closePopup("popup_loading");
+
+      // fallback to last known department budget
+      setDepartmentGrid(BudgetArray);
+    });
+}
+
+function setDepartmentGrid(departments) {
+  "use strict";
+
+  var tableBody = document.querySelector("#DepartmentBudgets");
+  tableBody.innerHTML = "";
+
+  if (departments && departments.length > 0) {
+    departments.forEach((dept) => {
+      var row = tableBody.insertRow();
+      var radioCell = row.insertCell(0);
+      var BudgetNameCell = row.insertCell(1);
+      var BudgetAmountCell = row.insertCell(2);
+      var DepartmentNameCell = row.insertCell(3);
+      var subActivityLineIDCell = row.insertCell(4);
+
+      var radioBtn = document.createElement("input");
+      radioBtn.type = "radio";
+      radioBtn.name = "row-selector";
+
+      radioCell.appendChild(radioBtn);
+      radioCell.style.display = "none";
+
+      applyTooltip(BudgetNameCell, dept.BudgetName || "");
+      applyTooltip(BudgetAmountCell, dept.BudgetAmount !== null ? "$" + dept.BudgetAmount : "");
+      BudgetAmountCell.style.color = "#7259F6";
+      applyTooltip(DepartmentNameCell, dept.DepartmentName || "");
+      DepartmentNameCell.style.color = "#4B8FFF";
+
+      subActivityLineIDCell.textContent = dept.BudgetId || "";
+      subActivityLineIDCell.classList.add("hidden");
+
+      radioBtn.style.display = "none"; // Instead of hiding radioCell
+
+      row.onclick = function () {
+        console.log("Row clicked"); // Debug
+        var wasSelected = row.classList.contains("highlight");
+        tableBody.querySelectorAll("tr").forEach((r) => r.classList.remove("highlight"));
+        tableBody.querySelectorAll('input[type="radio"]').forEach((rb) => (rb.checked = false));
+
+        if (!wasSelected) {
+          row.classList.add("highlight");
+          radioBtn.checked = true;
+        }
+      };
+
+      radioBtn.onclick = function (event) {
+        event.stopPropagation();
+        var wasSelected = row.classList.contains("highlight");
+        var rows = tableBody.querySelectorAll("tr");
+        rows.forEach((r) => r.classList.remove("highlight"));
+
+        var radioButtons = tableBody.querySelectorAll('input[type="radio"]');
+        radioButtons.forEach((radioButton) => (radioButton.checked = false));
+
+        if (!wasSelected) {
+          row.classList.add("highlight");
+          radioBtn.checked = true;
+        }
+      };
+
+      row.ondblclick = function () {
+        var rows = tableBody.querySelectorAll("tr");
+        rows.forEach((r) => r.classList.remove("highlight"));
+        tableBody.querySelectorAll('input[type="radio"]').forEach((rb) => (rb.checked = false));
+
+        row.classList.add("highlight");
+        radioBtn.checked = true;
+
+        $("#EditBudget").modal("show");
+
+        populateDepartmentBudgetForm();
+      };
+    });
+  } else {
+    setBudgetNullGrid("DepartmentBudgets");
+  }
+}
+
+//Add Budget Modal
+
+export function AddBudgetRecord() {
+  const BudgetName = document.getElementById("budgetName");
+
+  if (BudgetName.value.trim() === "") {
+    BudgetName.classList.add("invalid-field");
+    return;
+  }
+
+  const deptToggle = document.getElementById("departmentBudget");
+  const subToggle = document.getElementById("subscriptionBudget");
+  const budgetNameVlaue = BudgetName.value;
+
+  const isSubscriptionValid = validateCustomSelect(
+    "subscriptionActivityWrapper2",
+    "subscriptionActivity2",
+    "Vendor is required"
+  );
+
+  const isFinancialYearValid = validateCustomSelect(
+    "financialYearWrapper",
+    "financialYear",
+    "Financial Year is required"
+  );
+
+  const isDepartmentValid = validateCustomSelect(
+    "departmentWrapper3",
+    "departmentSelect3",
+    "Department is required"
+  );
+
+  const Amount =
+    document.getElementById("budgetAmount").value === ""
+      ? null
+      : parseFloat(document.getElementById("budgetAmount").value);
+
+  if (subToggle.checked && !isSubscriptionValid) return;
+  if (deptToggle.checked && (!isFinancialYearValid || !isDepartmentValid)) return;
+
+  const financialYearId = document
+    .getElementById("financialYearWrapper")
+    ?.getAttribute("data-selected-value");
+
+  const departmentId = document
+    .getElementById("departmentWrapper3")
+    ?.getAttribute("data-selected-value");
+
+  const activityLineId = document
+    .getElementById("subscriptionActivityWrapper2")
+    ?.getAttribute("data-selected-value");
+
+  /* =======================
+     DEPARTMENT BUDGET FLOW
+     ======================= */
+  if (deptToggle.checked) {
+    if (!financialYearId || !departmentId) {
+      alert("Please select both Financial Year and Department before proceeding.");
+      return;
+    }
+
+    // 1️⃣ CHECK BUDGET API
+    const checkUrl =
+      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/getBudget/check" +
+      `?financialYearId=${financialYearId}&departmentId=${departmentId}`;
+
+    fetch(checkUrl, {
+      method: "GET",
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.exists === true) {
+          showCustomPopup("A budget for this department and financial year already exists!");
+          return;
+        }
+
+        // 2️⃣ ADD DEPARTMENT BUDGET API
+        const record = {
+          yiic_departmentbudget: true,
+          yiic_subscriptionbudget: false,
+          "yiic_department@odata.bind": `/yiic_departments(${departmentId})`,
+          "yiic_financialyear@odata.bind": `/yiic_masterdatas(${financialYearId})`,
+          yiic_name: budgetNameVlaue,
+          yiic_amount: Amount,
+        };
+
+        fetch(
+          "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/addBudget",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(record),
+          }
+        )
+          .then((res) => {
+            if (!res.ok) throw new Error("Failed to create department budget");
+            closeModalAndShowSuccess();
+          })
+          .catch((err) => {
+            console.error("Error creating department budget:", err);
+          });
+      })
+      .catch((err) => {
+        console.error("Error checking department budget:", err);
+      });
+
+    return; // wait for async flow
+  }
+
+  /* =======================
+     SUBSCRIPTION BUDGET FLOW
+     ======================= */
+  if (subToggle.checked && activityLineId) {
+    const record = {
+      yiic_departmentbudget: false,
+      yiic_subscriptionbudget: true,
+      "yiic_subscriptionactivity@odata.bind": `/yiic_subscriptionsactivitylines(${activityLineId})`,
+      yiic_name: budgetNameVlaue,
+      yiic_amount: Amount,
+    };
+
+    fetch(
+      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/addBudget",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(record),
+      }
+    )
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to create subscription budget");
+        closeModalAndShowSuccess();
+      })
+      .catch((err) => {
+        console.error("Error creating subscription budget:", err);
+      });
+  }
+}
+
+function fetchDepartments(wrapperId) {
+  const API_URL =
+    "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/getDepartments";
+
+  fetch(API_URL, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "x-functions-key": "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
+    },
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to fetch departments");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      // ✅ Adjust this if your Azure API wraps data differently
+      const results = data?.value || data || [];
+
+      const departmentWrapper = document.getElementById(wrapperId);
+      const optionsContainer = departmentWrapper.querySelector(".options-container");
+
+      optionsContainer.innerHTML = "";
+
+      // ❌ No data
+      if (!results.length) {
+        const noDepts = document.createElement("div");
+        noDepts.className = "no-vendors";
+        noDepts.textContent = "No departments available";
+
+        Object.assign(noDepts.style, {
+          padding: "15px",
+          fontSize: "13px",
+          fontWeight: "600",
+          color: "grey",
+        });
+
+        optionsContainer.appendChild(noDepts);
+        return;
+      }
+
+      // 🔍 Search input
+      const searchInput = document.createElement("input");
+      searchInput.type = "text";
+      searchInput.className = "search-input";
+      searchInput.placeholder = "Search...";
+      searchInput.setAttribute("aria-label", "Search Department");
+      optionsContainer.appendChild(searchInput);
+
+      // 📋 Options
+      results.forEach((dept) => {
+        const option = document.createElement("div");
+        option.className = "option";
+        option.setAttribute("data-value", dept.yiic_departmentid);
+        option.textContent = dept.yiic_name;
+        optionsContainer.appendChild(option);
+      });
+
+      // 🔍 Filter logic
+      searchInput.addEventListener("input", function () {
+        const filter = searchInput.value.toLowerCase();
+        const options = optionsContainer.querySelectorAll(".option");
+
+        options.forEach((option) => {
+          option.style.display = option.textContent.toLowerCase().includes(filter) ? "" : "none";
+        });
+      });
+
+      // ✅ Select option
+      optionsContainer.querySelectorAll(".option").forEach((option) => {
+        option.addEventListener("click", function () {
+          const value = option.getAttribute("data-value");
+          const placeholder = departmentWrapper.querySelector(".optionName");
+
+          placeholder.textContent = option.textContent;
+          departmentWrapper.setAttribute("data-selected-value", value);
+          departmentWrapper.classList.remove("show-options");
+        });
+      });
+    })
+    .catch((error) => {
+      console.error("Error fetching departments:", error);
+    });
+}
+
+function fetchActivityLines(wrapperId) {
+  const accountId = window.APP_CONFIG.primaryAccountId;
+
+  const API_URL =
+    "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/getSubscriptionActivityLinesByAccount" +
+    "?accountId=" +
+    accountId;
+
+  fetch(API_URL, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to fetch subscription activity lines");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      // ⚠️ Adjust if backend wraps response
+      const results = data?.value || data || [];
+
+      const departmentWrapper = document.getElementById(wrapperId);
+      const optionsContainer = departmentWrapper.querySelector(".options-container");
+
+      optionsContainer.innerHTML = "";
+
+      // ❌ No data case
+      if (!results.length) {
+        const noDepts = document.createElement("div");
+        noDepts.className = "no-vendors";
+        noDepts.textContent = "No subscriptions available";
+
+        Object.assign(noDepts.style, {
+          padding: "15px",
+          fontSize: "13px",
+          fontWeight: "600",
+          color: "grey",
+        });
+
+        optionsContainer.appendChild(noDepts);
+        return;
+      }
+
+      // 🔍 Search input
+      const searchInput = document.createElement("input");
+      searchInput.type = "text";
+      searchInput.className = "search-input";
+      searchInput.placeholder = "Search...";
+      searchInput.setAttribute("aria-label", "Search Subscription");
+      optionsContainer.appendChild(searchInput);
+
+      // 📋 Options
+      results.forEach((item) => {
+        const option = document.createElement("div");
+        option.className = "option";
+        option.setAttribute("data-value", item.activityid);
+        option.textContent = item.yiic_subscriptionname;
+        optionsContainer.appendChild(option);
+      });
+
+      // 🔍 Filter logic
+      searchInput.addEventListener("input", function () {
+        const filter = searchInput.value.toLowerCase();
+        const options = optionsContainer.querySelectorAll(".option");
+
+        options.forEach((option) => {
+          option.style.display = option.textContent.toLowerCase().includes(filter) ? "" : "none";
+        });
+      });
+
+      // ✅ Select option
+      optionsContainer.querySelectorAll(".option").forEach((option) => {
+        option.addEventListener("click", function () {
+          const value = option.getAttribute("data-value");
+          const placeholder = departmentWrapper.querySelector(".optionName");
+
+          placeholder.textContent = option.textContent;
+          departmentWrapper.setAttribute("data-selected-value", value);
+          departmentWrapper.classList.remove("show-options");
+        });
+      });
+    })
+    .catch((error) => {
+      console.error("Error fetching subscriptions:", error);
+    });
+}
+
+function fetchFinancialYear(wrapperId) {
+  var currentYear = new Date().getFullYear();
+
+  const API_URL =
+    "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/Getfinancialyeardata";
+
+  fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      currentYear: currentYear,
+    }),
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to fetch financial years");
+      }
+      return response.json();
+    })
+    .then((data) => {
+      // ⚠️ Adjust ONLY if backend wraps response differently
+      var results = data?.value || data || [];
+
+      var departmentWrapper = document.getElementById(wrapperId);
+      var optionsContainer = departmentWrapper.querySelector(".options-container");
+
+      optionsContainer.innerHTML = ""; // Clear previous options
+
+      if (results.length === 0) {
+        var noDepts = document.createElement("div");
+        noDepts.classList.add("no-vendors");
+        noDepts.textContent = "No departments available";
+
+        noDepts.style.padding = "15px";
+        noDepts.style.fontSize = "13px";
+        noDepts.style.fontWeight = "600";
+        noDepts.style.color = "grey";
+
+        optionsContainer.appendChild(noDepts);
+        return;
+      }
+
+      var searchInput = document.createElement("input");
+      searchInput.type = "text";
+      searchInput.classList.add("search-input");
+      searchInput.placeholder = "Search...";
+      searchInput.setAttribute("aria-label", "Search Department");
+      optionsContainer.appendChild(searchInput);
+
+      results.forEach(function (dept) {
+        var option = document.createElement("div");
+        option.classList.add("option");
+        option.setAttribute("data-value", dept.yiic_masterdataid);
+        option.textContent = dept.yiic_name;
+        optionsContainer.appendChild(option);
+      });
+
+      searchInput.addEventListener("input", function () {
+        var filter = searchInput.value.toLowerCase();
+        var options = optionsContainer.querySelectorAll(".option");
+
+        options.forEach(function (option) {
+          option.style.display = option.textContent.toLowerCase().includes(filter) ? "" : "none";
+        });
+      });
+
+      var options = optionsContainer.querySelectorAll(".option");
+      options.forEach(function (option) {
+        option.addEventListener("click", function () {
+          var value = option.getAttribute("data-value");
+          var placeholder = departmentWrapper.querySelector(".optionName");
+
+          placeholder.textContent = option.textContent;
+          departmentWrapper.setAttribute("data-selected-value", value);
+          departmentWrapper.classList.remove("show-options");
+        });
+      });
+    })
+    .catch((error) => {
+      console.error("Error fetching financial years:", error);
+    });
+}
+
+export function FetchChoices() {
+  ResetBudgetModal();
+  removeErrorAndClass("budgetAmount");
+
+  const subFields = document.getElementById("subscriptionFields");
+  const nonSubFields = document.getElementById("nonSubscriptionFields");
+
+  subFields.classList.add("hidden");
+  nonSubFields.classList.add("hidden");
+
+  document.getElementById("budgetName").value = "";
+  document.getElementById("budgetName").classList.remove("invalid-field");
+
+  // Reset Budget Amount
+  document.getElementById("budgetAmount").value = "";
+
+  // Reset toggles
+  document.getElementById("departmentBudget").checked = false;
+  document.getElementById("subscriptionBudget").checked = false;
+
+  fetchDepartments("departmentWrapper3");
+  fetchActivityLines("subscriptionActivityWrapper2");
+  fetchFinancialYear("financialYearWrapper");
+}
+
+/// SUBSCRIPTION BUDGET FUNCTIONS END ///
+
+/// ADD subscription functions///
