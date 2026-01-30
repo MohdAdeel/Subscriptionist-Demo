@@ -1,7 +1,6 @@
 import TimeIcon from "../../assets/Time.svg";
 import { useActivityLines } from "../../hooks";
 import FrameIcon from "../../assets/Frame.svg";
-import ProfileImg from "../../assets/Image.jpg";
 import OverdueIcon from "../../assets/Overdue.svg";
 import { useEffect, useRef, useCallback, useState } from "react";
 import TotalActiveCostIcon from "../../assets/TotalActiveCost.svg";
@@ -10,6 +9,7 @@ import UpcomingRenewalsIcon from "../../assets/UpcomingRenewals.svg";
 import RecentlyConcludedIcon from "../../assets/RecentlyConcluded.svg";
 import ActiveSubscriptionsIcon from "../../assets/ActiveSubscriptions.svg";
 import { CardSkeleton, ChartSkeleton } from "../../components/SkeletonLoader";
+import PageHeader from "../../components/PageHeader";
 
 // Lazy load heavy utility modules - these contain Chart.js and are large (~400KB total)
 // They are only needed AFTER the API data is fetched
@@ -287,16 +287,12 @@ export default function Home() {
           margin-right: 10px;
         }
       `}</style>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <h1 className="text-xl font-semibold text-[#0B0B3B]">Welcome Jane!</h1>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-500">
-            {isLoading ? "Loading..." : "Last Update 10 min ago"}
-          </span>
-          <img src={ProfileImg} alt="Profile" className="w-9 h-9 rounded-full object-cover" />
-        </div>
-      </div>
+      <PageHeader
+        variant="home"
+        title="Welcome Jane!"
+        lastUpdatedText="Last Update 10 min ago"
+        isLoadingLastUpdated={isLoading}
+      />
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">

@@ -22,7 +22,8 @@ import AddVendorModal from "./component/AddVendorModal.jsx";
 import EditVendorModal from "./component/EditVendorModal.jsx";
 import { useEffect, useRef, useState, useCallback } from "react";
 import DeleteVendorModal from "./component/DeleteVendorModal.jsx";
-import { FiSearch, FiBell, FiCalendar, FiUser } from "react-icons/fi";
+import { FiSearch } from "react-icons/fi";
+import PageHeader from "../../components/PageHeader";
 
 const Vendor = () => {
   const navigate = useNavigate();
@@ -355,25 +356,11 @@ const Vendor = () => {
 
   return (
     <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-screen">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <div className="flex items-center gap-2 sm:gap-2.5">
-          <h2 className="m-0 text-lg sm:text-xl md:text-[22px] font-bold">Vendor Name</h2>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          <span className="text-[10px] xs:text-xs sm:text-[13px] text-[#8b8b8b] order-1 sm:order-none">
-            Last Update 21 days ago
-          </span>
-          <FiBell className="text-lg sm:text-xl cursor-pointer order-2 sm:order-none" />
-          <div className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-[#4facfe] to-[#00f2fe] rounded-full flex items-center justify-center order-3 sm:order-none">
-            <FiUser className="text-white text-base sm:text-lg" />
-          </div>
-          <span className="text-xs sm:text-sm font-medium order-4 sm:order-none truncate max-w-[180px] xs:max-w-[250px] sm:max-w-none">
-            Test Subscriptionist Invitation
-          </span>
-        </div>
-      </div>
+      <PageHeader
+        variant="reports"
+        title="Vendor Name"
+        lastUpdatedText="Last Update 21 days ago"
+      />
 
       {/* Filters and Actions */}
       <div className="flex flex-col lg:flex-row justify-between items-start gap-4 sm:gap-5 px-3 sm:px-4 md:px-5 mb-4 sm:mb-6 w-full overflow-x-hidden">
