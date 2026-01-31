@@ -1,13 +1,4 @@
-import {
-  FiX,
-  FiBell,
-  FiUser,
-  FiUpload,
-  FiFilter,
-  FiSearch,
-  FiDownload,
-  FiCalendar,
-} from "react-icons/fi";
+import { FiX, FiUpload, FiFilter, FiDownload, FiCalendar } from "react-icons/fi";
 import jsPDF from "jspdf";
 import ExcelJS from "exceljs";
 import autoTable from "jspdf-autotable";
@@ -19,6 +10,7 @@ import StandardReports from "./components/StandardReports";
 import RenewalAndExpiration from "./components/RenewalAndExpiration";
 import { applyFilters, clearFilters } from "../../lib/utils/reportsPage";
 import { TableSkeleton, ChartSkeleton, KPICardSkeleton } from "../../components/SkeletonLoader";
+import PageHeader from "../../components/PageHeader";
 
 const Report = () => {
   // React Query handles caching, deduplication, and loading state
@@ -1521,42 +1513,13 @@ const Report = () => {
           </div>
         </div>
       )}
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-800">Reports Dashboard</h1>
-
-        <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-          <span className="text-xs sm:text-sm text-gray-500">
-            {isLoading ? "Loading..." : "Last Update 29 days ago"}
-          </span>
-          <button className="relative p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <FiBell className="w-5 h-5 text-gray-600" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
-            <FiUser className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-          </div>
-          <div className="flex items-center gap-2">
-            <FiSearch className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">
-              Test Subcriptionist Invitation
-            </span>
-            <svg
-              className="w-4 h-4 text-gray-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        variant="reports"
+        title="Reports Dashboard"
+        lastUpdatedText="Last Update 29 days ago"
+        isLoadingLastUpdated={isLoading}
+        invitationLabel="Test Subcriptionist Invitation"
+      />
 
       {/* Tabs */}
       <div className="mb-6 border-b border-gray-200">
