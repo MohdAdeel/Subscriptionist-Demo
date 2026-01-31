@@ -16,10 +16,9 @@ function AppRoutes() {
       <Route element={<ProtectedRoutes />}>
         <Route path="/" element={<Home />} />
         <Route path="/subscriptions" element={<Subscription />} />
-        <Route path="/budget-management" element={<BudgetManagement />} />
         <Route path="/reports" element={<Report />} />
         <Route path="/vendors" element={<Vendor />} />
-         <Route path="/profile" element={<Profile />} />
+        <Route path="/profile" element={<Profile />} />
         {/* <Route path="/budget-management" element={<BudgetManagement />} /> */}
       </Route>
     </Routes>
