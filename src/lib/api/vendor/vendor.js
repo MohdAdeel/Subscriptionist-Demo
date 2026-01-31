@@ -21,6 +21,7 @@ export async function createVendor(record) {
     },
     body: JSON.stringify(record),
   });
+  console.log("response", response);
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -173,16 +174,13 @@ export async function getSubscriptionActivityLinesBySubscriptionActivity(subscri
  * @returns {Promise<Object>} Response data
  */
 export async function deleteSubscriptionActivityLine(activityLineId) {
-  const response = await fetch(
-    `${API_BASE_URL}/deleteSubscriptionActivityLine/${activityLineId}`,
-    {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": API_KEY,
-      },
-    }
-  );
+  const response = await fetch(`${API_BASE_URL}/deleteSubscriptionActivityLine/${activityLineId}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      "x-functions-key": API_KEY,
+    },
+  });
 
   if (!response.ok) {
     const errorText = await response.text();

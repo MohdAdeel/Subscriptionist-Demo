@@ -12,6 +12,7 @@ export const useSubscriptionsStore = create((set) => ({
   setSelectedSubscriptionId: (id) => set({ selectedSubscriptionId: id }),
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
+
   resetSubscriptions: () =>
     set({
       subscriptions: [],

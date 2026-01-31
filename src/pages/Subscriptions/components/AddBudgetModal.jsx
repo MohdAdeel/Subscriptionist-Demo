@@ -94,7 +94,6 @@ export default function AddBudgetModal({ open = true, onClose, onSuccess }) {
         const list = Array.isArray(lines) ? lines : [];
         setActivityLinesList(list);
         if (list.length > 0 && list[0]) {
-          console.log("Activity lines API (first item keys):", Object.keys(list[0]));
         }
       })
       .catch((err) => {
@@ -147,13 +146,10 @@ export default function AddBudgetModal({ open = true, onClose, onSuccess }) {
       } else {
         payload = null;
       }
-      if (payload) {
-        console.log("Add Budget payload:", payload);
-      }
+
       if (isSubscription && payload) {
         addBudget(payload)
           .then((result) => {
-            console.log("Add budget (subscription) result:", result);
             onSuccess?.();
             onClose?.();
           })
@@ -167,13 +163,11 @@ export default function AddBudgetModal({ open = true, onClose, onSuccess }) {
           .then((result) => {
             const list = Array.isArray(result) ? result : (result?.value ?? []);
             if (Array.isArray(list) && list.length === 0 && payload) {
-              console.log("OK");
               return addBudget(payload);
             }
           })
           .then((result) => {
             if (result !== undefined) {
-              console.log("Add budget (department) result:", result);
               onSuccess?.();
               onClose?.();
             }

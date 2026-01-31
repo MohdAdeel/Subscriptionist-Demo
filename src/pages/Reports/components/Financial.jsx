@@ -197,7 +197,6 @@ const Financial = ({
 
   useEffect(() => {
     if (!categorySummary || !categorySummary.length) return;
-    console.log("stored category summary", categorySummary);
   }, [categorySummary]);
 
   const internalDepartmentChartRef = useRef(null);

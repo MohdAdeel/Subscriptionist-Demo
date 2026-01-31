@@ -43,8 +43,6 @@ export default function Profile() {
       };
 
       const result = await addAssociateUser(userData);
-
-      console.log("✅ User added successfully:", result);
     } catch (error) {
       if (error instanceof Error) {
         console.error("❌ API Error:", error.message);
@@ -78,7 +76,6 @@ export default function Profile() {
     const loadData = async () => {
       try {
         const notificationRes = await getNotificationData();
-        console.log("Notification Data:", notificationRes);
 
         if (notificationRes?.value?.length > 0) {
           setNotification(notificationRes.value[0]);
@@ -112,8 +109,6 @@ export default function Profile() {
     if (contact.accountrolecode !== "") {
       payload.accountrolecode = Number(contact.accountrolecode);
     }
-
-    console.log("PATCH PAYLOAD 👉", payload);
 
     try {
       await updateContact(payload);

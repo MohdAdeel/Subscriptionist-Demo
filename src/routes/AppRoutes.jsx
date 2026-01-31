@@ -1,21 +1,22 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
 import Home from "../pages/Home/Home";
-import Subscription from "../pages/Subscriptions/Subscription";
+import Login from "../pages/Login/Login";
 import Report from "../pages/Reports/Report";
 import Vendor from "../pages/Vendors/Vendor";
-import Login from "../pages/Login/Login";
+// import Profile from "../pages/Profile/Profile";
 import ProtectedRoutes from "./ProtectedRoutes";
-
+import { Routes, Route } from "react-router-dom";
+import Subscription from "../pages/Subscriptions/Subscription";
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
       <Route element={<ProtectedRoutes />}>
         <Route path="/" element={<Home />} />
-        <Route path="/subscriptions" element={<Subscription />} />
+        <Route path="/login" element={<Login />} />
         <Route path="/reports" element={<Report />} />
         <Route path="/vendors" element={<Vendor />} />
+        <Route path="/subscriptions" element={<Subscription />} />
+        {/* <Route path="/profile" element={<Profile />} /> */}
       </Route>
     </Routes>
   );

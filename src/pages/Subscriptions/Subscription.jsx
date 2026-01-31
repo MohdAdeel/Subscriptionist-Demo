@@ -360,7 +360,6 @@ const Subscription = () => {
     setIsLoading(true);
     getRelationshipSubsLines(currentPage)
       .then((result) => {
-        console.log("hereis the result", result);
         getDeparments()
           .then((result) => {
             setDepartments(result?.value);
@@ -388,7 +387,6 @@ const Subscription = () => {
     if (showEditModal && selectedRowId) {
       populateEditForm(selectedRowId)
         .then((result) => {
-          console.log("hereis the result", result);
           setEditFormData(result);
         })
         .catch((err) => {
@@ -440,6 +438,16 @@ const Subscription = () => {
     },
     [currentPage]
   );
+
+  const handleAddSuccess = useCallback(() => {
+    setShowAddModal(false);
+    getRelationshipSubsLines(currentPage).then((refetchResult) => {
+      if (refetchResult) {
+        setTotalCount(Number(refetchResult?.TotalCount) ?? 0);
+        setActivityLines(mapActivityLinesToTableRows(refetchResult));
+      }
+    });
+  }, [currentPage]);
 
   return (
     <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-screen">
@@ -874,7 +882,12 @@ const Subscription = () => {
       </div>
 
       {/* Modals */}
-      <AddSubscriptionModal open={showAddModal} setOpen={setShowAddModal} />
+      <AddSubscriptionModal
+        open={showAddModal}
+        setOpen={setShowAddModal}
+        departments={departments}
+        onAddSuccess={handleAddSuccess}
+      />
       <EditSubscriptionModal
         open={showEditModal}
         onClose={() => {

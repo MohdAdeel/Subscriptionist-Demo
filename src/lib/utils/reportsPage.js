@@ -1145,7 +1145,6 @@ export function clearFilters() {
 }
 
 function setUserValuesForStand(StartDate, EndDate) {
-  console.log("here is StartDate", StartDate, "EndDate", EndDate);
   var currentYear = new Date().getFullYear();
 
   // Check and parse StartDate
@@ -1182,7 +1181,7 @@ function setUserValuesForStand(StartDate, EndDate) {
 
 function handleFilteredCharts() {
   SubscriptionJSon = JSON.parse(JSON.stringify(SubscriptionJSonBackup));
-  console.log("here is from handleFilteredCharts", SubscriptionJSon);
+
   // IMPORTANT: Use clearMonthlySubscription() to clear the array in sharedUtils.js
   // The local monthlySubscription variable in this file is NOT the one used by generateSimilarRecordsbyMonth
   clearMonthlySubscription();

@@ -310,8 +310,6 @@ export function SearchSubscriptionNameOnBlur(event) {
   // Update filters object with the search value (use null if empty)
   filters.subscriptionName = inputValue || null;
 
-  console.log("Vendor name filter changed (onBlur):", filters); // Debug log
-
   // Set pagination values (if needed)
   currentStart = 1;
   currentEnd = 4;
@@ -506,8 +504,6 @@ const createVendorRecord = async (record, onSuccess, onError, onClose) => {
   try {
     const data = await createVendorAPI(record);
 
-    console.log("Vendor created successfully:", data || "No response body");
-
     // Show success message
     showSuccessMessage("Vendor created successfully!");
 
@@ -566,8 +562,6 @@ export function SearchSubscriptionName(event) {
   // Update filters object with the search value (use null if empty)
   filters.subscriptionName = inputValue || null;
 
-  console.log("Vendor name filter changed (Enter key):", filters); // Debug log
-
   // Set pagination values (if needed)
   currentStart = 1;
   currentEnd = 4;
@@ -595,8 +589,6 @@ export function handleStatusChange(event) {
 
   // Preserve the vendor name filter if it exists
   // filters.subscriptionName remains unchanged
-
-  console.log("Status filter changed:", filters); // Debug log
 
   currentStart = 1;
   currentEnd = 4;
@@ -631,8 +623,6 @@ export function getRelationshipSubsLines(number, filters, onSuccess, onError) {
     pagenumber: number,
     vendor: vendorName,
   };
-
-  console.log("API Request Body:", body); // Debug log
 
   // Return the promise so .finally() can be called
   return callGetVendorDataAzureFunction(body)
@@ -802,8 +792,6 @@ function handleClick(element) {
 
 function handleGetVendorSuccess(result, pageNumber) {
   try {
-    console.log("Full vendor response:", result);
-
     // Parse the response data
     var subscriptionArray;
     var count;
@@ -817,8 +805,6 @@ function handleGetVendorSuccess(result, pageNumber) {
       subscriptionArray = [];
       count = "0";
     }
-
-    console.log("Parsed subscriptionArray:", subscriptionArray);
 
     // Handle count parsing
     var countValue;
@@ -854,8 +840,6 @@ function handleGetVendorSuccess(result, pageNumber) {
       countValue = 0;
     }
 
-    console.log("Count value:", countValue, "from original count:", count);
-
     // Handle charts and flag logic
     if (flag == false) {
       // Wait for DOM to be ready before rendering charts
@@ -873,7 +857,6 @@ function handleGetVendorSuccess(result, pageNumber) {
               // Both charts need Chart.js, so render them inside the callback
               drawAllVendorCharts(result);
               renderDepartmentSpendChart();
-              console.log(result);
             });
             flag = true;
           } catch (error) {
@@ -912,7 +895,6 @@ function handleGetVendorSuccess(result, pageNumber) {
       setNullGrid();
     } else {
       setGrid(subscriptionArray).then(() => {});
-      console.log(subscriptionArray);
     }
   } catch (error) {
     console.error("Error processing vendor data:", error);

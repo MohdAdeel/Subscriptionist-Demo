@@ -64,7 +64,6 @@ export default function EditBudgetModal({
       };
       updateBudget(budgetId, payload)
         .then((result) => {
-          console.log("Edit Budget result:", result);
           onSuccess?.();
           onClose?.();
         })
