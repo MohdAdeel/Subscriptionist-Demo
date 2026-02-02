@@ -1,8 +1,9 @@
 import Chart from "chart.js/auto";
+import { usePopup } from "../../components/Popup";
+import { getVendorData } from "../../lib/api/vendor/vendor";
 import { useEffect, useRef, useState, useMemo } from "react";
 import AddEditVendorModal from "./component/AddEditVendorModal";
 import { FiSearch, FiBell, FiUser, FiChevronDown } from "react-icons/fi";
-import { getVendorData } from "../../lib/api/vendor/vendor";
 
 // Reuse same palette as Reports/Financial for consistency
 const VENDOR_CHART_COLORS = [
@@ -18,73 +19,51 @@ const DEPARTMENT_BAR_COLORS = ["#E1DBFE", "#BFF1FF", "#E1FFBB", "#EAECF0"];
 
 const RECORDS_PER_PAGE = 10;
 
-// Dummy vendor table data
-const DUMMY_VENDORS = [
-  {
-    id: 1,
-    vendorName: "asasdg",
-    accountManagerEmail: "mew@gmail.com",
-    subscriptionAmount: 0,
-    activityStatus: "Active",
-  },
-  {
-    id: 2,
-    vendorName: "Microsoft",
-    accountManagerEmail: "fas@g.com",
-    subscriptionAmount: 100,
-    activityStatus: "Active",
-  },
-  {
-    id: 3,
-    vendorName: "new vendor1",
-    accountManagerEmail: "",
-    subscriptionAmount: 148430,
-    activityStatus: "Active",
-  },
-  {
-    id: 4,
-    vendorName: "subscription new22",
-    accountManagerEmail: "",
-    subscriptionAmount: 207,
-    activityStatus: "Active",
-  },
-  {
-    id: 5,
-    vendorName: "test",
-    accountManagerEmail: "test@gmail.com",
-    subscriptionAmount: 1167,
-    activityStatus: "Active",
-  },
-  {
-    id: 6,
-    vendorName: "Vendor Six",
-    accountManagerEmail: "six@example.com",
-    subscriptionAmount: 2500,
-    activityStatus: "Active",
-  },
-  {
-    id: 7,
-    vendorName: "Vendor Seven",
-    accountManagerEmail: "",
-    subscriptionAmount: 890,
-    activityStatus: "Inactive",
-  },
-  {
-    id: 8,
-    vendorName: "Vendor Eight",
-    accountManagerEmail: "eight@example.com",
-    subscriptionAmount: 3200,
-    activityStatus: "Active",
-  },
-];
+// External HTML tooltip so it's never clipped by sidebar/card
+function getOrCreateTooltipEl() {
+  let el = document.getElementById("vendor-chartjs-tooltip");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "vendor-chartjs-tooltip";
+    el.style.cssText =
+      "position: fixed; z-index: 9999; padding: 12px; border-radius: 8px; background: rgba(0,0,0,0.8); color: #fff; font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.2s; max-width: 240px;";
+    document.body.appendChild(el);
+  }
+  return el;
+}
 
-// Dummy data for Amount by Vendor donut
-const DUMMY_AMOUNT_BY_VENDOR = [
-  { label: "Microsoft", value: 45000 },
-  { label: "new vendor1", value: 120000 },
-  { label: "subscription new22", value: 8500 },
-  { label: "test", value: 2200 },
-];
+function externalTooltipHandler(context) {
+  const { chart, tooltip } = context;
+  const tooltipEl = getOrCreateTooltipEl();
+  if (tooltip.opacity === 0) {
+    tooltipEl.style.opacity = "0";
+    return;
+  }
+  if (tooltip.body) {
+    const title = (tooltip.title || []).join("");
+    const body = (tooltip.body || []).map((b) => (b.lines || []).join(" ")).join("<br/>");
+    tooltipEl.innerHTML = title
+      ? `<div style="font-weight: bold; margin-bottom: 4px;">${title}</div><div>${body}</div>`
+      : `<div>${body}</div>`;
+  }
+  const { left, top } = chart.canvas.getBoundingClientRect();
+  const caretX = left + tooltip.caretX;
+  const caretY = top + tooltip.caretY;
+  tooltipEl.style.opacity = "1";
+  tooltipEl.style.left = `${caretX - tooltipEl.offsetWidth - 10}px`;
+  tooltipEl.style.top = `${caretY - tooltipEl.offsetHeight / 2}px`;
+  const padding = 8;
+  if (parseInt(tooltipEl.style.left, 10) < padding) {
+    tooltipEl.style.left = `${padding}px`;
+  }
+  if (parseInt(tooltipEl.style.top, 10) < padding) {
+    tooltipEl.style.top = `${padding}px`;
+  }
+  const maxTop = window.innerHeight - tooltipEl.offsetHeight - padding;
+  if (parseInt(tooltipEl.style.top, 10) > maxTop) {
+    tooltipEl.style.top = `${maxTop}px`;
+  }
+}
 
 // Dummy data for Departmental Spend Trend bar chart
 const DUMMY_DEPARTMENT_SPEND = [
@@ -95,16 +74,17 @@ const DUMMY_DEPARTMENT_SPEND = [
 ];
 
 export default function Vendor() {
-  const [vendorNameFilter, setVendorNameFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
+  const { showError } = usePopup();
+  const [vendors, setVendors] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [editVendor, setEditVendor] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("All");
   const [selectedRowId, setSelectedRowId] = useState(null);
+  const [vendorNameFilter, setVendorNameFilter] = useState("");
+  const [isLoadingVendors, setIsLoadingVendors] = useState(true);
+  const [vendorsLengthCount, setVendorsLengthCount] = useState(0);
   const [showAddVendorModal, setShowAddVendorModal] = useState(false);
   const [showEditVendorModal, setShowEditVendorModal] = useState(false);
-  const [editVendor, setEditVendor] = useState(null);
-  const [vendorsLengthCount, setVendorsLengthCount] = useState(0);
-  const [vendors, setVendors] = useState([]);
-  const [isLoadingVendors, setIsLoadingVendors] = useState(true);
   const [activityLineCountForVendor, setActivityLineCountForVendor] = useState([]);
 
   const activityCountChartRef = useRef(null);
@@ -114,15 +94,15 @@ export default function Vendor() {
   const departmentSpendChartRef = useRef(null);
   const departmentSpendChartInstanceRef = useRef(null);
 
-  // Filter vendors (client-side for dummy data)
-  const filteredVendors = useMemo(() => {
-    return DUMMY_VENDORS.filter((v) => {
-      const nameMatch =
-        !vendorNameFilter || v.vendorName.toLowerCase().includes(vendorNameFilter.toLowerCase());
-      const statusMatch = statusFilter === "All" || v.activityStatus === statusFilter;
-      return nameMatch && statusMatch;
-    });
-  }, [vendorNameFilter, statusFilter]);
+  // Amount by Vendor chart data: vendors with amount > 0 (from API vendors state)
+  const amountByVendorData = useMemo(() => {
+    return vendors
+      .filter((v) => (v.amount ?? 0) > 0)
+      .map((v) => ({
+        label: v.vendorName ?? "Unknown",
+        value: v.amount ?? 0,
+      }));
+  }, [vendors]);
 
   // Server-side pagination: total pages from API count (e.g. 35 / 10 = 4 pages)
   const totalPages = Math.max(1, Math.ceil(vendorsLengthCount / RECORDS_PER_PAGE));
@@ -158,9 +138,8 @@ export default function Vendor() {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: "rgba(0, 0, 0, 0.8)",
-            padding: 12,
-            cornerRadius: 8,
+            enabled: false,
+            external: externalTooltipHandler,
             callbacks: {
               label: (ctx) =>
                 `${ctx.label}: ${ctx.parsed} ${ctx.parsed === 1 ? "activity" : "activities"}`,
@@ -177,18 +156,24 @@ export default function Vendor() {
     };
   }, [activityLineCountForVendor]);
 
-  // Amount by Vendor donut
+  // Amount by Vendor donut (driven by vendors with amount > 0)
   useEffect(() => {
     if (!amountByVendorChartRef.current) return;
+    const labels = amountByVendorData.map((e) => e.label);
+    const values = amountByVendorData.map((e) => e.value);
     const ctx = amountByVendorChartRef.current.getContext("2d");
+    if (amountByVendorChartInstanceRef.current) {
+      amountByVendorChartInstanceRef.current.destroy();
+      amountByVendorChartInstanceRef.current = null;
+    }
     amountByVendorChartInstanceRef.current = new Chart(ctx, {
       type: "doughnut",
       data: {
-        labels: DUMMY_AMOUNT_BY_VENDOR.map((e) => e.label),
+        labels,
         datasets: [
           {
-            data: DUMMY_AMOUNT_BY_VENDOR.map((e) => e.value),
-            backgroundColor: DUMMY_AMOUNT_BY_VENDOR.map(
+            data: values,
+            backgroundColor: labels.map(
               (_, i) => VENDOR_CHART_COLORS[i % VENDOR_CHART_COLORS.length]
             ),
             borderWidth: 0,
@@ -202,9 +187,8 @@ export default function Vendor() {
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: "rgba(0, 0, 0, 0.8)",
-            padding: 12,
-            cornerRadius: 8,
+            enabled: false,
+            external: externalTooltipHandler,
             callbacks: {
               label: (ctx) => ctx.label + ": $" + (ctx.parsed || 0).toLocaleString(),
             },
@@ -218,12 +202,16 @@ export default function Vendor() {
         amountByVendorChartInstanceRef.current = null;
       }
     };
-  }, []);
+  }, [amountByVendorData]);
 
-  // Departmental Spend Trend bar
+  // Departmental Spend Trend bar (dummy data; chart created when canvas is visible after loading)
   useEffect(() => {
-    if (!departmentSpendChartRef.current) return;
+    if (isLoadingVendors || !departmentSpendChartRef.current) return;
     const ctx = departmentSpendChartRef.current.getContext("2d");
+    if (departmentSpendChartInstanceRef.current) {
+      departmentSpendChartInstanceRef.current.destroy();
+      departmentSpendChartInstanceRef.current = null;
+    }
     departmentSpendChartInstanceRef.current = new Chart(ctx, {
       type: "bar",
       data: {
@@ -291,12 +279,12 @@ export default function Vendor() {
         departmentSpendChartInstanceRef.current = null;
       }
     };
-  }, []);
+  }, [isLoadingVendors]);
 
   const refetchVendorData = () => {
     setIsLoadingVendors(true);
     getVendorData({
-      contactId: "4dc801c2-7ac1-f011-bbd3-7c1e5215388e",
+      contactId: "c199b131-4c62-f011-bec2-6045bdffa665",
       status: 0,
       pagenumber: currentPage,
       vendor: null,
@@ -312,6 +300,7 @@ export default function Vendor() {
       })
       .catch((error) => {
         console.error(error);
+        showError("Unable to load vendors. Please refresh the page.");
       })
       .finally(() => {
         setIsLoadingVendors(false);
@@ -484,7 +473,7 @@ export default function Vendor() {
                             ${row.amount.toLocaleString()}
                           </td>
                           <td className="p-3 text-sm text-[#343A40]">
-                            {row.activityStatus || "Active"}
+                            {row.status === 0 || String(row.status) === "0" ? "Inactive" : "Active"}
                           </td>
                         </tr>
                       ))}
@@ -553,7 +542,10 @@ export default function Vendor() {
                 </>
               ) : (
                 <>
-                  <div className="relative flex-shrink-0" style={{ height: 120, width: 120 }}>
+                  <div
+                    className="relative flex-shrink-0 overflow-visible z-10"
+                    style={{ height: 120, width: 120 }}
+                  >
                     <canvas ref={activityCountChartRef} />
                   </div>
                   <div className="flex-1 min-w-0 overflow-y-auto max-h-[140px] pr-1">
@@ -584,25 +576,47 @@ export default function Vendor() {
               Amount by Vendor
             </h3>
             <div className="flex items-start gap-3">
-              <div className="relative flex-shrink-0" style={{ height: 120, width: 120 }}>
-                <canvas ref={amountByVendorChartRef} />
-              </div>
-              <div className="flex-1 min-w-0">
-                {DUMMY_AMOUNT_BY_VENDOR.map((item, i) => (
+              {isLoadingVendors ? (
+                <>
                   <div
-                    key={item.label}
-                    className="flex items-center gap-1.5 py-0.5 text-xs text-[#343A40]"
-                  >
-                    <span
-                      className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                      style={{
-                        backgroundColor: VENDOR_CHART_COLORS[i % VENDOR_CHART_COLORS.length],
-                      }}
-                    />
-                    <span className="truncate">{item.label}</span>
+                    className="flex-shrink-0 rounded-full bg-[#e9ecef] animate-pulse"
+                    style={{ height: 120, width: 120 }}
+                  />
+                  <div className="flex-1 min-w-0 space-y-2">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-[#e9ecef] animate-pulse flex-shrink-0" />
+                        <span className="h-3.5 w-24 bg-[#e9ecef] rounded animate-pulse" />
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </>
+              ) : (
+                <>
+                  <div
+                    className="relative flex-shrink-0 overflow-visible z-10"
+                    style={{ height: 120, width: 120 }}
+                  >
+                    <canvas ref={amountByVendorChartRef} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    {amountByVendorData.map((item, i) => (
+                      <div
+                        key={item.label + String(item.value)}
+                        className="flex items-center gap-1.5 py-0.5 text-xs text-[#343A40]"
+                      >
+                        <span
+                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                          style={{
+                            backgroundColor: VENDOR_CHART_COLORS[i % VENDOR_CHART_COLORS.length],
+                          }}
+                        />
+                        <span className="truncate">{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -612,7 +626,19 @@ export default function Vendor() {
               Departmental Spend Trend
             </h3>
             <div className="relative" style={{ height: 200, minHeight: 180 }}>
-              <canvas ref={departmentSpendChartRef} />
+              {isLoadingVendors ? (
+                <div className="flex items-end justify-between gap-2 h-full pt-8 pb-6">
+                  {[40, 65, 45, 55].map((h, i) => (
+                    <div
+                      key={i}
+                      className="flex-1 bg-[#e9ecef] rounded-t animate-pulse min-w-[32px]"
+                      style={{ height: `${h}%` }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <canvas ref={departmentSpendChartRef} />
+              )}
             </div>
           </div>
         </div>

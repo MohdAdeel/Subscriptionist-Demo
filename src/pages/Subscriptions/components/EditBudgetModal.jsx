@@ -1,3 +1,4 @@
+import { usePopup } from "../../../components/Popup";
 import { useState, useCallback, useEffect } from "react";
 import { updateBudget } from "../../../lib/utils/subscriptions";
 
@@ -34,8 +35,10 @@ export default function EditBudgetModal({
   budgetType = null,
   onSuccess,
 }) {
+  const { showSuccess, showError, showWarning } = usePopup();
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const isDepartment = budgetType === BUDGET_TYPE.DEPARTMENT;
   const isSubscription = budgetType === BUDGET_TYPE.SUBSCRIPTION;
@@ -55,23 +58,31 @@ export default function EditBudgetModal({
     (e) => {
       e.preventDefault();
       const budgetId = budgetRow?.BudgetId;
-      if (!budgetId) return;
+      if (!budgetId) {
+        showWarning("Unable to save: budget information is missing. Please try again.");
+        return;
+      }
       const amountNum = amount === "" ? 0 : parseFloat(amount);
       const payload = {
         budgetId,
         yiic_name: name,
         yiic_amount: amountNum,
       };
+      setIsSaving(true);
       updateBudget(budgetId, payload)
         .then((result) => {
+          showSuccess("Budget has been updated successfully.");
           onSuccess?.();
           onClose?.();
         })
         .catch((err) => {
-          console.error("Update budget failed:", err);
+          showError("Unable to save budget. Please try again.");
+        })
+        .finally(() => {
+          setIsSaving(false);
         });
     },
-    [onClose, onSuccess, name, amount, budgetRow]
+    [onClose, onSuccess, name, amount, budgetRow, showSuccess, showError, showWarning]
   );
 
   const inputBase =
@@ -222,15 +233,17 @@ export default function EditBudgetModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
+              disabled={isSaving}
+              className="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
             >
               Close
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-lg bg-[#1f2a7c] text-white text-sm font-medium hover:opacity-90 transition-opacity"
+              disabled={isSaving}
+              className="px-5 py-2.5 rounded-lg bg-[#1f2a7c] text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Save changes
+              {isSaving ? "Saving…" : "Save changes"}
             </button>
           </div>
         </form>

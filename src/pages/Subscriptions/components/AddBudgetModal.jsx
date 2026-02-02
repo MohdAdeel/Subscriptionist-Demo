@@ -1,11 +1,12 @@
 import { useState, useCallback, useEffect } from "react";
 import {
+  addBudget,
+  checkBudget,
   getDeparments,
   getFinancialYear,
   getActivityLines,
-  checkBudget,
-  addBudget,
 } from "../../../lib/utils/subscriptions";
+import { usePopup } from "../../../components/Popup";
 
 const BUDGET_TYPE = {
   DEPARTMENT: "department",
@@ -45,6 +46,7 @@ export default function AddBudgetModal({ open = true, onClose, onSuccess }) {
   const [activityLinesList, setActivityLinesList] = useState([]);
   const [isLoadingDepartmentFields, setIsLoadingDepartmentFields] = useState(false);
   const [isLoadingSubscriptionFields, setIsLoadingSubscriptionFields] = useState(false);
+  const { showSuccess, showError, showWarning, showInfo } = usePopup();
 
   const isDepartment = budgetType === BUDGET_TYPE.DEPARTMENT;
   const isSubscription = budgetType === BUDGET_TYPE.SUBSCRIPTION;
@@ -72,13 +74,14 @@ export default function AddBudgetModal({ open = true, onClose, onSuccess }) {
       })
       .catch((err) => {
         console.error("Failed to load departments or financial years:", err);
+        showError(err?.message ?? "Failed to load departments or financial years.");
         setDepartmentsList([]);
         setFinancialYearsList([]);
       })
       .finally(() => {
         setIsLoadingDepartmentFields(false);
       });
-  }, [isDepartment]);
+  }, [isDepartment, showError]);
 
   // When Subscription Budget toggle is on, fetch activity lines for the Subscription dropdown
   useEffect(() => {
@@ -98,12 +101,13 @@ export default function AddBudgetModal({ open = true, onClose, onSuccess }) {
       })
       .catch((err) => {
         console.error("Failed to load activity lines:", err);
+        showError(err?.message ?? "Failed to load subscriptions.");
         setActivityLinesList([]);
       })
       .finally(() => {
         setIsLoadingSubscriptionFields(false);
       });
-  }, [isSubscription]);
+  }, [isSubscription, showError]);
 
   const handleSubscriptionToggle = useCallback(() => {
     setBudgetType((prev) => (prev === BUDGET_TYPE.SUBSCRIPTION ? null : BUDGET_TYPE.SUBSCRIPTION));
@@ -149,12 +153,14 @@ export default function AddBudgetModal({ open = true, onClose, onSuccess }) {
 
       if (isSubscription && payload) {
         addBudget(payload)
-          .then((result) => {
+          .then(() => {
+            showSuccess("Budget added successfully.");
             onSuccess?.();
             onClose?.();
           })
           .catch((err) => {
             console.error("Add budget failed:", err);
+            showError(err?.message ?? "Failed to add budget.");
           });
         return;
       }
@@ -162,18 +168,27 @@ export default function AddBudgetModal({ open = true, onClose, onSuccess }) {
         checkBudget(financialYear, departmentId)
           .then((result) => {
             const list = Array.isArray(result) ? result : (result?.value ?? []);
-            if (Array.isArray(list) && list.length === 0 && payload) {
+            if (Array.isArray(list) && list.length > 0) {
+              showWarning(
+                "A budget already exists for this department and financial year.",
+                "Budget Exists"
+              );
+              return null;
+            }
+            if (payload) {
               return addBudget(payload);
             }
           })
           .then((result) => {
-            if (result !== undefined) {
+            if (result !== undefined && result !== null) {
+              showSuccess("Budget added successfully.");
               onSuccess?.();
               onClose?.();
             }
           })
           .catch((err) => {
             console.error("Check budget or add budget failed:", err);
+            showError(err?.message ?? "Failed to check or add budget.");
           });
         return;
       }
@@ -191,6 +206,9 @@ export default function AddBudgetModal({ open = true, onClose, onSuccess }) {
       subscriptionId,
       activityLinesList,
       getActivityLineId,
+      showSuccess,
+      showError,
+      showWarning,
     ]
   );
 

@@ -1,6 +1,13 @@
+// --- API configuration (shared across all functions) ---
+const API_BASE_URL =
+  "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api";
+const AZURE_FUNCTION_KEY = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
+const DEFAULT_ACCOUNT_ID = "f0983e34-d2c5-ee11-9079-00224827e0df";
+const DEFAULT_CONTACT_ID = "c199b131-4c62-f011-bec2-6045bdffa665";
+
 export async function getRelationshipSubsLines(number) {
   let body = {
-    contactId: "4dc801c2-7ac1-f011-bbd3-7c1e5215388e",
+    contactId: DEFAULT_CONTACT_ID,
     status: 0,
     pagenumber: number,
     startdate: null,
@@ -9,16 +16,14 @@ export async function getRelationshipSubsLines(number) {
     subscriptionName: null,
   };
   try {
-    const azureFunctionUrl =
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/GetSubscriptionData";
-    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
+    const azureFunctionUrl = `${API_BASE_URL}/GetSubscriptionData`;
 
     // Call the Azure Function
     const response = await fetch(azureFunctionUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-functions-key": funcKey,
+        "x-functions-key": AZURE_FUNCTION_KEY,
       },
       body: JSON.stringify(body),
     });
@@ -36,20 +41,15 @@ export async function getRelationshipSubsLines(number) {
 
 export async function populateEditForm(activityId) {
   try {
-    const azureFunctionUrl =
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/Getsubscriptionactivityline";
-    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
+    const azureFunctionUrl = `${API_BASE_URL}/Getsubscriptionactivityline?activityId=${encodeURIComponent(activityId)}`;
 
-    const response = await fetch(
-      `${azureFunctionUrl}?activityId=${encodeURIComponent(activityId)}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-functions-key": funcKey,
-        },
-      }
-    );
+    const response = await fetch(azureFunctionUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-functions-key": AZURE_FUNCTION_KEY,
+      },
+    });
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -64,14 +64,11 @@ export async function populateEditForm(activityId) {
 
 export async function getDeparments() {
   try {
-    const azureFunctionUrl =
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/getDepartments";
-    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-    const response = await fetch(azureFunctionUrl, {
+    const response = await fetch(`${API_BASE_URL}/getDepartments`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "x-functions-key": funcKey,
+        "x-functions-key": AZURE_FUNCTION_KEY,
       },
     });
     const result = await response.json();
@@ -83,14 +80,11 @@ export async function getDeparments() {
 
 export async function getCategories() {
   try {
-    const azureFunctionUrl =
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/getCategories";
-    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-    const response = await fetch(azureFunctionUrl, {
+    const response = await fetch(`${API_BASE_URL}/getCategories`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "x-functions-key": funcKey,
+        "x-functions-key": AZURE_FUNCTION_KEY,
       },
     });
     const result = await response.json();
@@ -103,16 +97,15 @@ export async function getCategories() {
 
 export async function checkSubscriptionExistance(subscriptionName, subscriptionActivityId) {
   try {
-    const azureFunctionUrl =
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/checkDuplicateSubscription" +
+    const url =
+      `${API_BASE_URL}/checkDuplicateSubscription` +
       `?subscriptionName=${encodeURIComponent(subscriptionName)}` +
       `&subscriptionActivityId=${subscriptionActivityId}`;
-    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-    const response = await fetch(azureFunctionUrl, {
+    const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "x-functions-key": funcKey,
+        "x-functions-key": AZURE_FUNCTION_KEY,
       },
     });
     const result = await response.json();
@@ -124,14 +117,11 @@ export async function checkSubscriptionExistance(subscriptionName, subscriptionA
 
 export async function updateSubscription(formData) {
   try {
-    const azureFunctionUrl =
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/UpdateSubscriptionActivityLine";
-    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-    const response = await fetch(azureFunctionUrl, {
+    const response = await fetch(`${API_BASE_URL}/UpdateSubscriptionActivityLine`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-functions-key": funcKey,
+        "x-functions-key": AZURE_FUNCTION_KEY,
       },
       body: JSON.stringify(formData),
     });
@@ -148,15 +138,12 @@ export async function deleteSubscriptionActivityLine(activityLineId) {
     return;
   }
   try {
-    const baseUrl =
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api";
-    const azureFunctionUrl = `${baseUrl}/deleteSubscriptionActivityLine/${encodeURIComponent(activityLineId)}`;
-    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-    const response = await fetch(azureFunctionUrl, {
+    const url = `${API_BASE_URL}/deleteSubscriptionActivityLine/${encodeURIComponent(activityLineId)}`;
+    const response = await fetch(url, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
-        "x-functions-key": funcKey,
+        "x-functions-key": AZURE_FUNCTION_KEY,
       },
     });
 
@@ -178,13 +165,10 @@ export async function deleteSubscriptionActivityLine(activityLineId) {
 // Budget Related Functions
 /** Fetch budget data from GetbudgetData API. Call when opening Budget Management modal. */
 export async function fetchBudgetData(options = {}) {
-  const { pageNumber = 1, contactId = "4dc801c2-7ac1-f011-bbd3-7c1e5215388e" } = options;
+  const { pageNumber = 1, contactId = DEFAULT_CONTACT_ID } = options;
   try {
-    const baseUrl =
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api";
-    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-    const azureFunctionUrl = `${baseUrl}/GetbudgetData?code=${funcKey}`;
-    const response = await fetch(azureFunctionUrl, {
+    const url = `${API_BASE_URL}/GetbudgetData?code=${AZURE_FUNCTION_KEY}`;
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -207,14 +191,11 @@ export async function fetchBudgetData(options = {}) {
 
 export async function getFinancialYear() {
   try {
-    const azureFunctionUrl =
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/Getfinancialyeardata";
-    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-    const response = await fetch(azureFunctionUrl, {
+    const response = await fetch(`${API_BASE_URL}/Getfinancialyeardata`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-functions-key": funcKey,
+        "x-functions-key": AZURE_FUNCTION_KEY,
       },
     });
     const result = await response.json();
@@ -224,18 +205,15 @@ export async function getFinancialYear() {
   }
 }
 
-/** Get subscription activity lines by account. accountId is hardcoded for now. */
-export async function getActivityLines(accountId = "f0983e34-d2c5-ee11-9079-00224827e0df") {
+/** Get subscription activity lines by account. */
+export async function getActivityLines(accountId = DEFAULT_ACCOUNT_ID) {
   try {
-    const baseUrl =
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api";
-    const azureFunctionUrl = `${baseUrl}/getSubscriptionActivityLinesByAccount?accountId=${encodeURIComponent(accountId)}`;
-    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-    const response = await fetch(azureFunctionUrl, {
+    const url = `${API_BASE_URL}/getSubscriptionActivityLinesByAccount?accountId=${encodeURIComponent(accountId)}`;
+    const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "x-functions-key": funcKey,
+        "x-functions-key": AZURE_FUNCTION_KEY,
       },
     });
     const result = await response.json();
@@ -249,19 +227,16 @@ export async function getActivityLines(accountId = "f0983e34-d2c5-ee11-9079-0022
 /** Check budget by financial year and department. Returns API result (e.g. array). */
 export async function checkBudget(financialYearId, departmentId) {
   try {
-    const baseUrl =
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api";
     const params = new URLSearchParams({
       financialYearId: financialYearId,
       departmentId: departmentId,
     });
-    const azureFunctionUrl = `${baseUrl}/getBudget/check?${params.toString()}`;
-    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-    const response = await fetch(azureFunctionUrl, {
+    const url = `${API_BASE_URL}/getBudget/check?${params.toString()}`;
+    const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "x-functions-key": funcKey,
+        "x-functions-key": AZURE_FUNCTION_KEY,
       },
     });
     const result = await response.json();
@@ -275,14 +250,11 @@ export async function checkBudget(financialYearId, departmentId) {
 /** POST budget payload to addBudget API (department or subscription budget). */
 export async function addBudget(payload) {
   try {
-    const azureFunctionUrl =
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/addBudget";
-    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-    const response = await fetch(azureFunctionUrl, {
+    const response = await fetch(`${API_BASE_URL}/addBudget`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-functions-key": funcKey,
+        "x-functions-key": AZURE_FUNCTION_KEY,
       },
       body: JSON.stringify(payload),
     });
@@ -301,16 +273,13 @@ export async function updateBudget(budgetId, payload) {
     return;
   }
   try {
-    const baseUrl =
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api";
-    const azureFunctionUrl = `${baseUrl}/updateBudget/${encodeURIComponent(budgetId)}`;
-    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
+    const url = `${API_BASE_URL}/updateBudget/${encodeURIComponent(budgetId)}`;
     const { ...body } = payload || {};
-    const response = await fetch(azureFunctionUrl, {
+    const response = await fetch(url, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        "x-functions-key": funcKey,
+        "x-functions-key": AZURE_FUNCTION_KEY,
       },
       body: JSON.stringify(body),
     });
@@ -323,17 +292,14 @@ export async function updateBudget(budgetId, payload) {
 }
 
 /** Fetch vendor list from getSubscriptionActivities API. Call when opening Add Subscription Manually. */
-export async function fetchVendorList(activityId = "f0983e34-d2c5-ee11-9079-00224827e0df") {
+export async function fetchVendorList(activityId = DEFAULT_ACCOUNT_ID) {
   try {
-    const baseUrl =
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api";
-    const azureFunctionUrl = `${baseUrl}/getSubscriptionActivities/${encodeURIComponent(activityId)}`;
-    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-    const response = await fetch(azureFunctionUrl, {
+    const url = `${API_BASE_URL}/getSubscriptionActivities/${encodeURIComponent(activityId)}`;
+    const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "x-functions-key": funcKey,
+        "x-functions-key": AZURE_FUNCTION_KEY,
       },
     });
     if (!response.ok) {
@@ -350,14 +316,11 @@ export async function fetchVendorList(activityId = "f0983e34-d2c5-ee11-9079-0022
 /** Add subscription  */
 export async function addSubscription(formData) {
   try {
-    const azureFunctionUrl =
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/createSubscriptionActivityLine ";
-    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-    const response = await fetch(azureFunctionUrl, {
+    const response = await fetch(`${API_BASE_URL}/createSubscriptionActivityLine`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-functions-key": funcKey,
+        "x-functions-key": AZURE_FUNCTION_KEY,
       },
       body: JSON.stringify(formData),
     });
@@ -368,25 +331,19 @@ export async function addSubscription(formData) {
     throw error;
   }
 }
-/** Check if vendor exists for account. POST to checkVendorExists.
- *  URL format: .../api/checkVendorExists?$filter=( _yiic_account_value eq 'accountId' and yiic_vendorname eq 'vendorName')
- */
-export async function checkVendorExistance(
-  accountId = "f0983e34-d2c5-ee11-9079-00224827e0df",
-  vendorName
-) {
+/** Check if vendor exists for account. GET .../api/checkVendorExists?vendorName=...&accountId=... */
+export async function checkVendorExistance(accountId = DEFAULT_ACCOUNT_ID, vendorName) {
   try {
-    const baseUrl =
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api";
-    const safeName = (vendorName ?? "").replace(/'/g, "''");
-    const filter = `( _yiic_account_value eq '${accountId}' and yiic_vendorname eq '${safeName}')`;
-    const azureFunctionUrl = `${baseUrl}/checkVendorExists?$filter=${encodeURIComponent(filter)}`;
-    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-    const response = await fetch(azureFunctionUrl, {
+    const params = new URLSearchParams({
+      vendorName: vendorName,
+      accountId: accountId,
+    });
+    const url = `${API_BASE_URL}/checkVendorExists?${params.toString()}`;
+    const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "x-functions-key": funcKey,
+        "x-functions-key": AZURE_FUNCTION_KEY,
       },
     });
     if (!response.ok) {
@@ -403,15 +360,12 @@ export async function checkVendorExistance(
 /** Fetch subscription activity by ID. GET from getSubscriptionActivityById/{id}. */
 export async function getSubscriptionActivityById(activityId) {
   try {
-    const baseUrl =
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api";
-    const azureFunctionUrl = `${baseUrl}/getSubscriptionActivityById/${activityId}`;
-    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-    const response = await fetch(azureFunctionUrl, {
+    const url = `${API_BASE_URL}/getSubscriptionActivityById/${activityId}`;
+    const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        "x-functions-key": funcKey,
+        "x-functions-key": AZURE_FUNCTION_KEY,
       },
     });
     if (!response.ok) {
@@ -428,14 +382,11 @@ export async function getSubscriptionActivityById(activityId) {
 /** Create vendor record. POST to createVendor with body (vendorName, accountManagerEmail, accountManagerName, accountManagerPhone). */
 export async function createVendorRecord(body) {
   try {
-    const azureFunctionUrl =
-      "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/createVendor";
-    const funcKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-    const response = await fetch(azureFunctionUrl, {
+    const response = await fetch(`${API_BASE_URL}/createVendor`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-functions-key": funcKey,
+        "x-functions-key": AZURE_FUNCTION_KEY,
       },
       body: JSON.stringify(body),
     });

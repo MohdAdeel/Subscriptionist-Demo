@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { FiX, FiPlus, FiChevronLeft, FiChevronDown } from "react-icons/fi";
 import AddNewVendor from "./AddNewVendor";
+import { useState, useRef, useEffect } from "react";
 import AddSubscriptionFormModal from "./AddSubscriptionFormModal";
+import { FiX, FiPlus, FiChevronLeft, FiChevronDown, FiSearch } from "react-icons/fi";
 
 export default function AddVendorManually({
   open = false,
@@ -14,18 +14,71 @@ export default function AddVendorManually({
   onAddSuccess,
   onAddVendorManually,
 }) {
+  const dropdownRef = useRef(null);
+  const searchInputRef = useRef(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedVendor, setSelectedVendor] = useState(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showAddNewVendor, setShowAddNewVendor] = useState(false);
   const [showAddSubscriptionForm, setShowAddSubscriptionForm] = useState(false);
 
   const handleBack = () => {
     setSelectedVendor(null);
+    setIsDropdownOpen(false);
+    setSearchTerm("");
     onBack?.();
   };
 
   const handleClose = () => {
     setSelectedVendor(null);
+    setIsDropdownOpen(false);
+    setSearchTerm("");
     onClose?.();
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+        setSearchTerm("");
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isDropdownOpen]);
+
+  // Focus search input when dropdown opens
+  useEffect(() => {
+    if (isDropdownOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isDropdownOpen]);
+
+  // Filter vendors based on search term
+  const filteredVendors = (Array.isArray(vendors) && vendors.length > 0 ? vendors : []).filter(
+    (v) => {
+      if (!searchTerm.trim()) return true;
+      const label =
+        typeof v === "object" ? (v?.yiic_vendorname ?? v?.vendorName ?? v?.name ?? v?.id ?? v) : v;
+      return String(label).toLowerCase().includes(searchTerm.toLowerCase());
+    }
+  );
+
+  const handleVendorSelect = (vendor) => {
+    setSelectedVendor(vendor);
+    setIsDropdownOpen(false);
+    setSearchTerm("");
+  };
+
+  const getVendorLabel = (vendor) => {
+    if (!vendor) return "";
+    return typeof vendor === "object"
+      ? (vendor?.yiic_vendorname ?? vendor?.vendorName ?? vendor?.name ?? vendor?.id ?? vendor)
+      : vendor;
   };
 
   const handleAddVendorManually = () => {
@@ -133,37 +186,80 @@ export default function AddVendorManually({
 
           <div className="space-y-3">
             <p className="text-base font-semibold text-gray-800">Select from available list</p>
-            <div className="relative">
-              <select
-                value={selectedVendor?.activityid ?? selectedVendor?.id ?? ""}
-                onChange={(e) => {
-                  const id = e.target.value;
-                  const vendor = vendors.find((v) => (v?.activityid ?? v?.id) === id) ?? null;
-                  setSelectedVendor(vendor);
-                }}
-                className="w-full appearance-none border border-gray-200 rounded-2xl px-4 py-3 pr-10 text-base bg-white focus:ring-2 focus:ring-[#1f2a7c]/40 focus:border-[#1f2a7c] outline-none"
+
+            {/* Custom Searchable Dropdown */}
+            <div className="relative" ref={dropdownRef}>
+              {/* Dropdown Trigger */}
+              <button
+                type="button"
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="w-full flex items-center justify-between border border-gray-200 rounded-2xl px-4 py-3 text-base bg-white hover:border-gray-300 focus:ring-2 focus:ring-[#1f2a7c]/40 focus:border-[#1f2a7c] outline-none transition-all"
               >
-                <option value="">Select Vendor</option>
-                {(Array.isArray(vendors) && vendors.length > 0 ? vendors : []).map((v, i) => {
-                  const value =
-                    typeof v === "object"
-                      ? (v?.activityid ?? v?.id ?? v?.vendorName ?? v?.name ?? v)
-                      : v;
-                  const label =
-                    typeof v === "object"
-                      ? (v?.yiic_vendorname ?? v?.vendorName ?? v?.name ?? v?.id ?? v)
-                      : v;
-                  return (
-                    <option
-                      key={typeof v === "object" ? (v?.activityid ?? v?.id ?? i) : v}
-                      value={value}
-                    >
-                      {label}
-                    </option>
-                  );
-                })}
-              </select>
-              <FiChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
+                <span className={selectedVendor ? "text-gray-800" : "text-gray-400"}>
+                  {selectedVendor ? getVendorLabel(selectedVendor) : "Select Vendor"}
+                </span>
+                <FiChevronDown
+                  className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${
+                    isDropdownOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {/* Dropdown Menu */}
+              {isDropdownOpen && (
+                <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden">
+                  {/* Search Input */}
+                  <div className="p-3 border-b border-gray-100">
+                    <div className="relative">
+                      <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        placeholder="Search vendors..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#1f2a7c]/40 focus:border-[#1f2a7c] outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Vendor List */}
+                  <div className="max-h-60 overflow-y-auto">
+                    {filteredVendors.length > 0 ? (
+                      filteredVendors.map((v, i) => {
+                        const value =
+                          typeof v === "object"
+                            ? (v?.activityid ?? v?.id ?? v?.vendorName ?? v?.name ?? v)
+                            : v;
+                        const label = getVendorLabel(v);
+                        const isSelected =
+                          selectedVendor &&
+                          (selectedVendor?.activityid ?? selectedVendor?.id) ===
+                            (v?.activityid ?? v?.id);
+
+                        return (
+                          <button
+                            key={typeof v === "object" ? (v?.activityid ?? v?.id ?? i) : v}
+                            type="button"
+                            onClick={() => handleVendorSelect(v)}
+                            className={`w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors ${
+                              isSelected
+                                ? "bg-[#1f2a7c]/5 text-[#1f2a7c] font-medium"
+                                : "text-gray-700"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="px-4 py-8 text-center text-sm text-gray-500">
+                        No vendors found
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

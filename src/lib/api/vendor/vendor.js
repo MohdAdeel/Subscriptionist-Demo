@@ -21,7 +21,6 @@ export async function createVendor(record) {
     },
     body: JSON.stringify(record),
   });
-  console.log("response", response);
 
   if (!response.ok) {
     const errorText = await response.text();

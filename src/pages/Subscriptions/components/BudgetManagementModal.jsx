@@ -11,18 +11,18 @@ export default function BudgetManagementModal({
   onFetchBudgetData,
   isBudgetLoading = false,
 }) {
-  const [showAddBudgetModal, setShowAddBudgetModal] = useState(false);
-  const [showEditBudgetModal, setShowEditBudgetModal] = useState(false);
+  const wasOpenRef = useRef(false);
+  const lastFetchedPageRef = useRef(null);
+  const [goToPageInput, setGoToPageInput] = useState("");
   const [editBudgetRow, setEditBudgetRow] = useState(null);
   const [editBudgetType, setEditBudgetType] = useState(null);
   const [activeTab, setActiveTab] = useState("subscription");
-  const [totalCountSubscription, setTotalCountSubscription] = useState(0);
   const [totalCountDepartment, setTotalCountDepartment] = useState(0);
-  const [currentPageSubscription, setCurrentPageSubscription] = useState(1);
+  const [showAddBudgetModal, setShowAddBudgetModal] = useState(false);
   const [currentPageDepartment, setCurrentPageDepartment] = useState(1);
-  const [goToPageInput, setGoToPageInput] = useState("");
-  const lastFetchedPageRef = useRef(null);
-  const wasOpenRef = useRef(false);
+  const [showEditBudgetModal, setShowEditBudgetModal] = useState(false);
+  const [totalCountSubscription, setTotalCountSubscription] = useState(0);
+  const [currentPageSubscription, setCurrentPageSubscription] = useState(1);
 
   const effectivePage =
     activeTab === "subscription" ? currentPageSubscription : currentPageDepartment;

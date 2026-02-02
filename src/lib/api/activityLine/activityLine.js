@@ -8,7 +8,7 @@ import API from "../api";
  * @param {string} contactId - Optional contact ID override
  * @returns {Promise<Array>} Raw activity lines data
  */
-export const fetchActivityLines = async (contactId = "4dc801c2-7ac1-f011-bbd3-7c1e5215388e") => {
+export const fetchActivityLines = async (contactId = "c199b131-4c62-f011-bec2-6045bdffa665") => {
   const { data } = await API.get("/GetActivityLinesByContactId", {
     params: { contactId },
   });

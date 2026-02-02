@@ -1,4 +1,3 @@
-import "./menu.css";
 import { useState } from "react";
 import Logo from "../assets/Logo.svg";
 import HomeIcon from "../assets/Home.svg";
@@ -23,37 +22,43 @@ const Menu = () => {
   ];
 
   return (
-    <aside className={`sidebar ${isCollapsed ? "collapsed" : ""}`}>
-      <div className="sidebar-top">
+    <aside
+      className={`flex flex-col justify-between rounded-r-2xl bg-[#000435] py-6 transition-all duration-300 ease-in-out ${
+        isCollapsed ? "w-20 px-3" : "w-[245px] px-6"
+      }`}
+    >
+      <div className="flex flex-col gap-14">
         {/* Logo + Toggle */}
-        <div className="logo-row">
+        <div className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"}`}>
           {!isCollapsed && (
-            <div className="logo">
-              <img src={Logo} alt="Logo" />
-              <span>Subscriptionist</span>
+            <div className="flex items-center gap-2">
+              <img src={Logo} alt="Logo" className="h-6 w-6" />
+              <span className="text-sm font-semibold text-white">Subscriptionist</span>
             </div>
           )}
           <img
             src={ToggleIcon}
             alt="Toggle"
-            className={`toggle ${isCollapsed ? "collapsed" : ""}`}
+            className={`h-6 w-6 cursor-pointer transition-transform duration-300 ease-in-out ${
+              isCollapsed ? "rotate-180" : ""
+            }`}
             onClick={() => setIsCollapsed(!isCollapsed)}
           />
         </div>
 
         {/* Menu */}
-        <nav className="menu">
+        <nav className="flex flex-col gap-5">
           {menuItems.map((item) => {
             const isActive = location.pathname === item.path;
 
             return (
-              <Link to={item.path} key={item.name} className="menu-link">
+              <Link to={item.path} key={item.name} className="no-underline">
                 <div
-                  className={`menu-item ${isActive ? "active" : ""} ${
-                    isCollapsed ? "collapsed-item" : ""
-                  }`}
+                  className={`flex cursor-pointer items-center rounded-lg py-3 transition-all duration-300 ease-in-out ${
+                    isActive ? "bg-white/10 text-white" : "text-white/70 hover:bg-[#001479]"
+                  } ${isCollapsed ? "w-full justify-center px-0" : "gap-4 px-5"}`}
                 >
-                  <img src={item.icon} alt={item.name} />
+                  <img src={item.icon} alt={item.name} className="h-5 w-5 shrink-0" />
                   {!isCollapsed && <span>{item.name}</span>}
                 </div>
               </Link>

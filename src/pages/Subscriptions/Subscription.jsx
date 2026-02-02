@@ -1,10 +1,6 @@
-import AddSubscriptionModal from "./components/AddSubscriptionModal";
-import EditSubscriptionModal from "./components/EditSubscriptionModal";
-import BudgetManagementModal from "./components/BudgetManagementModal";
 import {
   InputSkeleton,
   ButtonSkeleton,
-  TableRowSkeleton,
   TableHeaderSkeleton,
 } from "../../components/SkeletonLoader";
 import {
@@ -16,6 +12,10 @@ import {
   checkSubscriptionExistance,
   deleteSubscriptionActivityLine,
 } from "../../lib/utils/subscriptions";
+import { usePopup } from "../../components/Popup";
+import AddSubscriptionModal from "./components/AddSubscriptionModal";
+import EditSubscriptionModal from "./components/EditSubscriptionModal";
+import BudgetManagementModal from "./components/BudgetManagementModal";
 import React, { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { FiSearch, FiBell, FiCalendar, FiUser, FiChevronDown, FiTrash2 } from "react-icons/fi";
 
@@ -94,6 +94,7 @@ function mapActivityLinesToTableRows(result) {
 }
 
 const Subscription = () => {
+  const { showSuccess, showError, showWarning } = usePopup();
   const datePickerRef = useRef(null);
   const [endDate, setEndDate] = useState(null);
   const [totalCount, setTotalCount] = useState(0);
@@ -116,31 +117,37 @@ const Subscription = () => {
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [isBudgetLoading, setIsBudgetLoading] = useState(false);
   const [subscriptionNameFilter, setSubscriptionNameFilter] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [isDeletingSubscription, setIsDeletingSubscription] = useState(false);
 
-  const handleFetchBudgetData = useCallback((pageNumber, tab) => {
-    setIsBudgetLoading(true);
-    if (pageNumber === 1) {
-      setBudgetData(null);
-    }
-    fetchBudgetData({ pageNumber })
-      .then((result) => {
-        if (Array.isArray(result)) {
-          setBudgetData((prev) => ({
-            ...(prev || {}),
-            [tab === "department" ? "DepartmentBudget" : "SubscriptionBudget"]: result,
-          }));
-        } else {
-          setBudgetData(result);
-        }
-      })
-      .catch((err) => {
-        console.error("Budget data fetch failed:", err);
-        setBudgetData((prev) => prev || { SubscriptionBudget: [], DepartmentBudget: [] });
-      })
-      .finally(() => {
-        setIsBudgetLoading(false);
-      });
-  }, []);
+  const handleFetchBudgetData = useCallback(
+    (pageNumber, tab) => {
+      setIsBudgetLoading(true);
+      if (pageNumber === 1) {
+        setBudgetData(null);
+      }
+      fetchBudgetData({ pageNumber })
+        .then((result) => {
+          if (Array.isArray(result)) {
+            setBudgetData((prev) => ({
+              ...(prev || {}),
+              [tab === "department" ? "DepartmentBudget" : "SubscriptionBudget"]: result,
+            }));
+          } else {
+            setBudgetData(result);
+          }
+        })
+        .catch((err) => {
+          console.error("Budget data fetch failed:", err);
+          setBudgetData((prev) => prev || { SubscriptionBudget: [], DepartmentBudget: [] });
+          showError("Unable to load budget data. Please try again.");
+        })
+        .finally(() => {
+          setIsBudgetLoading(false);
+        });
+    },
+    [showError]
+  );
 
   const openEditModal = useCallback(() => {
     if (selectedRowId) setShowEditModal(true);
@@ -366,6 +373,7 @@ const Subscription = () => {
           })
           .catch((error) => {
             console.error("Failed to load departments:", error);
+            showError("Unable to load departments. Please refresh the page.");
           });
         setTotalCount(Number(result?.TotalCount) ?? 0);
         const rows = mapActivityLinesToTableRows(result);
@@ -376,11 +384,12 @@ const Subscription = () => {
         setActivityLines([]);
         setDepartments([]);
         setTotalCount(0);
+        showError("Unable to load subscriptions. Please refresh the page.");
       })
       .finally(() => {
         setIsLoading(false);
       });
-  }, [currentPage]);
+  }, [currentPage, showError]);
 
   // When edit modal opens (Edit button or double-click), fetch row data by SubscriptionActivityLineId
   useEffect(() => {
@@ -391,9 +400,10 @@ const Subscription = () => {
         })
         .catch((err) => {
           console.error("Failed to load edit form data:", err);
+          showError("Unable to load subscription details. Please try again.");
         });
     }
-  }, [showEditModal, selectedRowId]);
+  }, [showEditModal, selectedRowId, showError]);
 
   const handleUpdateSubscription = useCallback(
     (formData) => {
@@ -406,7 +416,7 @@ const Subscription = () => {
           const value = result?.value;
           const hasDuplicate = Array.isArray(value) && value.length > 0;
           if (hasDuplicate) {
-            alert("Subscription Exist");
+            showWarning("A subscription with this name already exists.");
             return;
           }
           // No duplicate: call update API
@@ -414,7 +424,7 @@ const Subscription = () => {
         })
         .then((updateResult) => {
           if (updateResult !== undefined) {
-            alert("Updated successfully");
+            showSuccess("Subscription updated successfully.");
             setShowEditModal(false);
             setEditFormData(null);
             // Refetch table data
@@ -429,6 +439,7 @@ const Subscription = () => {
         })
         .catch((err) => {
           console.error("Subscription check or update failed:", err);
+          showError("Unable to save subscription. Please try again.");
           setShowEditModal(false);
           setEditFormData(null);
         })
@@ -436,10 +447,11 @@ const Subscription = () => {
           setIsSavingEdit(false);
         });
     },
-    [currentPage]
+    [currentPage, showSuccess, showError, showWarning]
   );
 
   const handleAddSuccess = useCallback(() => {
+    showSuccess("Subscription added successfully.");
     setShowAddModal(false);
     getRelationshipSubsLines(currentPage).then((refetchResult) => {
       if (refetchResult) {
@@ -447,7 +459,43 @@ const Subscription = () => {
         setActivityLines(mapActivityLinesToTableRows(refetchResult));
       }
     });
-  }, [currentPage]);
+  }, [currentPage, showSuccess]);
+
+  const openDeleteConfirm = useCallback((row) => {
+    setDeleteConfirm({
+      rowId: row.id,
+      displayName: row.subscriptionName || "this subscription",
+    });
+  }, []);
+
+  const closeDeleteConfirm = useCallback(() => {
+    setDeleteConfirm(null);
+  }, []);
+
+  const handleConfirmDelete = useCallback(() => {
+    if (!deleteConfirm?.rowId) return;
+    setIsDeletingSubscription(true);
+    deleteSubscriptionActivityLine(deleteConfirm.rowId)
+      .then(() => {
+        closeDeleteConfirm();
+        showSuccess("Subscription deleted successfully.");
+        return getRelationshipSubsLines(currentPage);
+      })
+      .then((result) => {
+        if (result) {
+          setActivityLines(mapActivityLinesToTableRows(result));
+          setTotalCount(Number(result?.TotalCount) ?? 0);
+        }
+        setSelectedRowId(null);
+      })
+      .catch((err) => {
+        console.error("Delete failed:", err);
+        showError(err?.message || "Unable to delete subscription. Please try again.");
+      })
+      .finally(() => {
+        setIsDeletingSubscription(false);
+      });
+  }, [deleteConfirm, currentPage, closeDeleteConfirm, showSuccess, showError]);
 
   return (
     <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-screen">
@@ -733,94 +781,85 @@ const Subscription = () => {
                 </thead>
               )}
               <tbody>
-                {isLoading
-                  ? Array.from({ length: 8 }).map((_, idx) => (
-                      <tr key={idx} className="border-b border-[#eee]">
-                        {Array.from({ length: 10 }).map((_, colIdx) => (
-                          <td key={colIdx} className="p-3">
-                            <span className="inline-block h-3.5 w-4/5 max-w-[100px] rounded bg-gray-200 animate-pulse" />
-                          </td>
-                        ))}
-                      </tr>
-                    ))
-                  : ActivityLines.map((row) => (
-                      <tr
-                        key={row.id}
-                        data-row-id={row.id}
-                        onClick={() => handleRowClick(row.id)}
-                        onDoubleClick={() => handleRowDoubleClick(row.id)}
-                        className={`cursor-pointer transition-colors border-b border-[#eee] hover:bg-[#f9f9ff] ${
-                          selectedRowId === row.id
-                            ? "bg-[#e8ebff] border-l-4 border-l-[#172B4D]"
-                            : ""
-                        }`}
+                {isLoading ? (
+                  Array.from({ length: 8 }).map((_, idx) => (
+                    <tr key={idx} className="border-b border-[#eee]">
+                      {Array.from({ length: 10 }).map((_, colIdx) => (
+                        <td key={colIdx} className="p-3">
+                          <span className="inline-block h-3.5 w-4/5 max-w-[100px] rounded bg-gray-200 animate-pulse" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                ) : ActivityLines.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="p-12 text-center text-[#6C757D]">
+                      <p className="text-sm font-medium text-[#343A40] mb-1">
+                        No subscriptions found
+                      </p>
+                      <p className="text-xs">
+                        Add a new subscription using the &quot;Add Subscription&quot; button to get
+                        started.
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  ActivityLines.map((row) => (
+                    <tr
+                      key={row.id}
+                      data-row-id={row.id}
+                      onClick={() => handleRowClick(row.id)}
+                      onDoubleClick={() => handleRowDoubleClick(row.id)}
+                      className={`cursor-pointer transition-colors border-b border-[#eee] hover:bg-[#f9f9ff] ${
+                        selectedRowId === row.id ? "bg-[#e8ebff] border-l-4 border-l-[#172B4D]" : ""
+                      }`}
+                    >
+                      <td className="p-3 text-sm text-[#343A40]">{row.subscriptionName}</td>
+                      <td className="p-3 text-sm text-[#343A40]">{row.vendorName}</td>
+                      <td className="p-3 text-sm text-[#5B6B9E]">
+                        {row.amount != null ? `$${row.amount.toLocaleString()}` : ""}
+                      </td>
+                      <td className="p-3 text-sm text-[#343A40]">{row.department}</td>
+                      <td className="p-3 text-sm text-[#007BFF]">{row.startDate}</td>
+                      <td className="p-3 text-sm text-[#007BFF]">{row.endDate}</td>
+                      <td className="p-3 text-sm text-[#343A40]">{row.paymentFrequency}</td>
+                      <td
+                        className="p-3 text-sm"
+                        style={{
+                          color: isDateCritical(row.lastDueDate) ? "#DC3545" : "#007BFF",
+                        }}
                       >
-                        <td className="p-3 text-sm text-[#343A40]">{row.subscriptionName}</td>
-                        <td className="p-3 text-sm text-[#343A40]">{row.vendorName}</td>
-                        <td className="p-3 text-sm text-[#5B6B9E]">
-                          {row.amount != null ? `$${row.amount.toLocaleString()}` : ""}
-                        </td>
-                        <td className="p-3 text-sm text-[#343A40]">{row.department}</td>
-                        <td className="p-3 text-sm text-[#007BFF]">{row.startDate}</td>
-                        <td className="p-3 text-sm text-[#007BFF]">{row.endDate}</td>
-                        <td className="p-3 text-sm text-[#343A40]">{row.paymentFrequency}</td>
-                        <td
-                          className="p-3 text-sm"
-                          style={{
-                            color: isDateCritical(row.lastDueDate) ? "#DC3545" : "#007BFF",
-                          }}
-                        >
-                          {row.lastDueDate}
-                        </td>
-                        <td
-                          className="p-3 text-sm"
-                          style={{
-                            color: isDateCritical(row.nextDueDate) ? "#DC3545" : "#007BFF",
-                          }}
-                        >
-                          {row.nextDueDate}
-                        </td>
-                        <td className="p-3 text-sm text-[#343A40]">
-                          <span className="inline-flex items-center gap-6">
-                            {row.activityStatus}
-                            {selectedRowId === row.id && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (
-                                    !window.confirm(
-                                      "Are you sure you want to delete this subscription?"
-                                    )
-                                  )
-                                    return;
-                                  deleteSubscriptionActivityLine(row.id)
-                                    .then(() => {
-                                      alert("Deleted successfully");
-                                      return getRelationshipSubsLines(currentPage);
-                                    })
-                                    .then((result) => {
-                                      if (result) {
-                                        setActivityLines(mapActivityLinesToTableRows(result));
-                                        setTotalCount(Number(result?.TotalCount) ?? 0);
-                                      }
-                                      setSelectedRowId(null);
-                                    })
-                                    .catch((err) => {
-                                      console.error("Delete failed:", err);
-                                      alert(err?.message || "Failed to delete subscription.");
-                                    });
-                                }}
-                                className="p-1 rounded text-[#DC3545] hover:bg-red-50 transition-colors"
-                                aria-label="Delete subscription"
-                              >
-                                <FiTrash2 className="w-4 h-4" />
-                              </button>
-                            )}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                        {row.lastDueDate}
+                      </td>
+                      <td
+                        className="p-3 text-sm"
+                        style={{
+                          color: isDateCritical(row.nextDueDate) ? "#DC3545" : "#007BFF",
+                        }}
+                      >
+                        {row.nextDueDate}
+                      </td>
+                      <td className="p-3 text-sm text-[#343A40]">
+                        <span className="inline-flex items-center gap-6">
+                          {row.activityStatus}
+                          {selectedRowId === row.id && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openDeleteConfirm(row);
+                              }}
+                              className="p-1 rounded text-[#DC3545] hover:bg-red-50 transition-colors"
+                              aria-label="Delete subscription"
+                            >
+                              <FiTrash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -909,6 +948,55 @@ const Subscription = () => {
         onFetchBudgetData={handleFetchBudgetData}
         isBudgetLoading={isBudgetLoading}
       />
+
+      {/* Confirm Delete subscription modal */}
+      {deleteConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          onClick={(e) => e.target === e.currentTarget && closeDeleteConfirm()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-subscription-confirm-title"
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 pt-6 pb-4 border-b border-[#e9ecef]">
+              <h2
+                id="delete-subscription-confirm-title"
+                className="text-lg font-bold text-[#343A40]"
+              >
+                Confirm Delete
+              </h2>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-[#343A40]">
+                Are you sure you want to delete <strong>{deleteConfirm.displayName}</strong>? This
+                action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3 mt-6 pt-4">
+                <button
+                  type="button"
+                  onClick={closeDeleteConfirm}
+                  disabled={isDeletingSubscription}
+                  className="px-4 py-2 rounded-lg border border-[#e9ecef] text-[#343A40] text-sm font-semibold bg-white hover:bg-[#F8F9FA] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  disabled={isDeletingSubscription}
+                  className="px-4 py-2 rounded-lg bg-[#DC3545] text-white text-sm font-semibold hover:bg-[#c82333] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isDeletingSubscription ? "Deleting…" : "Confirm Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

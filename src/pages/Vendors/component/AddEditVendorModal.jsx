@@ -1,5 +1,6 @@
 import { FiX } from "react-icons/fi";
 import { useState, useEffect } from "react";
+import { usePopup } from "../../../components/Popup";
 import { createVendor, updateVendor } from "../../../lib/api/vendor/vendor";
 
 const initialFormState = {
@@ -17,8 +18,9 @@ export default function AddEditVendorModal({
   vendor = null,
 }) {
   const isEditMode = Boolean(vendor);
-  const [formData, setFormData] = useState(initialFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showSuccess, showError, showWarning } = usePopup();
+  const [formData, setFormData] = useState(initialFormState);
 
   useEffect(() => {
     if (open && vendor) {
@@ -60,11 +62,15 @@ export default function AddEditVendorModal({
       if (isEditMode) {
         const activityID = vendor?.vendorId;
         if (!activityID) {
-          console.error("Edit vendor: missing activityID");
+          showWarning(
+            "Unable to edit: vendor information is missing. Please select the vendor again."
+          );
+          setIsSubmitting(false);
           return;
         }
         const updateBody = { ...requestBody, activityID };
         await updateVendor(activityID, updateBody);
+        showSuccess("Vendor has been updated successfully.");
         onSave?.({
           vendorName,
           accountManagerName,
@@ -80,12 +86,14 @@ export default function AddEditVendorModal({
             "/accounts(f0983e34-d2c5-ee11-9079-00224827e0df)",
         };
         await createVendor(createBody);
+        showSuccess("Vendor has been added successfully.");
         onAdd?.({ vendorName, accountManagerName, accountManagerEmail, accountManagerPhone });
       }
       setFormData(initialFormState);
       onClose?.();
     } catch (err) {
       console.error(isEditMode ? "Update vendor failed:" : "Add vendor failed:", err);
+      showError("Unable to save vendor. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

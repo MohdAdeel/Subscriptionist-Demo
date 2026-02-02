@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
 import { FiCalendar } from "react-icons/fi";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { InputSkeleton, ButtonSkeleton } from "../../../components/SkeletonLoader";
 
 const UNIT_MAP = { 0: "Active", 1: "InActive", 2: "Canceled", 3: "Scheduled" };

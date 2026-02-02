@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from "react";
 import { FiCalendar, FiLock } from "react-icons/fi";
+import { usePopup } from "../../../components/Popup";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { addSubscription, checkSubscriptionExistance } from "../../../lib/utils/subscriptions";
 
 const DESC_MAX = 2000;
@@ -151,11 +152,12 @@ export default function AddSubscriptionFormModal({
   departments,
   selectedVendor,
 }) {
-  const [form, setForm] = useState(defaultFormState(selectedVendor));
-  const [isSaving, setIsSaving] = useState(false);
-  const startDatePickerRef = useRef(null);
   const endDatePickerRef = useRef(null);
+  const startDatePickerRef = useRef(null);
   const lastDueDatePickerRef = useRef(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [form, setForm] = useState(defaultFormState(selectedVendor));
+  const { showSuccess, showError, showWarning, showInfo } = usePopup();
 
   const openDatePicker = (ref) => {
     if (ref?.current) {
@@ -257,16 +259,19 @@ export default function AddSubscriptionFormModal({
       const value = result?.value;
       const hasDuplicate = Array.isArray(value) && value.length > 0;
       if (hasDuplicate) {
-        alert("Subscription Exist");
+        showWarning(
+          "A subscription with this name already exists for this activity.",
+          "Subscription Exists"
+        );
         return;
       }
       await addSubscription(payload);
-      alert("Subscription added successfully");
+      showSuccess("Subscription added successfully.");
       onClose?.();
       onSuccess?.();
     } catch (err) {
       console.error("Add subscription failed:", err);
-      alert("Failed to add subscription");
+      showError(err?.message || "Failed to add subscription.");
     } finally {
       setIsSaving(false);
     }

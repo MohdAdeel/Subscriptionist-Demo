@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { FiX, FiChevronLeft } from "react-icons/fi";
+import { usePopup } from "../../../components/Popup";
 import { checkVendorExistance, createVendorRecord } from "../../../lib/utils/subscriptions";
 
-const DEFAULT_ACCOUNT_ID = "f0983e34-d2c5-ee11-9079-00224827e0df";
+const DEFAULT_ACCOUNT_ID = "c199b131-4c62-f011-bec2-6045bdffa665";
 
 export default function AddNewVendor({ open = false, onBack, onClose, onAddVendor }) {
   const [formData, setFormData] = useState({
@@ -11,8 +12,8 @@ export default function AddNewVendor({ open = false, onBack, onClose, onAddVendo
     accountManagerName: "",
     accountManagerPhone: "",
   });
-  const [selectedVendor, setSelectedVendor] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { showSuccess, showError, showWarning, showInfo } = usePopup();
 
   const handleChange = (field) => (e) => {
     setFormData((prev) => ({ ...prev, [field]: e.target.value }));
@@ -53,7 +54,7 @@ export default function AddNewVendor({ open = false, onBack, onClose, onAddVendo
       const list = result?.value ?? (Array.isArray(result) ? result : []);
       const exists = Array.isArray(list) && list.length > 0;
       if (exists) {
-        alert("Vendor with this name already exists.");
+        showWarning("A vendor with this name already exists.", "Vendor Exists");
         return;
       }
       const payload = {
@@ -64,6 +65,7 @@ export default function AddNewVendor({ open = false, onBack, onClose, onAddVendo
         "yiic_Account_yiic_subscriptionsactivity@odata.bind": `/accounts(${DEFAULT_ACCOUNT_ID})`,
       };
       const vendorResponse = await createVendorRecord(payload);
+      showSuccess("Vendor added successfully.");
       onAddVendor?.(vendorResponse);
       setFormData({
         vendorName: "",
@@ -74,7 +76,7 @@ export default function AddNewVendor({ open = false, onBack, onClose, onAddVendo
       onBack?.();
     } catch (err) {
       console.error("Add vendor failed:", err);
-      alert(err?.message ?? "Failed to add vendor.");
+      showError(err?.message ?? "Failed to add vendor.");
     } finally {
       setIsSubmitting(false);
     }
