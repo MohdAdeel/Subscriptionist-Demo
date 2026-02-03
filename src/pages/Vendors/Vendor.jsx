@@ -89,10 +89,10 @@ export default function Vendor() {
   const [activityLineCountForVendor, setActivityLineCountForVendor] = useState([]);
 
   const activityCountChartRef = useRef(null);
-  const activityCountChartInstanceRef = useRef(null);
   const amountByVendorChartRef = useRef(null);
-  const amountByVendorChartInstanceRef = useRef(null);
   const departmentSpendChartRef = useRef(null);
+  const activityCountChartInstanceRef = useRef(null);
+  const amountByVendorChartInstanceRef = useRef(null);
   const departmentSpendChartInstanceRef = useRef(null);
 
   // Amount by Vendor chart data: vendors with amount > 0 (from API vendors state)

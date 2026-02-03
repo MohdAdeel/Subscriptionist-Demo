@@ -1,5 +1,5 @@
-import { FiArrowLeft, FiSearch } from "react-icons/fi";
 import { Link } from "react-router-dom";
+import { FiArrowLeft, FiSearch } from "react-icons/fi";
 
 const NotFound = ({
   title = "Page not found",

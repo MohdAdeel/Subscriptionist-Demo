@@ -9,6 +9,7 @@ import ProtectedRoutes from "./ProtectedRoutes";
 import { Routes, Route } from "react-router-dom";
 import Subscription from "../pages/Subscriptions/Subscription";
 import UnderConstruction from "../components/UnderConstruction";
+
 function AppRoutes() {
   return (
     <Routes>

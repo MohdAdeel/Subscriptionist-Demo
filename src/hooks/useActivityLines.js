@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { useActivityLineStore } from "../stores";
 import { fetchActivityLines } from "../lib/api/activityLine/activityLine";
 import { handleActivityLinesSuccess } from "../lib/utils/reportsPage";
-import { useActivityLineStore } from "../stores";
 
 /**
  * Query key for activity lines - used for caching and invalidation

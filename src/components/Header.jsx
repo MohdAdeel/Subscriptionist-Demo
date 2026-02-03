@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
 import { FiBell, FiChevronDown } from "react-icons/fi";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const Header = ({ userName = "John Doe", userPhoto = null, lastUpdateTime = null }) => {
   const location = useLocation();

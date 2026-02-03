@@ -4,11 +4,11 @@ import {
   getProfileImage,
   updateProfilePicture,
 } from "../../lib/api/profile/profile";
+import { FiUpload } from "react-icons/fi";
 import { usePopup } from "../../components/Popup";
 import React, { useState, useEffect } from "react";
 import Notifications from "./components/Notifications";
 import AssociatedUsers from "./components/AssociatedUsers";
-import { FiSearch, FiBell, FiChevronDown, FiUpload } from "react-icons/fi";
 
 // Dummy profile data
 const DUMMY_PROFILE = {

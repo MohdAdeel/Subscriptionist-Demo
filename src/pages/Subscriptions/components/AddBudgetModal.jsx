@@ -1,4 +1,3 @@
-import { useState, useCallback, useEffect } from "react";
 import {
   addBudget,
   checkBudget,
@@ -7,6 +6,7 @@ import {
   getActivityLines,
 } from "../../../lib/utils/subscriptions";
 import { usePopup } from "../../../components/Popup";
+import { useState, useCallback, useEffect } from "react";
 
 const BUDGET_TYPE = {
   DEPARTMENT: "department",
