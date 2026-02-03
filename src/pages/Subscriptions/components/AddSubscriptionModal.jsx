@@ -1,6 +1,8 @@
 import ExcelJS from "exceljs";
-import { useState, useCallback } from "react";
+import { usePopup } from "../../../components/Popup";
+import { useState, useCallback, useRef } from "react";
 import AddVendorManually from "./AddSubscriptionManually";
+import UploadSubscriptionModal from "./UploadSubscriptionModal";
 import { FiX, FiPlus, FiUpload, FiDownload } from "react-icons/fi";
 import { fetchVendorList, getDeparments, getCategories } from "../../../lib/utils/subscriptions";
 
@@ -13,19 +15,162 @@ export default function AddSubscriptionModal({
   vendors: vendorsProp = [],
   departments = [],
 }) {
-  const [showVendorModal, setShowVendorModal] = useState(false);
+  const { showError } = usePopup();
+  const fileInputRef = useRef(null);
   const [vendors, setVendors] = useState([]);
-  const [vendorsLoading, setVendorsLoading] = useState(false);
   const [vendorsError, setVendorsError] = useState(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [vendorsLoading, setVendorsLoading] = useState(false);
+  const [showVendorModal, setShowVendorModal] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadParsedData, setUploadParsedData] = useState(null);
 
   const vendorsList = vendorsProp.length > 0 ? vendorsProp : vendors;
 
   const handleClose = () => {
     setShowVendorModal(false);
+    setShowUploadModal(false);
+    setUploadParsedData(null);
     setVendorsError(null);
     setOpen?.(false);
   };
+
+  const ACCEPTED_EXTENSIONS = [".xlsx", ".xls"];
+  const isAcceptedFile = (file) => {
+    const name = (file?.name ?? "").toLowerCase();
+    return ACCEPTED_EXTENSIONS.some((ext) => name.endsWith(ext));
+  };
+
+  const TEMPLATE_HEADERS = [
+    "Subscription Name",
+    "Subscription Contract Amount",
+    "Description",
+    "Subscription Start Date",
+    "Subscription End Date",
+    "Number of Licenses",
+    "Number of Current Users",
+    "Is it Auto Renew Contract?",
+    "Do you require a partner for renewal?",
+    "Subscription Frequency Number",
+    "Subscription Frequency Unit",
+    "Vendor Profile",
+    "Subscription Category",
+    "Subscription Department",
+  ];
+
+  const normalizeHeader = (value) => String(value ?? "").trim();
+
+  const processFile = useCallback(
+    async (file) => {
+      if (!file) return;
+      try {
+        const buffer = await file.arrayBuffer();
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(buffer);
+        const sheet = workbook.worksheets[0];
+        if (!sheet) {
+          showError("No sheet found in file.", "Upload failed");
+          return;
+        }
+        const headerRow = sheet.getRow(1);
+        const headerValues = Array.isArray(headerRow.values) ? headerRow.values.slice(1) : [];
+        const maxColumns = Math.max(headerValues.length, TEMPLATE_HEADERS.length);
+        const headers = Array.from({ length: maxColumns }, (_, i) =>
+          normalizeHeader(headerValues[i])
+        );
+
+        if (headers.length === 0 || headers.every((h) => !h)) {
+          showError("No headers found in the first row.", "Upload failed");
+          return;
+        }
+
+        const normalizedTemplate = TEMPLATE_HEADERS.map((h) => h.toLowerCase().trim());
+        const normalizedUploaded = headers.map((h) => h.toLowerCase().trim()).filter(Boolean);
+        const templateSet = new Set(normalizedTemplate);
+        const uploadedSet = new Set(normalizedUploaded);
+        const missing = normalizedTemplate.filter((h) => !uploadedSet.has(h));
+        const extra = normalizedUploaded.filter((h) => !templateSet.has(h));
+
+        if (missing.length > 0 || extra.length > 0) {
+          const missingMessage =
+            missing.length > 0 ? `Missing headers: ${missing.join(", ")}. ` : "";
+          const extraMessage = extra.length > 0 ? `Unexpected headers: ${extra.join(", ")}.` : "";
+          showError(
+            `Uploaded file does not match the template. ${missingMessage}${extraMessage}`.trim(),
+            "Upload failed"
+          );
+          return;
+        }
+
+        const rows = [];
+        for (let r = 2; r <= sheet.rowCount; r++) {
+          const row = sheet.getRow(r);
+          const obj = {};
+          headers.forEach((h, i) => {
+            const cell = row.getCell(i + 1);
+            let val = cell?.value;
+            if (val != null && typeof val === "object" && val.text != null) val = val.text;
+            obj[h] = val != null ? String(val).trim() : "";
+          });
+          const hasValue = headers.some((h) => (obj[h] ?? "").trim() !== "");
+          if (hasValue) {
+            rows.push(obj);
+          }
+        }
+        setUploadParsedData({ headers, rows });
+        setShowUploadModal(true);
+      } catch (err) {
+        console.error("Excel parse error:", err);
+        showError(err?.message ?? "Failed to read Excel file.", "Upload failed");
+      }
+    },
+    [showError]
+  );
+
+  const handleFileChange = useCallback(
+    async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!isAcceptedFile(file)) {
+        showError("Please upload only Excel files (.xlsx, .xls).", "Invalid file type");
+        e.target.value = "";
+        return;
+      }
+      await processFile(file);
+      e.target.value = "";
+    },
+    [processFile, showError]
+  );
+
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+      const file = e.dataTransfer?.files?.[0];
+      if (!file) return;
+      if (!isAcceptedFile(file)) {
+        showError("Please upload only Excel files (.xlsx, .xls).", "Invalid file type");
+        return;
+      }
+      await processFile(file);
+    },
+    [processFile, showError]
+  );
 
   const handleAddManually = async () => {
     if (onAddManually) {
@@ -336,8 +481,15 @@ export default function AddSubscriptionModal({
                   </button>
                 </div>
 
-                {/* Upload Area with enhanced interactivity */}
-                <label className="group relative block border-2 border-dashed border-gray-300 rounded-2xl h-[150px] flex flex-col items-center justify-center cursor-pointer text-gray-600 hover:border-indigo-400 hover:bg-white transition-all duration-300 overflow-hidden bg-white/50">
+                {/* Upload Area with enhanced interactivity and drag-and-drop */}
+                <label
+                  className={`group relative block border-2 border-dashed rounded-2xl h-[150px] flex flex-col items-center justify-center cursor-pointer text-gray-600 transition-all duration-300 overflow-hidden bg-white/50 hover:border-indigo-400 hover:bg-white ${
+                    isDragging ? "border-indigo-500 bg-indigo-50/80" : "border-gray-300"
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
                   <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/0 via-purple-50/0 to-indigo-50/0 group-hover:from-indigo-50/50 group-hover:via-purple-50/30 group-hover:to-indigo-50/50 transition-all duration-500"></div>
                   <div className="relative z-10 flex flex-col items-center">
                     <div className="w-14 h-14 mb-3 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-indigo-100 group-hover:to-purple-100 flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-sm group-hover:shadow-md">
@@ -353,11 +505,33 @@ export default function AddSubscriptionModal({
                       Excel files (.xlsx, .xls)
                     </p>
                   </div>
-                  <input type="file" accept=".xlsx,.xls" className="hidden" />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
                 </label>
               </div>
             </div>
           </div>
+
+          <UploadSubscriptionModal
+            open={showUploadModal}
+            onClose={() => {
+              setShowUploadModal(false);
+              setUploadParsedData(null);
+            }}
+            parsedData={uploadParsedData}
+            vendors={vendorsList}
+            departments={departments}
+            onUploadComplete={(payload) => {
+              setShowUploadModal(false);
+              setUploadParsedData(null);
+              onAddSuccess?.();
+            }}
+          />
 
           <style>{`
             @keyframes fadeIn {

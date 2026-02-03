@@ -9,7 +9,6 @@ import UpcomingRenewalsIcon from "../../assets/UpcomingRenewals.svg";
 import RecentlyConcludedIcon from "../../assets/RecentlyConcluded.svg";
 import ActiveSubscriptionsIcon from "../../assets/ActiveSubscriptions.svg";
 import { CardSkeleton, ChartSkeleton } from "../../components/SkeletonLoader";
-import PageHeader from "../../components/PageHeader";
 
 // Lazy load heavy utility modules - these contain Chart.js and are large (~400KB total)
 // They are only needed AFTER the API data is fetched

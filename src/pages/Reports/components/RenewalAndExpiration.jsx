@@ -3,12 +3,14 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { useReportsPageStore } from "../../../stores";
 import { FiInfo, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
+const getMonthStart = (date) => new Date(date.getFullYear(), date.getMonth(), 1);
+
 const RenewalAndExpiration = ({
   formatCurrency,
   formatDate,
   renewalCostsChartRef: externalRenewalCostsChartRef,
 }) => {
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 0, 1));
+  const [currentMonth, setCurrentMonth] = useState(() => getMonthStart(new Date()));
   const [showMore, setShowMore] = useState(false);
   const internalRenewalCostsChartRef = useRef(null);
   const renewalCostsChartRef = externalRenewalCostsChartRef ?? internalRenewalCostsChartRef;
@@ -201,8 +203,16 @@ const RenewalAndExpiration = ({
     );
   };
 
+  const minMonth = useMemo(() => getMonthStart(new Date()), []);
+  const isPrevDisabled =
+    currentMonth.getFullYear() === minMonth.getFullYear() &&
+    currentMonth.getMonth() === minMonth.getMonth();
+
   const handlePreviousMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+    if (isPrevDisabled) return;
+    setCurrentMonth(
+      getMonthStart(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
+    );
   };
 
   const handleNextMonth = () => {
@@ -368,9 +378,14 @@ const RenewalAndExpiration = ({
             <div className="flex items-center justify-between mb-4">
               <button
                 onClick={handlePreviousMonth}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className={`p-2 rounded-full transition-colors ${
+                  isPrevDisabled ? "cursor-not-allowed text-gray-300" : "hover:bg-gray-100"
+                }`}
+                disabled={isPrevDisabled}
               >
-                <FiChevronLeft className="w-5 h-5 text-gray-600" />
+                <FiChevronLeft
+                  className={`w-5 h-5 ${isPrevDisabled ? "text-gray-300" : "text-gray-600"}`}
+                />
               </button>
               <button
                 onClick={handleNextMonth}

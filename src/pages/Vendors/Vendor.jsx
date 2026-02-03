@@ -450,7 +450,7 @@ export default function Vendor() {
                             ${row.amount.toLocaleString()}
                           </td>
                           <td className="p-3 text-sm text-[#343A40]">
-                            {row.status === 0 || String(row.status) === "0" ? "Inactive" : "Active"}
+                            {row.status === 0 || String(row.status) === "0" ? "Active" : "InActive"}
                           </td>
                         </tr>
                       ))}

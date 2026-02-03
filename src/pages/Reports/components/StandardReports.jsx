@@ -3,6 +3,22 @@ import { FiRefreshCw, FiInfo } from "react-icons/fi";
 import { useReportsPageStore } from "../../../stores";
 import { useEffect, useRef, useCallback, useMemo, useState } from "react";
 
+const InfoTooltipButton = ({ text }) => (
+  <button
+    type="button"
+    className="relative group p-1 hover:bg-gray-100 rounded-full transition-colors"
+    aria-label={text}
+  >
+    <FiInfo className="w-4 h-4 text-gray-400" />
+    <span
+      role="tooltip"
+      className="pointer-events-none absolute right-0 top-full mt-2 w-64 rounded-lg bg-gray-900 text-white text-xs leading-snug px-3 py-2 shadow-lg opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity z-20 text-left"
+    >
+      {text}
+    </span>
+  </button>
+);
+
 const StandardReports = ({ formatCurrency, formatDate, chartRef: externalChartRef }) => {
   const formatTopCardValue = (value) => {
     const numericValue = value === null || value === undefined ? 0 : Number(value);
@@ -204,9 +220,7 @@ const StandardReports = ({ formatCurrency, formatDate, chartRef: externalChartRe
             <div className="w-12 h-12 bg-gradient-to-br from-teal-100 to-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <FiRefreshCw className="w-6 h-6 text-teal-600" />
             </div>
-            <button className="p-1 hover:bg-gray-100 rounded-full transition-colors">
-              <FiInfo className="w-4 h-4 text-gray-400" />
-            </button>
+            <InfoTooltipButton text="Monetary value of current active subscription" />
           </div>
           <h3 className="text-sm font-medium text-gray-600 mb-2">Total Active Cost</h3>
           <p className="text-2xl sm:text-3xl font-bold text-gray-800">
@@ -220,9 +234,7 @@ const StandardReports = ({ formatCurrency, formatDate, chartRef: externalChartRe
             <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center flex-shrink-0">
               <FiRefreshCw className="w-6 h-6 text-blue-600" />
             </div>
-            <button className="p-1 hover:bg-gray-100 rounded-full transition-colors">
-              <FiInfo className="w-4 h-4 text-gray-400" />
-            </button>
+            <InfoTooltipButton text="Number of current active subscription" />
           </div>
           <h3 className="text-sm font-medium text-gray-600 mb-2">Active Subscriptions</h3>
           <p className="text-2xl sm:text-3xl font-bold text-gray-800">{TopCards.ActiveCount}</p>
@@ -234,9 +246,7 @@ const StandardReports = ({ formatCurrency, formatDate, chartRef: externalChartRe
             <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <FiRefreshCw className="w-6 h-6 text-yellow-600" />
             </div>
-            <button className="p-1 hover:bg-gray-100 rounded-full transition-colors">
-              <FiInfo className="w-4 h-4 text-gray-400" />
-            </button>
+            <InfoTooltipButton text="This total reflects renewals from the current month to the end of the financial year unless a filter is applied" />
           </div>
           <h3 className="text-sm font-medium text-gray-600 mb-2">Upcoming Renewal</h3>
           <p className="text-2xl sm:text-3xl font-bold text-gray-800">
@@ -250,9 +260,7 @@ const StandardReports = ({ formatCurrency, formatDate, chartRef: externalChartRe
             <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <FiRefreshCw className="w-6 h-6 text-purple-600" />
             </div>
-            <button className="p-1 hover:bg-gray-100 rounded-full transition-colors">
-              <FiInfo className="w-4 h-4 text-gray-400" />
-            </button>
+            <InfoTooltipButton text="Number of subscriptions expired during the last 12 months" />
           </div>
           <h3 className="text-sm font-medium text-gray-600 mb-2">Cost Savings Identified</h3>
           <p className="text-2xl sm:text-3xl font-bold text-gray-800">0</p>
@@ -262,7 +270,7 @@ const StandardReports = ({ formatCurrency, formatDate, chartRef: externalChartRe
       {/* Monthly Spend Chart */}
       <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 mb-6">
         <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4 sm:mb-6">
-          Monthly Spend
+          Subscription Tenure
         </h2>
         <div className="relative" style={{ height: "300px", minHeight: "250px" }}>
           <canvas ref={chartRef}></canvas>

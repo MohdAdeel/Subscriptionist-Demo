@@ -849,7 +849,7 @@ const Financial = ({
             <div className="flex-1 min-w-0">
               <div
                 id="vendor-chart-legend"
-                className="flex flex-col gap-1.5 text-xs sm:text-sm max-h-[150px]"
+                className="flex flex-col gap-1.5 text-xs sm:text-sm max-h-[250px] overflow-y-auto"
               >
                 {legendItems.map((item, index) => (
                   <div key={`${item.label}-${index}`} className="flex items-center gap-1.5">

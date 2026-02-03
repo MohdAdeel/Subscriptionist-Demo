@@ -1,4 +1,3 @@
-import { FiX, FiUpload, FiFilter, FiDownload, FiCalendar } from "react-icons/fi";
 import jsPDF from "jspdf";
 import ExcelJS from "exceljs";
 import autoTable from "jspdf-autotable";
@@ -9,8 +8,25 @@ import { useState, useEffect, useRef } from "react";
 import StandardReports from "./components/StandardReports";
 import RenewalAndExpiration from "./components/RenewalAndExpiration";
 import { applyFilters, clearFilters } from "../../lib/utils/reportsPage";
+import { FiX, FiUpload, FiFilter, FiDownload, FiCalendar } from "react-icons/fi";
 import { TableSkeleton, ChartSkeleton, KPICardSkeleton } from "../../components/SkeletonLoader";
-import PageHeader from "../../components/PageHeader";
+
+const VENDOR_CHART_COLORS = [
+  "#CCD6EB",
+  "#E1FFBB",
+  "#1D225D",
+  "#BFF1FF",
+  "#CFE1FF",
+  "#D4F1F4",
+  "#E1DBFE",
+  "#1D225D",
+  "#0891B2",
+  "#CCD6EB",
+  "#E1DBFE",
+];
+
+const getVendorLabel = (entry) =>
+  entry?.vendor ?? entry?.name ?? entry?.vendorName ?? "Unknown vendor";
 
 const Report = () => {
   // React Query handles caching, deduplication, and loading state
@@ -252,7 +268,10 @@ const Report = () => {
     }
   };
 
-  const addFinancialOverviewSheet = (workbook) => {
+  const addFinancialOverviewSheet = (
+    workbook,
+    { vendorLegendItems = [], usageLegendItems = [] } = {}
+  ) => {
     const overviewSheet = workbook.addWorksheet("Overview");
     overviewSheet.properties.defaultGridLines = false;
 
@@ -260,12 +279,38 @@ const Report = () => {
     for (let col = 1; col <= totalColumns; col += 1) {
       overviewSheet.getColumn(col).width = 18;
     }
+    overviewSheet.getColumn(6).width = 4;
+    overviewSheet.getColumn(7).width = 24;
+    overviewSheet.getColumn(8).width = 12;
 
     const placeTitle = (row, col, title) => {
       const cell = overviewSheet.getCell(row, col);
       cell.value = title;
       cell.font = { bold: true, size: 12, color: { argb: "FF111827" } };
       cell.alignment = { vertical: "middle", horizontal: "left" };
+    };
+
+    const placeLegendTitle = (row, col, title) => {
+      const cell = overviewSheet.getCell(row, col);
+      cell.value = title;
+      cell.font = { bold: true, size: 10, color: { argb: "FF111827" } };
+      cell.alignment = { vertical: "middle", horizontal: "left" };
+    };
+
+    const toArgb = (hexColor) => {
+      if (!hexColor) return "FF000000";
+      const normalized = hexColor.replace("#", "").trim();
+      if (normalized.length === 3) {
+        const [r, g, b] = normalized.split("");
+        return `FF${r}${r}${g}${g}${b}${b}`.toUpperCase();
+      }
+      if (normalized.length === 6) {
+        return `FF${normalized.toUpperCase()}`;
+      }
+      if (normalized.length === 8) {
+        return normalized.toUpperCase();
+      }
+      return "FF000000";
     };
 
     const addChartImage = (canvas, row, col, width, height, fallbackText) => {
@@ -280,6 +325,45 @@ const Report = () => {
       overviewSheet.addImage(imageId, {
         tl: { col: col - 1, row: row - 1 },
         ext: { width, height },
+      });
+    };
+
+    const addLegendItems = (items, startRow, startCol, { showValue = false, emptyText } = {}) => {
+      if (!items.length) {
+        const cell = overviewSheet.getCell(startRow, startCol + 1);
+        cell.value = emptyText || "No data available";
+        cell.font = { size: 10, color: { argb: "FF6B7280" } };
+        return;
+      }
+
+      items.forEach((item, index) => {
+        const row = startRow + index;
+        const colorCell = overviewSheet.getCell(row, startCol);
+        if (item.color) {
+          colorCell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: toArgb(item.color) },
+          };
+        }
+        colorCell.border = {
+          top: { style: "thin", color: { argb: "FFE5E7EB" } },
+          left: { style: "thin", color: { argb: "FFE5E7EB" } },
+          right: { style: "thin", color: { argb: "FFE5E7EB" } },
+          bottom: { style: "thin", color: { argb: "FFE5E7EB" } },
+        };
+
+        const labelCell = overviewSheet.getCell(row, startCol + 1);
+        labelCell.value = item.label || "Unknown";
+        labelCell.font = { size: 10, color: { argb: "FF374151" } };
+        labelCell.alignment = { vertical: "middle", horizontal: "left" };
+
+        if (showValue) {
+          const valueCell = overviewSheet.getCell(row, startCol + 2);
+          valueCell.value = item.value ?? "";
+          valueCell.font = { size: 10, color: { argb: "FF111827" } };
+          valueCell.alignment = { vertical: "middle", horizontal: "right" };
+        }
       });
     };
 
@@ -302,6 +386,10 @@ const Report = () => {
       220,
       "Spend by Vendor chart not available"
     );
+    placeLegendTitle(3, 6, "Vendors");
+    addLegendItems(vendorLegendItems, 4, 6, {
+      emptyText: "No vendor data available",
+    });
 
     placeTitle(18, 1, "Most Expensive Subscriptions");
     addChartImage(
@@ -322,6 +410,11 @@ const Report = () => {
       220,
       "Usage Analysis chart not available"
     );
+    placeLegendTitle(19, 6, "Usage");
+    addLegendItems(usageLegendItems, 20, 6, {
+      showValue: true,
+      emptyText: "Usage data not available",
+    });
   };
 
   const addRenewalOverviewSheet = (workbook) => {
@@ -1417,7 +1510,17 @@ const Report = () => {
             ),
           }));
 
-        addFinancialOverviewSheet(workbook);
+        const vendorLegendItems = (vendorCountData || []).map((entry, index) => ({
+          label: getVendorLabel(entry),
+          color: VENDOR_CHART_COLORS[index % VENDOR_CHART_COLORS.length],
+        }));
+
+        const usageLegendItems = [
+          { label: "Used", value: "80%", color: "#1D225D" },
+          { label: "Unused", value: "20%", color: "#9333EA" },
+        ];
+
+        addFinancialOverviewSheet(workbook, { vendorLegendItems, usageLegendItems });
         addTableSheet(workbook, "Spend by Category", categoryRows, "SpendByCategoryTable");
         addTableSheet(workbook, "Spend by Department", departmentRows, "SpendByDepartmentTable");
       } else if (activeTab === "renewal") {
