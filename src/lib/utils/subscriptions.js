@@ -5,16 +5,7 @@ const AZURE_FUNCTION_KEY = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6Ts
 const DEFAULT_ACCOUNT_ID = "f0983e34-d2c5-ee11-9079-00224827e0df";
 const DEFAULT_CONTACT_ID = "c199b131-4c62-f011-bec2-6045bdffa665";
 
-export async function getRelationshipSubsLines(number) {
-  let body = {
-    contactId: DEFAULT_CONTACT_ID,
-    status: 0,
-    pagenumber: number,
-    startdate: null,
-    enddate: null,
-    vendorName: null,
-    subscriptionName: null,
-  };
+export async function getRelationshipSubsLines(body) {
   try {
     const azureFunctionUrl = `${API_BASE_URL}/GetSubscriptionData`;
 

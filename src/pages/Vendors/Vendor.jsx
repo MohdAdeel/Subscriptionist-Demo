@@ -78,11 +78,12 @@ export default function Vendor() {
   const [vendors, setVendors] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [editVendor, setEditVendor] = useState(null);
-  const [statusFilter, setStatusFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("3");
   const [selectedRowId, setSelectedRowId] = useState(null);
   const [vendorNameFilter, setVendorNameFilter] = useState("");
   const [isLoadingVendors, setIsLoadingVendors] = useState(true);
   const [vendorsLengthCount, setVendorsLengthCount] = useState(0);
+  const [debouncedVendorName, setDebouncedVendorName] = useState("");
   const [showAddVendorModal, setShowAddVendorModal] = useState(false);
   const [showEditVendorModal, setShowEditVendorModal] = useState(false);
   const [activityLineCountForVendor, setActivityLineCountForVendor] = useState([]);
@@ -283,11 +284,14 @@ export default function Vendor() {
 
   const refetchVendorData = () => {
     setIsLoadingVendors(true);
+    const normalizedStatus = Number.parseInt(statusFilter, 10);
+    const status = Number.isNaN(normalizedStatus) || statusFilter === "" ? 3 : normalizedStatus;
+    const vendor = debouncedVendorName.trim() ? debouncedVendorName.trim() : null;
     getVendorData({
       contactId: "c199b131-4c62-f011-bec2-6045bdffa665",
-      status: 0,
+      status,
       pagenumber: currentPage,
-      vendor: null,
+      vendor,
     })
       .then((data) => {
         setActivityLineCountForVendor(
@@ -308,8 +312,15 @@ export default function Vendor() {
   };
 
   useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedVendorName(vendorNameFilter);
+    }, 400);
+    return () => clearTimeout(timeoutId);
+  }, [vendorNameFilter]);
+
+  useEffect(() => {
     refetchVendorData();
-  }, [currentPage]);
+  }, [currentPage, statusFilter, debouncedVendorName]);
 
   return (
     <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-screen">
@@ -352,9 +363,9 @@ export default function Vendor() {
                         }}
                         className="border-none outline-none w-full text-xs sm:text-sm text-[#343A40] bg-transparent cursor-pointer appearance-none"
                       >
-                        <option value="All">All</option>
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
+                        <option value="3">All</option>
+                        <option value="0">Active</option>
+                        <option value="1">Inactive</option>
                       </select>
                     </div>
                   </div>
@@ -409,51 +420,60 @@ export default function Vendor() {
                   </tr>
                 </thead>
                 <tbody>
-                  {isLoadingVendors
-                    ? Array.from({ length: RECORDS_PER_PAGE }).map((_, idx) => (
-                        <tr key={idx} className="border-b border-[#eee]">
-                          <td className="p-3">
-                            <div className="h-4 w-3/4 max-w-[180px] bg-[#e9ecef] rounded animate-pulse" />
-                          </td>
-                          <td className="p-3">
-                            <div className="h-4 w-2/3 max-w-[140px] bg-[#e9ecef] rounded animate-pulse" />
-                          </td>
-                          <td className="p-3">
-                            <div className="h-4 w-20 bg-[#e9ecef] rounded animate-pulse" />
-                          </td>
-                          <td className="p-3">
-                            <div className="h-4 w-16 bg-[#e9ecef] rounded animate-pulse" />
-                          </td>
-                        </tr>
-                      ))
-                    : vendors.map((row) => (
-                        <tr
-                          key={row.activityID}
-                          onClick={() => setSelectedRowId(row.activityID)}
-                          onDoubleClick={() => {
-                            setEditVendor(row);
-                            setShowEditVendorModal(true);
-                          }}
-                          className={`cursor-pointer transition-colors border-b border-[#eee] hover:bg-[#f9f9ff] ${
-                            selectedRowId === row.activityID
-                              ? "bg-[#e8ebff] border-l-4 border-l-[#172B4D]"
-                              : ""
-                          }`}
-                        >
-                          <td className="p-3">
-                            <span className="text-sm text-[#172B4D] font-medium underline cursor-pointer hover:opacity-80">
-                              {row.vendorName}
-                            </span>
-                          </td>
-                          <td className="p-3 text-sm text-[#343A40]">{row.managerEmail || "—"}</td>
-                          <td className="p-3 text-sm text-[#343A40]">
-                            ${row.amount.toLocaleString()}
-                          </td>
-                          <td className="p-3 text-sm text-[#343A40]">
-                            {row.status === 0 || String(row.status) === "0" ? "Active" : "InActive"}
-                          </td>
-                        </tr>
-                      ))}
+                  {isLoadingVendors ? (
+                    Array.from({ length: RECORDS_PER_PAGE }).map((_, idx) => (
+                      <tr key={idx} className="border-b border-[#eee]">
+                        <td className="p-3">
+                          <div className="h-4 w-3/4 max-w-[180px] bg-[#e9ecef] rounded animate-pulse" />
+                        </td>
+                        <td className="p-3">
+                          <div className="h-4 w-2/3 max-w-[140px] bg-[#e9ecef] rounded animate-pulse" />
+                        </td>
+                        <td className="p-3">
+                          <div className="h-4 w-20 bg-[#e9ecef] rounded animate-pulse" />
+                        </td>
+                        <td className="p-3">
+                          <div className="h-4 w-16 bg-[#e9ecef] rounded animate-pulse" />
+                        </td>
+                      </tr>
+                    ))
+                  ) : vendors.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="p-12 text-center text-[#6C757D]">
+                        <p className="text-sm font-medium text-[#343A40] mb-1">No Data available</p>
+                        <p className="text-xs">Add New Vendor</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    vendors.map((row) => (
+                      <tr
+                        key={row.activityID}
+                        onClick={() => setSelectedRowId(row.activityID)}
+                        onDoubleClick={() => {
+                          setEditVendor(row);
+                          setShowEditVendorModal(true);
+                        }}
+                        className={`cursor-pointer transition-colors border-b border-[#eee] hover:bg-[#f9f9ff] ${
+                          selectedRowId === row.activityID
+                            ? "bg-[#e8ebff] border-l-4 border-l-[#172B4D]"
+                            : ""
+                        }`}
+                      >
+                        <td className="p-3">
+                          <span className="text-sm text-[#172B4D] font-medium underline cursor-pointer hover:opacity-80">
+                            {row.vendorName}
+                          </span>
+                        </td>
+                        <td className="p-3 text-sm text-[#343A40]">{row.managerEmail || "—"}</td>
+                        <td className="p-3 text-sm text-[#343A40]">
+                          ${row.amount.toLocaleString()}
+                        </td>
+                        <td className="p-3 text-sm text-[#343A40]">
+                          {row.status === 0 || String(row.status) === "0" ? "Active" : "InActive"}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

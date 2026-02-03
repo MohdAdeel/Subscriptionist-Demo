@@ -96,29 +96,83 @@ function mapActivityLinesToTableRows(result) {
 const Subscription = () => {
   const { showSuccess, showError, showWarning } = usePopup();
   const datePickerRef = useRef(null);
+  const vendorDropdownRef = useRef(null);
+  const vendorSearchInputRef = useRef(null);
   const [endDate, setEndDate] = useState(null);
   const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const [startDate, setStartDate] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
   const [budgetData, setBudgetData] = useState(null);
   const [departments, setDepartments] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("3");
   const [editFormData, setEditFormData] = useState(null);
+  const [dateRangeText, setDateRangeText] = useState("");
   const [ActivityLines, setActivityLines] = useState([]);
   const [goToPageInput, setGoToPageInput] = useState("");
   const [vendorFilter, setVendorFilter] = useState("All");
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedRowId, setSelectedRowId] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [statusFilter, setStatusFilter] = useState("Active");
+  const [appliedEndDate, setAppliedEndDate] = useState(null);
+  const [vendorSearchTerm, setVendorSearchTerm] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [isBudgetLoading, setIsBudgetLoading] = useState(false);
+  const [appliedStartDate, setAppliedStartDate] = useState(null);
+  const [isVendorDropdownOpen, setIsVendorDropdownOpen] = useState(false);
   const [subscriptionNameFilter, setSubscriptionNameFilter] = useState("");
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [isDeletingSubscription, setIsDeletingSubscription] = useState(false);
+  const [debouncedSubscriptionName, setDebouncedSubscriptionName] = useState("");
+
+  const vendorOptions = useMemo(() => {
+    const unique = new Set();
+    ActivityLines.forEach((row) => {
+      const name = row.vendorName ? String(row.vendorName).trim() : "";
+      if (name) unique.add(name);
+    });
+    return ["All", ...Array.from(unique).sort((a, b) => a.localeCompare(b))];
+  }, [ActivityLines]);
+
+  const filteredVendorOptions = useMemo(() => {
+    const term = vendorSearchTerm.trim().toLowerCase();
+    if (!term) return vendorOptions;
+    return vendorOptions.filter((vendor) => vendor.toLowerCase().includes(term));
+  }, [vendorOptions, vendorSearchTerm]);
+
+  const handleVendorSelect = (vendor) => {
+    setVendorFilter(vendor);
+    setIsVendorDropdownOpen(false);
+    setVendorSearchTerm("");
+  };
+
+  useEffect(() => {
+    if (!isVendorDropdownOpen) return;
+    const handleClickOutside = (event) => {
+      if (vendorDropdownRef.current && !vendorDropdownRef.current.contains(event.target)) {
+        setIsVendorDropdownOpen(false);
+        setVendorSearchTerm("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isVendorDropdownOpen]);
+
+  useEffect(() => {
+    if (isVendorDropdownOpen && vendorSearchInputRef.current) {
+      vendorSearchInputRef.current.focus();
+    }
+  }, [isVendorDropdownOpen]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSubscriptionName(subscriptionNameFilter);
+    }, 400);
+    return () => clearTimeout(timeoutId);
+  }, [subscriptionNameFilter]);
 
   const handleFetchBudgetData = useCallback(
     (pageNumber, tab) => {
@@ -325,14 +379,12 @@ const Subscription = () => {
 
   const handleApplyDateRange = () => {
     if (startDate && endDate) {
-      const datePickerInput = document.getElementById("datePicker");
       const formattedRange = `${formatDateForDisplay(
         startDate
       )} - ${formatDateForDisplay(endDate)}`;
-      if (datePickerInput) {
-        datePickerInput.value = formattedRange;
-        datePickerInput.dispatchEvent(new Event("change", { bubbles: true }));
-      }
+      setDateRangeText(formattedRange);
+      setAppliedStartDate(startDate);
+      setAppliedEndDate(endDate);
       setShowDatePicker(false);
     }
   };
@@ -340,10 +392,9 @@ const Subscription = () => {
   const handleClearDateRange = () => {
     setStartDate(null);
     setEndDate(null);
-    const datePickerInput = document.getElementById("datePicker");
-    if (datePickerInput) {
-      datePickerInput.value = "";
-    }
+    setAppliedStartDate(null);
+    setAppliedEndDate(null);
+    setDateRangeText("");
   };
 
   const navigateMonth = (direction) => {
@@ -365,7 +416,22 @@ const Subscription = () => {
 
   useEffect(() => {
     setIsLoading(true);
-    getRelationshipSubsLines(currentPage)
+    const parsedStatus = Number.parseInt(statusFilter, 10);
+    const normalizedStatus = Number.isNaN(parsedStatus) ? 3 : parsedStatus;
+    const vendorName = vendorFilter && vendorFilter !== "All" ? vendorFilter : null;
+    const subsciptionActivityline = debouncedSubscriptionName.trim()
+      ? debouncedSubscriptionName.trim()
+      : null;
+    const hasAppliedDateRange = appliedStartDate && appliedEndDate;
+    getRelationshipSubsLines({
+      contactId: "c199b131-4c62-f011-bec2-6045bdffa665",
+      status: normalizedStatus,
+      pagenumber: currentPage,
+      startdate: hasAppliedDateRange ? formatDateForDisplay(appliedStartDate) : null,
+      enddate: hasAppliedDateRange ? formatDateForDisplay(appliedEndDate) : null,
+      vendorName,
+      subsciptionActivityline,
+    })
       .then((result) => {
         getDeparments()
           .then((result) => {
@@ -389,7 +455,15 @@ const Subscription = () => {
       .finally(() => {
         setIsLoading(false);
       });
-  }, [currentPage, showError]);
+  }, [
+    currentPage,
+    statusFilter,
+    vendorFilter,
+    debouncedSubscriptionName,
+    appliedStartDate,
+    appliedEndDate,
+    showError,
+  ]);
 
   // When edit modal opens (Edit button or double-click), fetch row data by SubscriptionActivityLineId
   useEffect(() => {
@@ -500,7 +574,7 @@ const Subscription = () => {
   return (
     <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-screen">
       {/* Filters and Actions */}
-      <div className="flex flex-col lg:flex-row justify-between items-start gap-4 sm:gap-5 px-3 sm:px-4 md:px-5 mb-4 sm:mb-6 w-full overflow-x-hidden">
+      <div className="flex flex-col lg:flex-row justify-between items-start gap-4 sm:gap-5 px-3 sm:px-4 md:px-5 mb-4 sm:mb-6 w-full">
         <div className="flex flex-col md:flex-row md:flex-wrap gap-3 sm:gap-4 flex-1 w-full min-w-0 mb-0">
           {isLoading ? (
             <>
@@ -541,6 +615,7 @@ const Subscription = () => {
                     placeholder="Select Date Range"
                     name="datefilter"
                     onClick={handleDatePickerClick}
+                    value={dateRangeText}
                     readOnly
                     className="border-none outline-none w-full text-xs sm:text-sm pl-0 cursor-pointer min-w-0"
                   />
@@ -644,14 +719,59 @@ const Subscription = () => {
                 <label className="text-xs sm:text-[13px] text-[#343A40] font-medium">
                   Vendor Name
                 </label>
-                <div className="flex items-center bg-white rounded-lg border border-[#e9ecef] p-2 w-full">
-                  <select
-                    value={vendorFilter}
-                    onChange={(e) => setVendorFilter(e.target.value)}
-                    className="border-none outline-none w-full text-xs sm:text-sm text-[#343A40] bg-transparent cursor-pointer appearance-none"
+                <div ref={vendorDropdownRef} className="relative w-full z-30">
+                  <button
+                    type="button"
+                    onClick={() => setIsVendorDropdownOpen((prev) => !prev)}
+                    className="flex w-full items-center justify-between bg-white rounded-lg border border-[#e9ecef] p-2 text-xs sm:text-sm text-[#343A40]"
                   >
-                    <option value="All">All</option>
-                  </select>
+                    <span className="truncate">{vendorFilter || "All"}</span>
+                    <FiChevronDown
+                      className={`ml-2 h-4 w-4 text-[#6C757D] transition-transform duration-200 ${
+                        isVendorDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {isVendorDropdownOpen && (
+                    <div className="absolute z-40 mt-2 w-full rounded-lg border border-[#e9ecef] bg-white shadow-xl overflow-visible">
+                      <div className="p-3 border-b border-gray-100">
+                        <div className="relative">
+                          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <input
+                            ref={vendorSearchInputRef}
+                            type="text"
+                            placeholder="Search vendors..."
+                            value={vendorSearchTerm}
+                            onChange={(e) => setVendorSearchTerm(e.target.value)}
+                            className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1f2a7c]/40 focus:border-[#1f2a7c] outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        {filteredVendorOptions.length > 0 ? (
+                          filteredVendorOptions.map((vendor) => (
+                            <button
+                              key={vendor}
+                              type="button"
+                              onClick={() => handleVendorSelect(vendor)}
+                              className={`w-full text-left px-4 py-3 text-xs sm:text-sm hover:bg-gray-50 transition-colors ${
+                                vendorFilter === vendor
+                                  ? "bg-[#1f2a7c]/5 text-[#1f2a7c] font-medium"
+                                  : "text-gray-700"
+                              }`}
+                            >
+                              {vendor}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-4 py-6 text-center text-xs sm:text-sm text-gray-500">
+                            No vendors found
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               {/* Status */}
@@ -663,8 +783,9 @@ const Subscription = () => {
                     onChange={(e) => setStatusFilter(e.target.value)}
                     className="border-none outline-none w-full text-xs sm:text-sm text-[#343A40] bg-transparent cursor-pointer appearance-none"
                   >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
+                    <option value="3">All</option>
+                    <option value="0">Active</option>
+                    <option value="1">Inactive</option>
                   </select>
                 </div>
               </div>
