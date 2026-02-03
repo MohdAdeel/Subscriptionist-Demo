@@ -499,29 +499,6 @@ const Subscription = () => {
 
   return (
     <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-screen">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <h2 className="m-0 text-lg sm:text-xl md:text-[24px] font-bold text-[#343A40]">
-          Subscription Inventory
-        </h2>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          <span className="text-[10px] xs:text-xs sm:text-[13px] text-[#6C757D] order-1 sm:order-none">
-            Last Update 2 days ago
-          </span>
-          <FiBell className="text-lg sm:text-xl text-[#343A40] cursor-pointer order-2 sm:order-none" />
-          <div className="w-7 h-7 sm:w-8 sm:h-8 bg-[#172B4D] rounded-full flex items-center justify-center order-3 sm:order-none">
-            <FiUser className="text-white text-base sm:text-lg" />
-          </div>
-          <div className="flex items-center gap-1 cursor-pointer order-4 sm:order-none">
-            <FiSearch className="text-[#6C757D] w-4 h-4" />
-            <span className="text-xs sm:text-sm font-medium text-[#343A40] truncate max-w-[180px] xs:max-w-[250px] sm:max-w-none">
-              Test Subcriptionist Invitation
-            </span>
-            <FiChevronDown className="text-[#6C757D] w-4 h-4 flex-shrink-0" />
-          </div>
-        </div>
-      </div>
-
       {/* Filters and Actions */}
       <div className="flex flex-col lg:flex-row justify-between items-start gap-4 sm:gap-5 px-3 sm:px-4 md:px-5 mb-4 sm:mb-6 w-full overflow-x-hidden">
         <div className="flex flex-col md:flex-row md:flex-wrap gap-3 sm:gap-4 flex-1 w-full min-w-0 mb-0">

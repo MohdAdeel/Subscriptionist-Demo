@@ -1513,13 +1513,6 @@ const Report = () => {
           </div>
         </div>
       )}
-      <PageHeader
-        variant="reports"
-        title="Reports Dashboard"
-        lastUpdatedText="Last Update 29 days ago"
-        isLoadingLastUpdated={isLoading}
-        invitationLabel="Test Subcriptionist Invitation"
-      />
 
       {/* Tabs */}
       <div className="mb-6 border-b border-gray-200">

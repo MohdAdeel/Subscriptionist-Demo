@@ -287,12 +287,6 @@ export default function Home() {
           margin-right: 10px;
         }
       `}</style>
-      <PageHeader
-        variant="home"
-        title="Welcome Jane!"
-        lastUpdatedText="Last Update 10 min ago"
-        isLoadingLastUpdated={isLoading}
-      />
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">

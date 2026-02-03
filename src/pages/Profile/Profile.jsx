@@ -73,18 +73,17 @@ function formToUpdatePayload(form) {
 
 function Profile() {
   const { showError, showSuccess } = usePopup();
-  const [activeTab, setActiveTab] = useState("personal");
   const [profile, setProfile] = useState(null);
   const [form, setForm] = useState(INITIAL_FORM);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState("personal");
   const [profileImageUrl, setProfileImageUrl] = useState(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   useEffect(() => {
     getProfile(CONTACT_ID)
       .then((data) => {
-        console.log("Profile data from API:", data);
         const contact = Array.isArray(data) ? data[0] : (data?.value?.[0] ?? data);
         setProfile(contact ?? null);
       })
@@ -180,33 +179,6 @@ function Profile() {
 
   return (
     <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-screen">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <h2 className="m-0 text-lg sm:text-xl md:text-[24px] font-bold text-[#343A40]">
-          Profile Settings
-        </h2>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          <span className="text-[10px] xs:text-xs sm:text-[13px] text-[#6C757D] order-1 sm:order-none">
-            Last Update {DUMMY_PROFILE.lastUpdated}
-          </span>
-          <FiBell className="text-lg sm:text-xl text-[#343A40] cursor-pointer order-2 sm:order-none" />
-          <div className="w-7 h-7 sm:w-8 sm:h-8 bg-[#172B4D] rounded-full flex items-center justify-center order-3 sm:order-none text-white text-xs sm:text-sm font-semibold overflow-hidden flex-shrink-0">
-            {profileImageUrl ? (
-              <img src={profileImageUrl} alt="Profile" className="w-full h-full object-cover" />
-            ) : (
-              DUMMY_PROFILE.headerInitials
-            )}
-          </div>
-          <div className="flex items-center gap-1 cursor-pointer order-4 sm:order-none">
-            <FiSearch className="text-[#6C757D] w-4 h-4" />
-            <span className="text-xs sm:text-sm font-medium text-[#343A40] truncate max-w-[180px] xs:max-w-[250px] sm:max-w-none">
-              {DUMMY_PROFILE.invitationLabel}
-            </span>
-            <FiChevronDown className="text-[#6C757D] w-4 h-4 flex-shrink-0" />
-          </div>
-        </div>
-      </div>
-
       {/* Tabs */}
       <div className="border-b border-[#e9ecef] mb-6 flex justify-between items-center">
         <div className="flex gap-0 -mb-px">

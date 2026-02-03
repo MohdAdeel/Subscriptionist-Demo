@@ -32,8 +32,8 @@ const Menu = () => {
         <div className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"}`}>
           {!isCollapsed && (
             <div className="flex items-center gap-2">
-              <img src={Logo} alt="Logo" className="h-6 w-6" />
-              <span className="text-sm font-semibold text-white">Subscriptionist</span>
+              <img src={Logo} alt="Logo" className="h-12 w-12" />
+              <span className="text-md font-semibold text-white">Subscriptionist</span>
             </div>
           )}
           <img
