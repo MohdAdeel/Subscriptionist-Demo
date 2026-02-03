@@ -5,9 +5,9 @@ import { FiBell, FiChevronDown } from "react-icons/fi";
 const Header = ({ userName = "John Doe", userPhoto = null, lastUpdateTime = null }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [timeAgo, setTimeAgo] = useState("");
   const dropdownRef = useRef(null);
+  const [timeAgo, setTimeAgo] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   // Map routes to page names
   const getPageName = () => {

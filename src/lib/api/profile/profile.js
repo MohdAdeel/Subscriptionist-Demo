@@ -6,6 +6,8 @@
 const API_BASE_URL =
   "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api";
 const API_KEY = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
+const AZURE_B2C_API_URL =
+  "https://9664b34e42b9e4b690b17571f761b8.02.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/6d6e14b48e154728bd4df8dcefb097e0/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=2j88myHpOqnUwREPLPKgy-XuN4O2HXK9-JgLWpHdeag";
 
 /**
  * Get contact/profile by contact ID
@@ -97,9 +99,11 @@ export async function addAssociatedUser(payload) {
     const errorText = await response.text();
     throw new Error(`Failed to add associated user: ${response.status} - ${errorText}`);
   }
-
   if (response.status === 204) return {};
-  return response.json();
+  const data = await response.json();
+
+  await createUserInB2C({ email: data?.email });
+  return data;
 }
 
 /**
@@ -224,4 +228,28 @@ export async function updateProfilePicture(contactId, entityimage) {
 
   if (response.status === 204) return {};
   return response.json();
+}
+
+export async function createUserInB2C(payload) {
+  const response = await fetch(`${AZURE_B2C_API_URL}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const text = await response.text();
+  let data = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { raw: text };
+    }
+  }
+  if (!response.ok) {
+    throw new Error(`B2C create failed: ${response.status} - ${text || JSON.stringify(data)}`);
+  }
+  return data;
 }
