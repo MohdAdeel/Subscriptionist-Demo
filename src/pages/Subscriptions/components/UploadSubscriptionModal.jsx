@@ -4,9 +4,9 @@ import {
   checkSubscriptionExistance,
 } from "../../../lib/utils/subscriptions";
 import AddNewVendor from "./AddNewVendor";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { usePopup } from "../../../components/Popup";
-import { FiX, FiCheck, FiTrash2, FiPlus } from "react-icons/fi";
+import { FiX, FiCheck, FiTrash2, FiPlus, FiSearch, FiChevronDown } from "react-icons/fi";
 
 const STEP_LABELS = ["Upload CSV/Excel", "Field Mapping", "Vendor Associations"];
 
@@ -92,25 +92,32 @@ export default function UploadSubscriptionModal({
 }) {
   const { showError, showSuccess, showWarning } = usePopup();
   const [step, setStep] = useState(2);
+  const bulkVendorDropdownRef = useRef(null);
+  const bulkVendorSearchInputRef = useRef(null);
+  const [bulkVendor, setBulkVendor] = useState("");
   const [fieldMapping, setFieldMapping] = useState({});
   const [activityRows, setActivityRows] = useState([]);
-  const [selectedRowIds, setSelectedRowIds] = useState(new Set());
-  const [bulkVendor, setBulkVendor] = useState("");
-  const [invalidHeaders, setInvalidHeaders] = useState(new Set());
-  const [validationErrors, setValidationErrors] = useState([]);
-  const [showValidationModal, setShowValidationModal] = useState(false);
-  const [showMappingWarning, setShowMappingWarning] = useState(false);
-  const [availableVendors, setAvailableVendors] = useState([]);
-  const [vendorsLoading, setVendorsLoading] = useState(false);
-  const [showAddVendorModal, setShowAddVendorModal] = useState(false);
-  const [addVendorTargetRowId, setAddVendorTargetRowId] = useState(null);
-  const [invalidAssociationRowIds, setInvalidAssociationRowIds] = useState(new Set());
-  const [duplicateRowIds, setDuplicateRowIds] = useState(new Set());
-  const [showAssociationWarning, setShowAssociationWarning] = useState(false);
-  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
-  const [showConfirmUpload, setShowConfirmUpload] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [vendorsLoading, setVendorsLoading] = useState(false);
+  const [openRowVendorId, setOpenRowVendorId] = useState(null);
+  const [availableVendors, setAvailableVendors] = useState([]);
+  const [validationErrors, setValidationErrors] = useState([]);
+  const [invalidHeaders, setInvalidHeaders] = useState(new Set());
+  const [selectedRowIds, setSelectedRowIds] = useState(new Set());
+  const [duplicateRowIds, setDuplicateRowIds] = useState(new Set());
+  const [showConfirmUpload, setShowConfirmUpload] = useState(false);
+  const [rowVendorSearchTerm, setRowVendorSearchTerm] = useState("");
+  const [showAddVendorModal, setShowAddVendorModal] = useState(false);
+  const [showMappingWarning, setShowMappingWarning] = useState(false);
+  const [bulkVendorSearchTerm, setBulkVendorSearchTerm] = useState("");
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [addVendorTargetRowId, setAddVendorTargetRowId] = useState(null);
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false);
+  const [showAssociationWarning, setShowAssociationWarning] = useState(false);
+  const [isBulkVendorDropdownOpen, setIsBulkVendorDropdownOpen] = useState(false);
+  const [rowDropdownPosition, setRowDropdownPosition] = useState({ top: 0, left: 0 });
+  const [invalidAssociationRowIds, setInvalidAssociationRowIds] = useState(new Set());
 
   const headers = useMemo(() => {
     if (!parsedData?.headers?.length) return [];
@@ -200,6 +207,71 @@ export default function UploadSubscriptionModal({
         .filter(Boolean),
     [availableVendors]
   );
+
+  const filteredBulkVendorOptions = useMemo(() => {
+    const term = bulkVendorSearchTerm.trim().toLowerCase();
+    if (!term) return vendorOptions;
+    return vendorOptions.filter((option) => option.label.toLowerCase().includes(term));
+  }, [vendorOptions, bulkVendorSearchTerm]);
+
+  const filteredRowVendorOptions = useMemo(() => {
+    const term = rowVendorSearchTerm.trim().toLowerCase();
+    if (!term) return vendorOptions;
+    return vendorOptions.filter((option) => option.label.toLowerCase().includes(term));
+  }, [vendorOptions, rowVendorSearchTerm]);
+
+  const handleBulkVendorSelect = (option) => {
+    const value = option.label?.trim() || "";
+    setBulkVendor(value);
+    setIsBulkVendorDropdownOpen(false);
+    setBulkVendorSearchTerm("");
+    if (!value || selectedRowIds.size === 0) return;
+    const match = availableVendors.find(
+      (vendor) => getVendorLabel(vendor).toLowerCase() === value.toLowerCase()
+    );
+    const vendorId = match ? getVendorId(match) : null;
+    setActivityRows((prev) =>
+      prev.map((r) => (selectedRowIds.has(r.id) ? { ...r, vendor: value, vendorId } : r))
+    );
+    if (vendorId) {
+      setInvalidAssociationRowIds((prev) => {
+        const next = new Set(prev);
+        selectedRowIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!isBulkVendorDropdownOpen) return;
+    const handleClickOutside = (event) => {
+      if (bulkVendorDropdownRef.current && !bulkVendorDropdownRef.current.contains(event.target)) {
+        setIsBulkVendorDropdownOpen(false);
+        setBulkVendorSearchTerm("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isBulkVendorDropdownOpen]);
+
+  useEffect(() => {
+    if (isBulkVendorDropdownOpen && bulkVendorSearchInputRef.current) {
+      bulkVendorSearchInputRef.current.focus();
+    }
+  }, [isBulkVendorDropdownOpen]);
+
+  useEffect(() => {
+    if (!openRowVendorId) return;
+    const handleClickOutside = (event) => {
+      const container = event.target.closest(`[data-row-vendor-dropdown="${openRowVendorId}"]`);
+      if (!container) {
+        setOpenRowVendorId(null);
+        setRowVendorSearchTerm("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [openRowVendorId]);
 
   const crmToCsvMap = useMemo(() => {
     const mapping = {};
@@ -622,7 +694,7 @@ export default function UploadSubscriptionModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={handleClose} aria-hidden />
       <div
-        className="relative w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl border border-[#e9ecef] bg-white shadow-xl"
+        className="relative w-full max-w-4xl h-[80vh] flex flex-col rounded-2xl border border-[#e9ecef] bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -689,7 +761,7 @@ export default function UploadSubscriptionModal({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-auto px-6 py-6">
+        <div className={`flex-1 px-6 py-6 ${step === 2 ? "overflow-y-auto" : ""}`}>
           {step === 2 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
               {headers.map((csvHeader) => (
@@ -722,105 +794,219 @@ export default function UploadSubscriptionModal({
 
           {step === 3 && (
             <div className="space-y-4">
-              <div className="flex justify-end">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    list="upload-vendor-options"
-                    placeholder={vendorsLoading ? "Loading vendors..." : "Search vendor"}
-                    className="px-3 py-2 border border-[#e9ecef] rounded-lg w-56 text-sm text-[#172B4D] bg-white focus:ring-2 focus:ring-[#172B4D]/20 focus:border-[#172B4D] outline-none"
-                    value={bulkVendor}
-                    onChange={(e) => setBulkVendor(e.target.value)}
-                    disabled={vendorsLoading}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleBulkVendorApply}
-                    className="text-sm font-medium text-[#172B4D] border border-[#172B4D] px-3 py-2 rounded-lg hover:bg-[#f6f7fb] transition-colors"
-                  >
-                    -- Select Vendor for Selected Rows --
-                  </button>
-                </div>
-              </div>
-              <datalist id="upload-vendor-options">
-                {vendorOptions.map((option) => (
-                  <option key={option.key} value={option.label} />
-                ))}
-              </datalist>
-              <div className="border border-[#e9ecef] rounded-xl overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-[#f6f7fb] border-b border-[#e9ecef]">
-                      <th className="w-10 py-3 px-3 text-left font-semibold text-[#172B4D]"></th>
-                      <th className="py-3 px-3 text-left font-semibold text-[#172B4D]">#</th>
-                      <th className="py-3 px-3 text-left font-semibold text-[#172B4D]">
-                        Activity Line Description
-                      </th>
-                      <th className="py-3 px-3 text-left font-semibold text-[#172B4D]">
-                        Select Vendor
-                      </th>
-                      <th className="w-12 py-3 px-3 text-left font-semibold text-[#172B4D]">
-                        Delete
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activityRows.map((row) => (
-                      <tr
-                        key={row.id}
-                        className={`border-b border-[#e9ecef] last:border-0 hover:bg-[#f6f7fb]/50 ${
-                          duplicateRowIds.has(row.id) ? "bg-red-50" : ""
-                        }`}
+              {activityRows.length > 1 && (
+                <div className="flex justify-end">
+                  <div className="flex items-center gap-2">
+                    <div ref={bulkVendorDropdownRef} className="relative w-56">
+                      <button
+                        type="button"
+                        onClick={() => setIsBulkVendorDropdownOpen((prev) => !prev)}
+                        className="flex w-full items-center justify-between rounded-lg border border-[#e9ecef] bg-white px-3 py-2 text-sm text-[#172B4D] focus:ring-2 focus:ring-[#172B4D]/20 focus:border-[#172B4D] outline-none"
+                        disabled={vendorsLoading}
                       >
-                        <td className="py-2 px-3">
-                          <input
-                            type="radio"
-                            checked={selectedRowIds.has(row.id)}
-                            onChange={() => toggleRowSelection(row.id)}
-                            className="rounded-full border-[#e9ecef] text-[#172B4D] focus:ring-[#172B4D]"
-                          />
-                        </td>
-                        <td className="py-2 px-3 font-medium text-[#343A40]">{row.index}</td>
-                        <td className="py-2 px-3 text-[#6C757D]">{row.description}</td>
-                        <td className="py-2 px-3">
-                          <div className="flex items-center gap-2">
+                        <span className="truncate">
+                          {bulkVendor ||
+                            (vendorsLoading
+                              ? "Loading vendors..."
+                              : "Select vendor for Selected Rows")}
+                        </span>
+                        <FiChevronDown
+                          className={`ml-2 h-4 w-4 text-[#6C757D] transition-transform duration-200 ${
+                            isBulkVendorDropdownOpen ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
+
+                      {isBulkVendorDropdownOpen && (
+                        <div className="absolute z-50 mt-2 w-full rounded-lg border border-[#e9ecef] bg-white shadow-xl overflow-visible">
+                          <div className="p-3 border-b border-gray-100">
+                            <div className="relative">
+                              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                              <input
+                                ref={bulkVendorSearchInputRef}
+                                type="text"
+                                placeholder="Search vendors..."
+                                value={bulkVendorSearchTerm}
+                                onChange={(e) => setBulkVendorSearchTerm(e.target.value)}
+                                className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#172B4D]/20 focus:border-[#172B4D] outline-none"
+                              />
+                            </div>
+                          </div>
+                          <div className="max-h-60 overflow-y-auto">
+                            {filteredBulkVendorOptions.length > 0 ? (
+                              filteredBulkVendorOptions.map((option) => (
+                                <button
+                                  key={option.key}
+                                  type="button"
+                                  onClick={() => handleBulkVendorSelect(option)}
+                                  className={`w-full text-left px-4 py-3 text-xs sm:text-sm hover:bg-gray-50 transition-colors ${
+                                    bulkVendor === option.label
+                                      ? "bg-[#1f2a7c]/5 text-[#1f2a7c] font-medium"
+                                      : "text-gray-700"
+                                  }`}
+                                >
+                                  {option.label}
+                                </button>
+                              ))
+                            ) : (
+                              <div className="px-4 py-6 text-center text-xs sm:text-sm text-gray-500">
+                                No vendors found
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="border border-[#e9ecef] rounded-xl">
+                <div className="max-h-[50vh] overflow-y-auto overflow-x-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 z-10 bg-[#f6f7fb]">
+                      <tr className="border-b border-[#e9ecef]">
+                        <th className="w-10 py-3 px-3 text-left font-semibold text-[#172B4D]"></th>
+                        <th className="py-3 px-3 text-left font-semibold text-[#172B4D]">#</th>
+                        <th className="py-3 px-3 text-left font-semibold text-[#172B4D]">
+                          Activity Line Description
+                        </th>
+                        <th className="py-3 px-3 text-left font-semibold text-[#172B4D]">
+                          Select Vendor
+                        </th>
+                        <th className="w-12 py-3 px-3 text-left font-semibold text-[#172B4D]">
+                          Delete
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activityRows.map((row) => (
+                        <tr
+                          key={row.id}
+                          className={`border-b border-[#e9ecef] last:border-0 hover:bg-[#f6f7fb]/50 ${
+                            duplicateRowIds.has(row.id) ? "bg-red-50" : ""
+                          }`}
+                        >
+                          <td className="py-2 px-3">
                             <input
-                              type="text"
-                              list="upload-vendor-options"
-                              placeholder={vendorsLoading ? "Loading vendors..." : "Search vendor"}
-                              className={`w-44 min-w-0 px-3 py-1.5 border rounded-lg text-[#172B4D] bg-white focus:ring-2 focus:ring-[#172B4D]/20 focus:border-[#172B4D] outline-none ${
-                                invalidAssociationRowIds.has(row.id)
-                                  ? "border-red-400 ring-1 ring-red-200"
-                                  : "border-[#e9ecef]"
-                              }`}
-                              value={row.vendor}
-                              onChange={(e) => handleVendorChange(row.id, e.target.value)}
-                              disabled={vendorsLoading}
+                              type="radio"
+                              checked={selectedRowIds.has(row.id)}
+                              onChange={() => toggleRowSelection(row.id)}
+                              className="rounded-full border-[#e9ecef] text-[#172B4D] focus:ring-[#172B4D]"
                             />
+                          </td>
+                          <td className="py-2 px-3 font-medium text-[#343A40]">{row.index}</td>
+                          <td className="py-2 px-3 text-[#6C757D]">{row.description}</td>
+                          <td className="py-2 px-3">
+                            <div
+                              className="flex items-center gap-2 relative"
+                              data-row-vendor-dropdown={row.id}
+                            >
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  if (openRowVendorId === row.id) {
+                                    setOpenRowVendorId(null);
+                                  } else {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    setRowDropdownPosition({
+                                      top: rect.bottom + 8,
+                                      left: rect.left,
+                                    });
+                                    setOpenRowVendorId(row.id);
+                                  }
+                                  setRowVendorSearchTerm("");
+                                }}
+                                className={`flex w-44 min-w-0 items-center justify-between px-3 py-1.5 rounded-lg text-[#172B4D] bg-white focus:ring-2 focus:ring-[#172B4D]/20 focus:border-[#172B4D] outline-none ${
+                                  invalidAssociationRowIds.has(row.id)
+                                    ? "border border-red-400 ring-1 ring-red-200"
+                                    : "border border-[#e9ecef]"
+                                }`}
+                                disabled={vendorsLoading}
+                              >
+                                <span className="truncate">
+                                  {row.vendor ||
+                                    (vendorsLoading ? "Loading vendors..." : "Search vendor")}
+                                </span>
+                                <FiChevronDown
+                                  className={`ml-2 h-4 w-4 text-[#6C757D] transition-transform duration-200 ${
+                                    openRowVendorId === row.id ? "rotate-180" : ""
+                                  }`}
+                                />
+                              </button>
+
+                              {openRowVendorId === row.id && (
+                                <div
+                                  className="fixed z-50 w-44 min-w-0 rounded-lg border border-[#e9ecef] bg-white shadow-xl"
+                                  style={{
+                                    top: `${rowDropdownPosition.top}px`,
+                                    left: `${rowDropdownPosition.left}px`,
+                                  }}
+                                >
+                                  <div className="p-3 border-b border-gray-100">
+                                    <div className="relative">
+                                      <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                      <input
+                                        type="text"
+                                        placeholder="Search vendors..."
+                                        value={rowVendorSearchTerm}
+                                        onChange={(e) => setRowVendorSearchTerm(e.target.value)}
+                                        className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#172B4D]/20 focus:border-[#172B4D] outline-none"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="max-h-60 overflow-y-auto">
+                                    {filteredRowVendorOptions.length > 0 ? (
+                                      filteredRowVendorOptions.map((option) => (
+                                        <button
+                                          key={option.key}
+                                          type="button"
+                                          onClick={() => {
+                                            handleVendorChange(row.id, option.label);
+                                            setOpenRowVendorId(null);
+                                            setRowVendorSearchTerm("");
+                                          }}
+                                          className={`w-full text-left px-4 py-3 text-xs sm:text-sm hover:bg-gray-50 transition-colors ${
+                                            row.vendor === option.label
+                                              ? "bg-[#1f2a7c]/5 text-[#1f2a7c] font-medium"
+                                              : "text-gray-700"
+                                          }`}
+                                        >
+                                          {option.label}
+                                        </button>
+                                      ))
+                                    ) : (
+                                      <div className="px-4 py-6 text-center text-xs sm:text-sm text-gray-500">
+                                        No vendors found
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => handleAddVendor(row.id)}
+                                className="p-2 rounded-lg text-[#6C757D] hover:bg-green-50 hover:text-green-600 transition-colors"
+                                aria-label="Add vendor"
+                              >
+                                <FiPlus className="w-4 h-4" strokeWidth={2.5} />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="py-2 px-3">
                             <button
                               type="button"
-                              onClick={() => handleAddVendor(row.id)}
-                              className="p-2 rounded-lg text-[#6C757D] hover:bg-green-50 hover:text-green-600 transition-colors"
-                              aria-label="Add vendor"
+                              onClick={() => handleDeleteRow(row.id)}
+                              className="p-2 rounded-lg text-[#6C757D] hover:bg-red-50 hover:text-red-600 transition-colors"
+                              aria-label="Delete row"
                             >
-                              <FiPlus className="w-4 h-4" strokeWidth={2.5} />
+                              <FiTrash2 className="w-4 h-4" />
                             </button>
-                          </div>
-                        </td>
-                        <td className="py-2 px-3">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteRow(row.id)}
-                            className="p-2 rounded-lg text-[#6C757D] hover:bg-red-50 hover:text-red-600 transition-colors"
-                            aria-label="Delete row"
-                          >
-                            <FiTrash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
