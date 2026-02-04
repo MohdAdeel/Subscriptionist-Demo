@@ -85,8 +85,17 @@ export default function AddNewVendor({ open = false, onBack, onClose, onAddVendo
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-2xl w-full max-w-[520px] shadow-xl">
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50"
+      onClick={(e) => {
+        e.stopPropagation();
+        if (e.target === e.currentTarget) handleClose();
+      }}
+    >
+      <div
+        className="bg-white rounded-2xl w-full max-w-[520px] shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* HEADER */}
         <div className="flex items-center justify-between px-8 py-4 border-b border-gray-100">
           <button

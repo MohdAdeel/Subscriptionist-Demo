@@ -29,16 +29,6 @@ const StandardReports = ({ formatCurrency, formatDate, chartRef: externalChartRe
     });
   };
 
-  //   const formatTopCardValue = (value) => {
-  //   const numericValue =
-  //     value === null || value === undefined ? 0 : Number(value);
-  //   if (Number.isNaN(numericValue)) return "0";
-  //   return numericValue.toLocaleString("en-IN", {
-  //     minimumFractionDigits: 0,
-  //     maximumFractionDigits: 2,
-  //   });
-  // };
-
   const TopCards = useReportsPageStore((state) => state.TopCards);
   const monthlySpendChartData = useReportsPageStore((state) => state.monthlySpendChartData);
   const subscriptionTableData = useReportsPageStore((state) => state.subscriptionTableData);

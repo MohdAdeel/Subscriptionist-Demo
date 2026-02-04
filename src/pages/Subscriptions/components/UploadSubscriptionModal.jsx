@@ -692,9 +692,15 @@ export default function UploadSubscriptionModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50" onClick={handleClose} aria-hidden />
       <div
-        className="relative w-full max-w-4xl h-[80vh] flex flex-col rounded-2xl border border-[#e9ecef] bg-white shadow-xl"
+        className="absolute inset-0 z-0 bg-black/50"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) handleClose();
+        }}
+        aria-hidden
+      />
+      <div
+        className="relative z-10 w-full max-w-4xl h-[80vh] flex flex-col rounded-2xl border border-[#e9ecef] bg-white shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

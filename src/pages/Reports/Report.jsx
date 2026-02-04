@@ -1783,7 +1783,7 @@ const Report = () => {
           onClick={() => setIsFilterOpen(false)}
         >
           <div
-            className="absolute top-60 left-75 w-full max-w-sm rounded-2xl bg-white p-5 shadow-[0_20px_40px_-18px_rgba(17,24,39,0.35)] ring-1 ring-black/5"
+            className="absolute top-60 left-70 w-full max-w-sm rounded-2xl bg-white p-5 shadow-[0_20px_40px_-18px_rgba(17,24,39,0.35)] ring-1 ring-black/5"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-center justify-between">
