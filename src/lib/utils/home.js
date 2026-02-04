@@ -20,6 +20,23 @@ const BUDGETS_API_URL =
 const currentYear = currentDate.getFullYear();
 let startDateForBudget = new Date(currentYear, 0, 1);
 let endDateForBudget = new Date(currentYear, 11, 31);
+
+function resetHomeProcessingState() {
+  SubscriptionJSonBackup = [];
+  SubscriptionJSon = [];
+  monthlySubscription = [];
+  renewalArray = [];
+  monthlyDepartments = [];
+  BugetDeprartment = [];
+  vendorProfileCounts = [];
+
+  currentDate = new Date();
+  startDateforDep = new Date(currentDate.getFullYear(), startMonthIndex, 1);
+  endDatefordep = new Date(currentDate.getFullYear(), endMonthIndex + 1, 0);
+  const year = currentDate.getFullYear();
+  startDateForBudget = new Date(year, 0, 1);
+  endDateForBudget = new Date(year, 11, 31);
+}
 /**
  * Process activity lines data for the Home page.
  * Call this when on Home and data is available (e.g. from useActivityLines().data).
@@ -29,6 +46,8 @@ export function handleDataProcessing(originalData) {
     console.warn("[Home] No data to process");
     return;
   }
+
+  resetHomeProcessingState();
 
   const transformedData = groupByVendorName(originalData.lines);
 

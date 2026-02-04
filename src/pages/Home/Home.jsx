@@ -655,6 +655,15 @@ const Home = () => {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: {
+          duration: 800,
+          easing: "easeOutQuart",
+        },
+        animations: {
+          y: {
+            from: 0,
+          },
+        },
         plugins: {
           tooltip: {
             position: "nearest",
