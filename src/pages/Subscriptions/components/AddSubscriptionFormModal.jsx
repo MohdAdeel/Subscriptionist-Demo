@@ -270,7 +270,6 @@ export default function AddSubscriptionFormModal({
         return;
       }
       await addMutation.mutateAsync(payload);
-      showSuccess("Subscription added successfully.");
       onClose?.();
       onSuccess?.();
     } catch (err) {

@@ -34,18 +34,25 @@ const Menu = () => {
         <div className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"}`}>
           {!isCollapsed && (
             <div className="flex items-center gap-2">
-              <img src={Logo} alt="Logo" className="h-12 w-12" />
-              <span className="text-md font-semibold text-white">Subscriptionist</span>
+              <img src={Logo} alt="Logo" className="h-8 w-8" />
+              <span className="text-sm font-semibold text-white">Subscriptionist</span>
             </div>
           )}
-          <img
-            src={ToggleIcon}
-            alt="Toggle"
-            className={`h-6 w-6 cursor-pointer transition-transform duration-300 ease-in-out ${
-              isCollapsed ? "rotate-180" : ""
-            }`}
+          <button
+            type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
-          />
+            className="group relative flex items-center justify-center rounded-xl p-1.5 outline-none transition-all duration-300 ease-out focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#000435] hover:scale-110 active:scale-95"
+            aria-label={isCollapsed ? "Expand menu" : "Collapse menu"}
+          >
+            <span className="absolute inset-0 rounded-xl bg-white/0 ring-2 ring-transparent transition-all duration-300 ease-out group-hover:bg-white/10 group-hover:ring-white/20 group-hover:scale-125 group-active:bg-white/5 group-active:ring-white/10" />
+            <img
+              src={ToggleIcon}
+              alt="Toggle"
+              className={`relative z-10 h-6 w-6 cursor-pointer transition-all duration-300 ease-out drop-shadow-sm group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] ${
+                isCollapsed ? "rotate-180" : ""
+              }`}
+            />
+          </button>
         </div>
 
         {/* Menu */}

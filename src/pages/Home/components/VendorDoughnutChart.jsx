@@ -69,6 +69,26 @@ const VendorDoughnutChart = ({
 
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm border border-[#EEF2F6]">
+      <style>{`
+        .vendor-chart-legend-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: #1D225D #EEF2F6;
+        }
+        .vendor-chart-legend-scroll::-webkit-scrollbar {
+          width: 6px;
+        }
+        .vendor-chart-legend-scroll::-webkit-scrollbar-track {
+          background: #EEF2F6;
+          border-radius: 3px;
+        }
+        .vendor-chart-legend-scroll::-webkit-scrollbar-thumb {
+          background: #1D225D;
+          border-radius: 3px;
+        }
+        .vendor-chart-legend-scroll::-webkit-scrollbar-thumb:hover {
+          background: #15195a;
+        }
+      `}</style>
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[#111827]">Vendors</h3>
         <div className="relative">
@@ -93,7 +113,7 @@ const VendorDoughnutChart = ({
             <div className="h-48 w-48">
               <canvas ref={chartRef} />
             </div>
-            <div className="max-h-50 overflow-y-auto pr-2 space-y-2">
+            <div className="vendor-chart-legend-scroll max-h-50 overflow-y-auto pr-2 space-y-2">
               {vendorBreakdown.map((vendor, index) => (
                 <div key={vendor.label} className="flex items-center gap-6 text-xs text-[#344054]">
                   <span
