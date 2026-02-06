@@ -1,16 +1,60 @@
-# React + Vite
+# Subscriptionist Demo
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Subscription management dashboard for tracking renewals, costs, vendors, and reports.
 
-Currently, two official plugins are available:
+## Tech stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- React 19 + Vite
+- Zustand (state)
+- React Query (data fetching)
+- Chart.js (charts)
+- Tailwind CSS (styling)
 
-## React Compiler
+## Prerequisites
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Node.js 18+ and npm
 
-## Expanding the ESLint configuration
+## Getting started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. Install deps:
+   - `npm install`
+2. Create `.env` (see Environment below).
+3. Start dev server:
+   - `npm run dev`
+
+## Environment
+
+Create `.env` in the project root (do not commit secrets):
+
+```
+VITE_API_BASE_URL=https://your-api-domain/api
+VITE_API_KEY=your-functions-key
+VITE_AZURE_B2C_API_URL=https://your-b2c-endpoint
+```
+
+## Scripts
+
+- `npm run dev` start local dev server
+- `npm run build` build for production
+- `npm run preview` preview production build
+- `npm run lint` run ESLint
+
+## Project structure
+
+- `src/pages/` page-level screens
+- `src/components/` shared UI components
+- `src/lib/api/` API clients
+- `src/lib/utils/` data processing helpers
+- `src/stores/` Zustand stores
+- `src/routes/` route definitions
+
+## Deployment notes
+
+- Build output is in `dist/`
+- Configure the environment variables in your hosting provider
+- Do not ship API keys in the client bundle
+
+## Troubleshooting
+
+- Blank data or charts usually means the API base URL or key is invalid.
+- If builds fail, re-run `npm install` and check Node version.
