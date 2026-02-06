@@ -54,7 +54,11 @@ const VENDOR_CHART_COLORS = [
 
 const DEPARTMENT_CHART_COLORS = ["#E1DBFE", "#BFF1FF", "#E1FFBB", "#EAECF0", "#CFE1FF", "#BFF1FF"];
 
-const UPCOMING_LABELS = ["Feb 2026", "Mar 2026", "Apr 2026", "May 2026", "Jun 2026", "Jul 2026"];
+const UPCOMING_RENEWAL_COLORS = ["#DCEBFF", "#C8DDFF", "#B8D1FF", "#9CC2FF", "#8CB7FF", "#7EAEFF"];
+
+const UPCOMING_WINDOW_MONTHS = 6;
+const UPCOMING_HALF_FIRST = 0;
+const UPCOMING_HALF_LAST = 1;
 
 const MONTHLY_WINDOW = 7;
 
@@ -114,6 +118,7 @@ const Home = () => {
   const monthlySpendChartData = useHomeStore((state) => state.monthlySpendChartData) ?? [];
   const departmentSpendChartData = useHomeStore((state) => state.departmentSpendChartData) ?? [];
   const ActualVsBudgetData = useHomeStore((state) => state.ActualVsBudgetData) ?? [];
+  const upcomingRenewalRecords = useHomeStore((state) => state.upcomingRenewalRecords) ?? [];
   const [timelineRange, setTimelineRange] = useState("12 Months");
   const [hoveredInfo, setHoveredInfo] = useState(null);
   const [maxLabelLength, setMaxLabelLength] = useState(() => getMaxLabelLength());
@@ -125,6 +130,11 @@ const Home = () => {
     return Math.min(currentMonth, 12 - MONTHLY_WINDOW);
   });
   const [departmentYear, setDepartmentYear] = useState(() => new Date().getFullYear());
+  const [upcomingRenewalYear, setUpcomingRenewalYear] = useState(() => new Date().getFullYear());
+  const [upcomingRenewalHalf, setUpcomingRenewalHalf] = useState(() =>
+    new Date().getMonth() < 6 ? UPCOMING_HALF_FIRST : UPCOMING_HALF_LAST
+  );
+  const [selectedUpcomingRenewalKey, setSelectedUpcomingRenewalKey] = useState(null);
 
   const vendorsChartRef = useRef(null);
   const monthlySpendChartRef = useRef(null);
@@ -163,6 +173,16 @@ const Home = () => {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
+
+  const formatShortDate = (value) => {
+    const date = toSafeDate(value);
+    if (!date) return "N/A";
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
 
   const kpiCards = [
     {
@@ -351,8 +371,43 @@ const Home = () => {
       hasValidData,
     };
   }, [actualVsBudgetRecords, departmentLabelLength]);
+
+  const upcomingRenewalSeries = useMemo(() => {
+    const byMonth = new Map();
+    const records = Array.isArray(upcomingRenewalRecords) ? upcomingRenewalRecords : [];
+    const year = upcomingRenewalYear ?? new Date().getFullYear();
+    const startMonth = upcomingRenewalHalf === UPCOMING_HALF_FIRST ? 0 : UPCOMING_WINDOW_MONTHS;
+    records.forEach((record) => {
+      const date = toSafeDate(record.SubscriptionStartDate);
+      if (!date || date.getFullYear() !== year) return;
+      const key = getMonthKey(date);
+      if (byMonth.has(key)) {
+        byMonth.get(key).push(record);
+      } else {
+        byMonth.set(key, [record]);
+      }
+    });
+
+    const labels = [];
+    const values = [];
+    const monthKeys = [];
+
+    for (let i = 0; i < UPCOMING_WINDOW_MONTHS; i += 1) {
+      const date = new Date(year, startMonth + i, 1);
+      const label = date.toLocaleString("default", { month: "short", year: "numeric" });
+      const key = getMonthKey(date);
+      labels.push(breakLongMonthNames(label, maxLabelLength));
+      values.push(byMonth.get(key)?.length ?? 0);
+      monthKeys.push(key);
+    }
+
+    const maxValue = values.length > 0 ? Math.max(...values) : 0;
+    const stepSize = Math.max(1, Math.ceil(maxValue / 6));
+
+    return { labels, values, monthKeys, byMonth, maxValue, stepSize };
+  }, [upcomingRenewalRecords, upcomingRenewalYear, upcomingRenewalHalf, maxLabelLength]);
+
   const vendorProfile = useMemo(() => [{ label: "Strategic", value: 1 }], []);
-  const upcomingRenewal = useMemo(() => [1, 1, 1, 1, 1, 1], []);
 
   const upcomingTasks = useMemo(
     () => [
@@ -379,9 +434,56 @@ const Home = () => {
   const hasDepartmentSpend = !isLoading;
   const hasActualVsBudget = !isLoading;
   const hasVendorProfile = !isLoading && vendorProfile.length > 0;
-  const hasUpcomingRenewal = !isLoading && upcomingRenewal.length > 0;
+  const hasUpcomingRenewal = !isLoading;
   const hasUpcomingTasks = !isLoading && upcomingTasks.length > 0;
   const hasOverdueTasks = !isLoading && overdueTasks.length > 0;
+  const upcomingRenewalYearLabel = `FY${String(upcomingRenewalYear).slice(-2)}`;
+  const upcomingRenewalHalfLabel =
+    upcomingRenewalHalf === UPCOMING_HALF_FIRST ? "Jan-Jun" : "Jul-Dec";
+  const upcomingRenewalPeriodLabel = `${upcomingRenewalYearLabel} · ${upcomingRenewalHalfLabel}`;
+
+  const handleUpcomingRenewalPrev = () => {
+    if (upcomingRenewalHalf === UPCOMING_HALF_LAST) {
+      setUpcomingRenewalHalf(UPCOMING_HALF_FIRST);
+    } else {
+      setUpcomingRenewalYear((prev) => prev - 1);
+      setUpcomingRenewalHalf(UPCOMING_HALF_LAST);
+    }
+  };
+
+  const handleUpcomingRenewalNext = () => {
+    if (upcomingRenewalHalf === UPCOMING_HALF_FIRST) {
+      setUpcomingRenewalHalf(UPCOMING_HALF_LAST);
+    } else {
+      setUpcomingRenewalYear((prev) => prev + 1);
+      setUpcomingRenewalHalf(UPCOMING_HALF_FIRST);
+    }
+  };
+
+  const selectedUpcomingRenewalLabel = useMemo(() => {
+    if (!selectedUpcomingRenewalKey) return "";
+    const [year, month] = selectedUpcomingRenewalKey.split("-").map(Number);
+    if (Number.isNaN(year) || Number.isNaN(month)) return "";
+    const date = new Date(year, month, 1);
+    return date.toLocaleString("default", { month: "short", year: "numeric" });
+  }, [selectedUpcomingRenewalKey]);
+
+  const selectedUpcomingRenewalRows = useMemo(() => {
+    if (!selectedUpcomingRenewalKey) return [];
+    const rows = upcomingRenewalSeries.byMonth.get(selectedUpcomingRenewalKey) ?? [];
+    return [...rows].sort((a, b) => {
+      const aDate = toSafeDate(a.SubscriptionStartDate)?.getTime() ?? 0;
+      const bDate = toSafeDate(b.SubscriptionStartDate)?.getTime() ?? 0;
+      return aDate - bDate;
+    });
+  }, [selectedUpcomingRenewalKey, upcomingRenewalSeries]);
+
+  useEffect(() => {
+    if (!selectedUpcomingRenewalKey) return;
+    if (!upcomingRenewalSeries.monthKeys.includes(selectedUpcomingRenewalKey)) {
+      setSelectedUpcomingRenewalKey(null);
+    }
+  }, [selectedUpcomingRenewalKey, upcomingRenewalSeries.monthKeys]);
   const maxMonthlyStartMonthIndex = Math.max(0, 12 - MONTHLY_WINDOW);
   const canMonthlyPrev = monthlyStartMonthIndex > 0;
   const canMonthlyNext = monthlyStartMonthIndex < maxMonthlyStartMonthIndex;
@@ -781,19 +883,31 @@ const Home = () => {
   }, [vendorProfile, isLoading]);
 
   useEffect(() => {
-    if (isLoading || !upcomingRenewalChartRef.current) return;
+    if (isLoading || !upcomingRenewalChartRef.current || selectedUpcomingRenewalKey) {
+      if (upcomingRenewalChartInstanceRef.current) {
+        upcomingRenewalChartInstanceRef.current.destroy();
+        upcomingRenewalChartInstanceRef.current = null;
+      }
+      return;
+    }
     const ctx = upcomingRenewalChartRef.current.getContext("2d");
     if (upcomingRenewalChartInstanceRef.current) {
       upcomingRenewalChartInstanceRef.current.destroy();
     }
+    const barColors = upcomingRenewalSeries.values.map(
+      (_, idx) => UPCOMING_RENEWAL_COLORS[idx % UPCOMING_RENEWAL_COLORS.length]
+    );
+    const suggestedMax = Math.max(1, Math.ceil(upcomingRenewalSeries.maxValue * 1.1));
     upcomingRenewalChartInstanceRef.current = new Chart(ctx, {
       type: "bar",
       data: {
-        labels: UPCOMING_LABELS,
+        labels: upcomingRenewalSeries.labels,
         datasets: [
           {
-            data: upcomingRenewal,
-            backgroundColor: ["#DCEBFF", "#C8DDFF", "#B8D1FF", "#9CC2FF", "#8CB7FF", "#7EAEFF"],
+            data: upcomingRenewalSeries.values,
+            backgroundColor: barColors,
+            hoverBackgroundColor: barColors,
+            borderWidth: 0,
             borderRadius: 10,
             maxBarThickness: 48,
           },
@@ -804,13 +918,52 @@ const Home = () => {
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          x: { grid: { display: false }, ticks: { color: "#667085" } },
-          y: {
-            min: 0,
-            max: 2,
-            ticks: { stepSize: 1, color: "#667085" },
-            grid: { color: "#EEF2F6" },
+          x: {
+            grid: { display: false },
+            ticks: {
+              color: "#000000",
+              font: { size: 12 },
+              maxRotation: 0,
+              minRotation: 0,
+              callback: function (value) {
+                const label = this.getLabelForValue(value);
+                return typeof label === "string" ? label.split("\n") : label;
+              },
+            },
           },
+          y: {
+            ticks: {
+              color: "#000000",
+              font: { size: 12 },
+              callback: (value) => Number(value).toLocaleString(),
+              maxTicksLimit: 5,
+              stepSize: upcomingRenewalSeries.stepSize,
+            },
+            grid: {
+              display: true,
+              color: "#EAECF0",
+              borderDash: [5, 5],
+              drawBorder: false,
+              drawTicks: false,
+            },
+            beginAtZero: true,
+            suggestedMin: 0,
+            suggestedMax,
+          },
+        },
+        onHover: (event, elements) => {
+          const target = event?.native?.target;
+          if (target) {
+            target.style.cursor = elements.length ? "pointer" : "default";
+          }
+        },
+        onClick: (event, elements) => {
+          if (!elements?.length) return;
+          const index = elements[0].index;
+          const key = upcomingRenewalSeries.monthKeys[index];
+          if (key) {
+            setSelectedUpcomingRenewalKey(key);
+          }
         },
       },
     });
@@ -820,7 +973,7 @@ const Home = () => {
         upcomingRenewalChartInstanceRef.current = null;
       }
     };
-  }, [upcomingRenewal, isLoading]);
+  }, [upcomingRenewalSeries, isLoading, selectedUpcomingRenewalKey]);
 
   return (
     <div className="w-full p-6 space-y-6">
@@ -1046,18 +1199,86 @@ const Home = () => {
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold text-[#111827]">Upcoming Renewal Per Month</h3>
             <div className="flex items-center gap-2 text-xs text-[#98A2B3]">
-              <button className="h-6 w-6 rounded-full border border-[#E4E7EC] text-xs">&lt;</button>
-              <span>FY26</span>
-              <button className="h-6 w-6 rounded-full border border-[#E4E7EC] text-xs">&gt;</button>
+              <button
+                className="h-6 w-6 rounded-full border border-[#E4E7EC] text-xs"
+                onClick={handleUpcomingRenewalPrev}
+              >
+                &lt;
+              </button>
+              <span>{upcomingRenewalPeriodLabel}</span>
+              <button
+                className="h-6 w-6 rounded-full border border-[#E4E7EC] text-xs"
+                onClick={handleUpcomingRenewalNext}
+              >
+                &gt;
+              </button>
             </div>
           </div>
-          <div className="mt-4 h-56">
-            {hasUpcomingRenewal ? (
-              <canvas ref={upcomingRenewalChartRef} />
-            ) : (
-              <BarSkeleton bars={6} />
-            )}
-          </div>
+          {selectedUpcomingRenewalKey ? (
+            <div className="mt-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-[#111827]">
+                  Renewals for {selectedUpcomingRenewalLabel}
+                </h4>
+                <button
+                  type="button"
+                  className="rounded-full bg-[#1D4ED8] px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-[#1E40AF]"
+                  onClick={() => setSelectedUpcomingRenewalKey(null)}
+                >
+                  Back to chart
+                </button>
+              </div>
+              <div className="mt-3 max-h-56 overflow-y-auto overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-[#F2F4F7] sticky top-0">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-semibold text-[#667085]">Name</th>
+                      <th className="px-3 py-2 text-left font-semibold text-[#667085]">Due Date</th>
+                      <th className="px-3 py-2 text-left font-semibold text-[#667085]">
+                        Frequency
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#EEF2F6]">
+                    {selectedUpcomingRenewalRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="px-3 py-3 text-center text-[#98A2B3]">
+                          No renewals in this month.
+                        </td>
+                      </tr>
+                    ) : (
+                      selectedUpcomingRenewalRows.map((row, idx) => (
+                        <tr key={`${row.SubscriptionName || row.VendorName}-${idx}`}>
+                          <td className="px-3 py-2 text-[#101828]">
+                            {row.SubscriptionName || row.VendorName || "Unknown"}
+                          </td>
+                          <td className="px-3 py-2 text-[#475467]">
+                            {formatShortDate(row.SubscriptionStartDate)}
+                          </td>
+                          <td className="px-3 py-2 text-[#475467]">
+                            {row.SubscriptionFrequency || "N/A"}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="mt-4 h-56">
+                {hasUpcomingRenewal ? (
+                  <canvas ref={upcomingRenewalChartRef} />
+                ) : (
+                  <BarSkeleton bars={6} />
+                )}
+              </div>
+              {hasUpcomingRenewal && (
+                <p className="mt-3 text-xs text-[#98A2B3]">Click a bar to view renewals.</p>
+              )}
+            </>
+          )}
         </div>
       </div>
 

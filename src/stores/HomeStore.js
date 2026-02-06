@@ -55,4 +55,9 @@ export const useHomeStore = create((set) => ({
   ActualVsBudgetData: [],
 
   setActualVsBudgetData: (ActualVsBudgetData) => set({ ActualVsBudgetData }),
+
+  /** Upcoming renewal records (expanded occurrences within the window) */
+  upcomingRenewalRecords: [],
+
+  setUpcomingRenewalRecords: (upcomingRenewalRecords) => set({ upcomingRenewalRecords }),
 }));

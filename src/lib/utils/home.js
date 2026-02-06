@@ -13,6 +13,12 @@ var endDatefordep = new Date(currentDate.getFullYear(), endMonthIndex + 1, 0);
 var BugetDeprartment = [];
 var vendorProfileCounts = [];
 var vendorProfileMap = {};
+var monthlyrenewal = [];
+
+var startDateforRenwal = new Date();
+startDateforRenwal.setDate(1);
+var endDateforRenewal = new Date(new Date().setMonth(new Date().getMonth() + 6));
+endDateforRenewal.setDate(0);
 
 const API_KEY = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
 const BUDGETS_API_URL =
@@ -29,6 +35,7 @@ function resetHomeProcessingState() {
   monthlyDepartments = [];
   BugetDeprartment = [];
   vendorProfileCounts = [];
+  monthlyrenewal = [];
 
   currentDate = new Date();
   startDateforDep = new Date(currentDate.getFullYear(), startMonthIndex, 1);
@@ -49,7 +56,17 @@ export function handleDataProcessing(originalData) {
 
   resetHomeProcessingState();
 
-  const transformedData = groupByVendorName(originalData.lines);
+  const lines = Array.isArray(originalData)
+    ? originalData
+    : Array.isArray(originalData.lines)
+      ? originalData.lines
+      : Array.isArray(originalData.ActivityLines)
+        ? originalData.ActivityLines
+        : Array.isArray(originalData.value)
+          ? originalData.value
+          : [];
+
+  const transformedData = groupByVendorName(lines);
 
   SubscriptionJSonBackup = transformedData;
   SubscriptionJSon = JSON.parse(JSON.stringify(SubscriptionJSonBackup));
@@ -62,7 +79,7 @@ export function handleDataProcessing(originalData) {
   setRenewalTimelineCards(renewalResult.upcomingRenewalAmount, renewalResult.renewalTimelineCount);
   ModifyBudgetChartLimit();
   ModifyDepartmentchartLimit();
-  //   ModifyRenewalSubscriptionsWithchartLimit();
+  ModifyRenewalSubscriptionsWithchartLimit();
   countConcludedSubscriptions(SubscriptionJSon);
 }
 
@@ -905,6 +922,7 @@ function processVendorprofiles(filteredSubscriptions) {
   mapVendorProfileNames();
   // setVendorProfileChart();
 }
+
 function mapVendorProfileNames() {
   vendorProfileCounts.forEach((profile) => {
     profile.VendorProfile = vendorProfileMap[profile.VendorProfile];
@@ -926,6 +944,187 @@ function filtermonthlysubsinRangeforDepartment() {
     }
   });
   monthlyDepartments = tempdepartments;
+}
+
+function ModifyRenewalSubscriptionsWithchartLimit() {
+  "use strict"; // Enable strict mode
+
+  monthlyrenewal = [];
+
+  // Remove duplicate objects based on their time properties
+  removeObjectsWithSameTime(SubscriptionJSon);
+
+  // Iterate through each subscription array in SubscriptionJSon
+  SubscriptionJSon.forEach(function (subArray) {
+    // Loop through each record in the subArray
+    subArray.forEach(function (record) {
+      // Process only if SubscriptionFrequency is valid and not empty
+      if (record.SubscriptionFrequency && record.SubscriptionFrequency.trim() !== "") {
+        // Check if the subscription frequency is monthly or contains 'Months'
+        if (
+          record.SubscriptionFrequency.includes("Monthly") ||
+          record.SubscriptionFrequency.includes("Months")
+        ) {
+          generateSimilarRecordsbyMonthforRenewal(record);
+        }
+        // Check if the subscription frequency is yearly or contains 'Years'
+        else if (
+          record.SubscriptionFrequency.includes("Yearly") ||
+          record.SubscriptionFrequency.includes("Years")
+        ) {
+          generateSimilarRecordsbyYearforRenewal(record);
+        }
+      }
+    });
+  });
+
+  // Merge all records by month for renewal processing
+  mergeRecordsByMonthforRenewal();
+}
+
+function mergeRecordsByMonthforRenewal() {
+  // Create an object to store merged records
+
+  filtermonthlysubsinRangeforRenewal();
+
+  // setrenewalchart();
+}
+
+function filtermonthlysubsinRangeforRenewal() {
+  const startDate = new Date(startDateforRenwal);
+  const endDate = new Date(endDateforRenewal); // Set end date to last day of end month
+  const allRenewals = [...monthlyrenewal];
+  var tempMonthly = [];
+
+  monthlyrenewal.forEach(function (record) {
+    var subscriptionstartDate = new Date(record.SubscriptionStartDate);
+
+    if (subscriptionstartDate >= startDate && subscriptionstartDate <= endDate) {
+      // Keep the record if the date is within the specified range
+      tempMonthly.push(record);
+    }
+  });
+
+  monthlyrenewal = tempMonthly;
+  console.log("here is the monthly renewal", monthlyrenewal);
+
+  const { setUpcomingRenewalRecords } = useHomeStore.getState();
+  setUpcomingRenewalRecords(allRenewals);
+}
+
+function generateSimilarRecordsbyMonthforRenewal(record) {
+  var endDate = new Date(record.SubscriptionEndDate);
+  var startDate = new Date(record.SubscriptionStartDate);
+  // var LastDueDate = new Date(record.LastDueDate);
+
+  var frequency = parseFrequency(record.SubscriptionFrequency);
+
+  // Check if frequency is a valid number
+  if (isNaN(frequency) || frequency == 0) {
+    return [];
+  }
+  if (startDate.getFullYear() === 1) {
+    return [];
+  }
+  // var currentdate= new Date()    ;
+  var startYear = startDate.getFullYear();
+  var startMonth = startDate.getMonth();
+  var endYear = endDate.getFullYear();
+  var endMonth = endDate.getMonth();
+  var monthDifference = (endYear - startYear) * 12 + (endMonth - startMonth);
+
+  var tempdate = new Date(startDate);
+  var endDateForComparison = new Date(startDate);
+  endDateForComparison.setMonth(endDateForComparison.getMonth() + monthDifference);
+  endDateForComparison.setDate(endDate.getDate());
+
+  // Loop from startDate to endDate with frequency as the increment
+  while (startDate <= endDateForComparison) {
+    if (
+      startDate.getFullYear() === endDateForComparison.getFullYear() &&
+      startDate.getMonth() === endDateForComparison.getMonth()
+    ) {
+      break; // Exit loop if year and month match
+    }
+
+    var subscriptionAmount =
+      record.SubscriptionContractAmount !== null ? record.SubscriptionContractAmount.Value : 0;
+
+    var newRecord = {
+      SubscriptionStartDate: tempdate, // Convert date to ISO format
+      SubscriptionEndDate: record.SubscriptionEndDate,
+      SubscriptionFrequency: record.SubscriptionFrequency, // Append the frequency to the original value
+      SubscriptionContractAmount: {
+        Value: subscriptionAmount,
+      },
+      VendorName: record.VendorName,
+      SubscriptionName: record.SubscriptionName,
+      DepartmentNames: {
+        Name: record.DepartmentNames.Name,
+      },
+    };
+
+    monthlyrenewal.push(newRecord);
+
+    startDate.setMonth(startDate.getMonth() + frequency);
+    tempdate = new Date(startDate);
+  }
+}
+
+function generateSimilarRecordsbyYearforRenewal(record) {
+  var LastDueDate = new Date(record.LastDueDate);
+  var NextDueeDate = new Date(record.NextDueDate);
+  var endDate = new Date(record.SubscriptionEndDate);
+  var startDate = new Date(record.SubscriptionStartDate);
+
+  var frequency = parseFrequency(record.SubscriptionFrequency);
+
+  // Check if frequency is a valid number
+  if (isNaN(frequency) || frequency == 0) {
+    return [];
+  }
+
+  if (startDate.getFullYear() === 1) {
+    return [];
+  }
+
+  var currentdate = new Date();
+  var startYear = startDate.getFullYear();
+  var startMonth = startDate.getMonth();
+  var endYear = endDate.getFullYear();
+  var endMonth = endDate.getMonth();
+  var yearDifference = endYear - startYear;
+
+  var endDateForComparison = new Date(startDate);
+  endDateForComparison.setFullYear(endDateForComparison.getFullYear() + yearDifference);
+  endDateForComparison.setDate(endDate.getDate());
+  var tempdate = new Date(startDate);
+
+  // Loop from startDate to endDate with frequency as the increment
+  while (startDate.getFullYear() < endDateForComparison.getFullYear()) {
+    var subscriptionAmount =
+      record.SubscriptionContractAmount !== null ? record.SubscriptionContractAmount.Value : 0;
+
+    var newRecord = {
+      SubscriptionStartDate: tempdate, // Convert date to ISO format
+      SubscriptionEndDate: record.SubscriptionEndDate,
+      SubscriptionFrequency: record.SubscriptionFrequency, // Append the frequency to the original value
+      SubscriptionContractAmount: {
+        Value: subscriptionAmount,
+      },
+      VendorName: record.VendorName,
+      SubscriptionName: record.SubscriptionName,
+      DepartmentNames: {
+        Name: record.DepartmentNames.Name,
+      },
+    };
+
+    monthlyrenewal.push(newRecord);
+
+    startDate.setFullYear(startDate.getFullYear() + frequency);
+
+    tempdate = new Date(startDate);
+  }
 }
 
 function groupByVendorName(data) {
