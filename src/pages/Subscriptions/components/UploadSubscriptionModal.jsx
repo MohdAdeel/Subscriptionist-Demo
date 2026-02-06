@@ -1,8 +1,5 @@
-import {
-  addSubscription,
-  fetchVendorList,
-  checkSubscriptionExistance,
-} from "../../../lib/api/Subscription/subscriptions";
+import { addSubscription } from "../../../lib/api/Subscription/subscriptions";
+import { useVendorList, checkSubscriptionExistance } from "../../../hooks/useSubscriptions";
 import AddNewVendor from "./AddNewVendor";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { usePopup } from "../../../components/Popup";
@@ -86,11 +83,18 @@ export default function UploadSubscriptionModal({
   open = false,
   onClose,
   parsedData = null,
-  vendors = [],
+  vendors: vendorsProp = [],
   departments = [],
   onUploadComplete,
 }) {
   const { showError, showSuccess, showWarning } = usePopup();
+  const { data: vendorListData, isLoading: vendorsLoadingFromHook } = useVendorList(undefined, {
+    enabled: open && vendorsProp?.length === 0,
+  });
+  const rawFromHook =
+    vendorListData?.value ?? (Array.isArray(vendorListData) ? vendorListData : []);
+  const vendors = vendorsProp?.length > 0 ? vendorsProp : normalizeVendorList(rawFromHook);
+  const vendorsLoading = vendorsProp?.length === 0 ? vendorsLoadingFromHook : false;
   const [step, setStep] = useState(2);
   const bulkVendorDropdownRef = useRef(null);
   const bulkVendorSearchInputRef = useRef(null);
@@ -98,7 +102,6 @@ export default function UploadSubscriptionModal({
   const [fieldMapping, setFieldMapping] = useState({});
   const [activityRows, setActivityRows] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [vendorsLoading, setVendorsLoading] = useState(false);
   const [openRowVendorId, setOpenRowVendorId] = useState(null);
   const [availableVendors, setAvailableVendors] = useState([]);
   const [validationErrors, setValidationErrors] = useState([]);
@@ -158,39 +161,9 @@ export default function UploadSubscriptionModal({
 
   useEffect(() => {
     if (!open || step !== 3) return;
-    const normalizedPropVendors = normalizeVendorList(vendors);
-    if (normalizedPropVendors.length > 0) {
-      setAvailableVendors(normalizedPropVendors);
-      return;
-    }
-
-    let cancelled = false;
-    const loadVendors = async () => {
-      setVendorsLoading(true);
-      try {
-        const result = await fetchVendorList();
-        const raw = result?.value ?? [];
-        const normalized = normalizeVendorList(raw);
-        if (!cancelled) {
-          setAvailableVendors(normalized);
-        }
-      } catch (err) {
-        console.error("Fetch vendor list failed:", err);
-        if (!cancelled) {
-          showError(err?.message ?? "Failed to load vendors", "Upload failed");
-        }
-      } finally {
-        if (!cancelled) {
-          setVendorsLoading(false);
-        }
-      }
-    };
-
-    loadVendors();
-    return () => {
-      cancelled = true;
-    };
-  }, [open, step, vendors, showError]);
+    const normalized = normalizeVendorList(vendors);
+    setAvailableVendors(normalized);
+  }, [open, step, vendors]);
 
   const vendorOptions = useMemo(
     () =>
@@ -675,7 +648,6 @@ export default function UploadSubscriptionModal({
     setShowValidationModal(false);
     setShowMappingWarning(false);
     setAvailableVendors([]);
-    setVendorsLoading(false);
     setShowAddVendorModal(false);
     setAddVendorTargetRowId(null);
     setInvalidAssociationRowIds(new Set());

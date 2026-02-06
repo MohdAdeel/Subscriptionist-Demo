@@ -2,13 +2,14 @@ import { useState } from "react";
 import { FiX, FiChevronLeft } from "react-icons/fi";
 import { usePopup } from "../../../components/Popup";
 import {
+  useCreateVendorRecordMutation,
   checkVendorExistance,
-  createVendorRecord,
-} from "../../../lib/api/Subscription/subscriptions";
+} from "../../../hooks/useSubscriptions";
 
 const DEFAULT_ACCOUNT_ID = "c199b131-4c62-f011-bec2-6045bdffa665";
 
 export default function AddNewVendor({ open = false, onBack, onClose, onAddVendor }) {
+  const createVendorMutation = useCreateVendorRecordMutation();
   const [formData, setFormData] = useState({
     vendorName: "",
     accountManagerEmail: "",
@@ -67,7 +68,7 @@ export default function AddNewVendor({ open = false, onBack, onClose, onAddVendo
         yiic_accountmanagerphone: formData.accountManagerPhone ?? "",
         "yiic_Account_yiic_subscriptionsactivity@odata.bind": `/accounts(${DEFAULT_ACCOUNT_ID})`,
       };
-      const vendorResponse = await createVendorRecord(payload);
+      const vendorResponse = await createVendorMutation.mutateAsync(payload);
       showSuccess("Vendor added successfully.");
       onAddVendor?.(vendorResponse);
       setFormData({

@@ -2,9 +2,9 @@ import { FiCalendar, FiLock } from "react-icons/fi";
 import { usePopup } from "../../../components/Popup";
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  addSubscription,
+  useAddSubscriptionMutation,
   checkSubscriptionExistance,
-} from "../../../lib/api/Subscription/subscriptions";
+} from "../../../hooks/useSubscriptions";
 
 const DESC_MAX = 2000;
 
@@ -155,6 +155,7 @@ export default function AddSubscriptionFormModal({
   departments,
   selectedVendor,
 }) {
+  const addMutation = useAddSubscriptionMutation();
   const endDatePickerRef = useRef(null);
   const startDatePickerRef = useRef(null);
   const lastDueDatePickerRef = useRef(null);
@@ -268,7 +269,7 @@ export default function AddSubscriptionFormModal({
         );
         return;
       }
-      await addSubscription(payload);
+      await addMutation.mutateAsync(payload);
       showSuccess("Subscription added successfully.");
       onClose?.();
       onSuccess?.();
@@ -278,7 +279,7 @@ export default function AddSubscriptionFormModal({
     } finally {
       setIsSaving(false);
     }
-  }, [form, onClose, onSuccess]);
+  }, [form, onClose, onSuccess, addMutation]);
 
   if (!open) return null;
 

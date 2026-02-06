@@ -1,6 +1,6 @@
 import { usePopup } from "../../../components/Popup";
 import { useState, useCallback, useEffect } from "react";
-import { updateBudget } from "../../../lib/api/Subscription/subscriptions";
+import { useUpdateBudgetMutation } from "../../../hooks/useSubscriptions";
 
 const BUDGET_TYPE = {
   DEPARTMENT: "department",
@@ -35,6 +35,7 @@ export default function EditBudgetModal({
   budgetType = null,
   onSuccess,
 }) {
+  const updateBudgetMutation = useUpdateBudgetMutation();
   const { showSuccess, showError, showWarning } = usePopup();
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -64,13 +65,13 @@ export default function EditBudgetModal({
       }
       const amountNum = amount === "" ? 0 : parseFloat(amount);
       const payload = {
-        budgetId,
         yiic_name: name,
         yiic_amount: amountNum,
       };
       setIsSaving(true);
-      updateBudget(budgetId, payload)
-        .then((result) => {
+      updateBudgetMutation
+        .mutateAsync({ budgetId, payload })
+        .then(() => {
           showSuccess("Budget has been updated successfully.");
           onSuccess?.();
           onClose?.();

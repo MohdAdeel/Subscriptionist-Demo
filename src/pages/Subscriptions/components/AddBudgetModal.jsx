@@ -1,10 +1,10 @@
 import {
-  addBudget,
-  checkBudget,
-  getDeparments,
-  getFinancialYear,
-  getActivityLines,
-} from "../../../lib/api/Subscription/subscriptions";
+  useDepartments,
+  useFinancialYear,
+  useSubscriptionActivityLines,
+  useAddBudgetMutation,
+} from "../../../hooks/useSubscriptions";
+import { checkBudget } from "../../../lib/api/Subscription/subscriptions";
 import { usePopup } from "../../../components/Popup";
 import { useState, useCallback, useEffect } from "react";
 
@@ -35,18 +35,36 @@ function ToggleSwitch({ checked, onToggle, ariaLabel }) {
 }
 
 export default function AddBudgetModal({ open = true, onClose, onSuccess }) {
+  const addBudgetMutation = useAddBudgetMutation();
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [budgetType, setBudgetType] = useState(null);
   const [financialYear, setFinancialYear] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [subscriptionId, setSubscriptionId] = useState("");
-  const [departmentsList, setDepartmentsList] = useState([]);
-  const [financialYearsList, setFinancialYearsList] = useState([]);
-  const [activityLinesList, setActivityLinesList] = useState([]);
-  const [isLoadingDepartmentFields, setIsLoadingDepartmentFields] = useState(false);
-  const [isLoadingSubscriptionFields, setIsLoadingSubscriptionFields] = useState(false);
   const { showSuccess, showError, showWarning, showInfo } = usePopup();
+
+  const { data: departmentsData = [], isLoading: isLoadingDepartmentFields } = useDepartments({
+    enabled: open && budgetType === BUDGET_TYPE.DEPARTMENT,
+  });
+  const { data: financialYearsData = [], isLoading: isLoadingFinancialYears } = useFinancialYear({
+    enabled: open && budgetType === BUDGET_TYPE.DEPARTMENT,
+  });
+  const { data: activityLinesData = [], isLoading: isLoadingSubscriptionFields } =
+    useSubscriptionActivityLines(undefined, {
+      enabled: open && budgetType === BUDGET_TYPE.SUBSCRIPTION,
+    });
+
+  const isLoadingDeptSection = isLoadingDepartmentFields || isLoadingFinancialYears;
+  const departmentsList = Array.isArray(departmentsData)
+    ? departmentsData
+    : (departmentsData?.value ?? []);
+  const financialYearsList = Array.isArray(financialYearsData)
+    ? financialYearsData
+    : (financialYearsData?.value ?? []);
+  const activityLinesList = Array.isArray(activityLinesData)
+    ? activityLinesData
+    : (activityLinesData?.value ?? activityLinesData?.ActivityLines ?? []);
 
   const isDepartment = budgetType === BUDGET_TYPE.DEPARTMENT;
   const isSubscription = budgetType === BUDGET_TYPE.SUBSCRIPTION;
@@ -55,59 +73,6 @@ export default function AddBudgetModal({ open = true, onClose, onSuccess }) {
   const handleDepartmentToggle = useCallback(() => {
     setBudgetType((prev) => (prev === BUDGET_TYPE.DEPARTMENT ? null : BUDGET_TYPE.DEPARTMENT));
   }, []);
-
-  // When Department Budget toggle is on, fetch departments and financial years for the dropdowns
-  useEffect(() => {
-    if (!isDepartment) {
-      setDepartmentsList([]);
-      setFinancialYearsList([]);
-      return;
-    }
-    setIsLoadingDepartmentFields(true);
-    Promise.all([getDeparments(), getFinancialYear()])
-      .then(([deptResult, yearResult]) => {
-        const departments = deptResult?.value ?? [];
-        const years = yearResult?.value ?? (Array.isArray(yearResult) ? yearResult : []);
-        setDepartmentsList(Array.isArray(departments) ? departments : []);
-        const yearsList = Array.isArray(years) ? years : [];
-        setFinancialYearsList(yearsList);
-      })
-      .catch((err) => {
-        console.error("Failed to load departments or financial years:", err);
-        showError(err?.message ?? "Failed to load departments or financial years.");
-        setDepartmentsList([]);
-        setFinancialYearsList([]);
-      })
-      .finally(() => {
-        setIsLoadingDepartmentFields(false);
-      });
-  }, [isDepartment, showError]);
-
-  // When Subscription Budget toggle is on, fetch activity lines for the Subscription dropdown
-  useEffect(() => {
-    if (!isSubscription) {
-      setActivityLinesList([]);
-      return;
-    }
-    setIsLoadingSubscriptionFields(true);
-    getActivityLines()
-      .then((result) => {
-        const lines =
-          result?.value ?? result?.ActivityLines ?? (Array.isArray(result) ? result : []);
-        const list = Array.isArray(lines) ? lines : [];
-        setActivityLinesList(list);
-        if (list.length > 0 && list[0]) {
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to load activity lines:", err);
-        showError(err?.message ?? "Failed to load subscriptions.");
-        setActivityLinesList([]);
-      })
-      .finally(() => {
-        setIsLoadingSubscriptionFields(false);
-      });
-  }, [isSubscription, showError]);
 
   const handleSubscriptionToggle = useCallback(() => {
     setBudgetType((prev) => (prev === BUDGET_TYPE.SUBSCRIPTION ? null : BUDGET_TYPE.SUBSCRIPTION));
@@ -152,7 +117,8 @@ export default function AddBudgetModal({ open = true, onClose, onSuccess }) {
       }
 
       if (isSubscription && payload) {
-        addBudget(payload)
+        addBudgetMutation
+          .mutateAsync(payload)
           .then(() => {
             showSuccess("Budget added successfully.");
             onSuccess?.();
@@ -176,7 +142,7 @@ export default function AddBudgetModal({ open = true, onClose, onSuccess }) {
               return null;
             }
             if (payload) {
-              return addBudget(payload);
+              return addBudgetMutation.mutateAsync(payload);
             }
           })
           .then((result) => {
@@ -206,6 +172,7 @@ export default function AddBudgetModal({ open = true, onClose, onSuccess }) {
       subscriptionId,
       activityLinesList,
       getActivityLineId,
+      addBudgetMutation,
       showSuccess,
       showError,
       showWarning,
@@ -315,10 +282,10 @@ export default function AddBudgetModal({ open = true, onClose, onSuccess }) {
                     value={financialYear}
                     onChange={(e) => setFinancialYear(e.target.value)}
                     className={inputBase}
-                    disabled={isLoadingDepartmentFields}
+                    disabled={isLoadingDeptSection}
                   >
                     <option value="">
-                      {isLoadingDepartmentFields ? "Loading..." : "Select Financial Year"}
+                      {isLoadingDeptSection ? "Loading..." : "Select Financial Year"}
                     </option>
                     {financialYearsList.map((item, index) => {
                       const isObject = item && typeof item === "object";
@@ -346,10 +313,10 @@ export default function AddBudgetModal({ open = true, onClose, onSuccess }) {
                     value={departmentId}
                     onChange={(e) => setDepartmentId(e.target.value)}
                     className={inputBase}
-                    disabled={isLoadingDepartmentFields}
+                    disabled={isLoadingDeptSection}
                   >
                     <option value="">
-                      {isLoadingDepartmentFields ? "Loading..." : "Select Department"}
+                      {isLoadingDeptSection ? "Loading..." : "Select Department"}
                     </option>
                     {departmentsList.map((d) => {
                       const id = d.yiic_departmentid ?? d.yiic_departmentId ?? "";

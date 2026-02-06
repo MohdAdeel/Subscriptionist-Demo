@@ -4,11 +4,7 @@ import { useState, useCallback, useRef } from "react";
 import AddVendorManually from "./AddSubscriptionManually";
 import UploadSubscriptionModal from "./UploadSubscriptionModal";
 import { FiX, FiPlus, FiUpload, FiDownload } from "react-icons/fi";
-import {
-  fetchVendorList,
-  getDeparments,
-  getCategories,
-} from "../../../lib/api/Subscription/subscriptions";
+import { useVendorList, useDepartments, useCategories } from "../../../hooks/useSubscriptions";
 
 export default function AddSubscriptionModal({
   open = false,
@@ -17,25 +13,46 @@ export default function AddSubscriptionModal({
   onDownloadTemplate,
   onAddSuccess,
   vendors: vendorsProp = [],
-  departments = [],
+  departments: departmentsProp = [],
 }) {
   const { showError } = usePopup();
   const fileInputRef = useRef(null);
-  const [vendors, setVendors] = useState([]);
-  const [vendorsError, setVendorsError] = useState(null);
+  const {
+    data: vendorListData,
+    isLoading: vendorsLoading,
+    error: vendorsError,
+  } = useVendorList(undefined, { enabled: open });
+  const { data: departmentsData = [] } = useDepartments({ enabled: open });
+  const { data: categoriesData = [] } = useCategories({ enabled: open });
+
+  const rawVendors = vendorListData?.value ?? (Array.isArray(vendorListData) ? vendorListData : []);
+  const vendors = Array.isArray(rawVendors)
+    ? rawVendors
+        .map((item) => ({
+          ...item,
+          id: item?.activityid ?? item?.id,
+          name: item?.yiic_vendorname ?? item?.vendorName ?? item?.name ?? "",
+        }))
+        .filter((v) => v?.yiic_vendorname !== "")
+    : [];
+  const departments =
+    departmentsProp?.length > 0
+      ? departmentsProp
+      : Array.isArray(departmentsData)
+        ? departmentsData
+        : (departmentsData?.value ?? []);
+
   const [isDownloading, setIsDownloading] = useState(false);
-  const [vendorsLoading, setVendorsLoading] = useState(false);
   const [showVendorModal, setShowVendorModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadParsedData, setUploadParsedData] = useState(null);
 
-  const vendorsList = vendorsProp.length > 0 ? vendorsProp : vendors;
+  const vendorsList = vendorsProp?.length > 0 ? vendorsProp : vendors;
 
   const handleClose = () => {
     setShowVendorModal(false);
     setShowUploadModal(false);
     setUploadParsedData(null);
-    setVendorsError(null);
     setOpen?.(false);
   };
 
@@ -176,31 +193,12 @@ export default function AddSubscriptionModal({
     [processFile, showError]
   );
 
-  const handleAddManually = async () => {
+  const handleAddManually = () => {
     if (onAddManually) {
       onAddManually();
       return;
     }
-    setVendorsLoading(true);
-    setVendorsError(null);
-    try {
-      const result = await fetchVendorList();
-      const raw = result?.value ?? [];
-      const list = (Array.isArray(raw) ? raw : [])
-        .map((item) => ({
-          ...item,
-          id: item?.activityid ?? item?.id,
-          name: item?.yiic_vendorname ?? item?.vendorName ?? item?.name ?? "",
-        }))
-        .filter((v) => v?.yiic_vendorname !== "");
-      setVendors(list);
-      setShowVendorModal(true);
-    } catch (err) {
-      console.error("Fetch vendor list failed:", err);
-      setVendorsError(err?.message ?? "Failed to load vendors");
-    } finally {
-      setVendorsLoading(false);
-    }
+    setShowVendorModal(true);
   };
 
   const handleVendorModalBack = () => setShowVendorModal(false);
@@ -216,14 +214,9 @@ export default function AddSubscriptionModal({
 
       setIsDownloading(true);
       try {
-        // Fetch lookup data
-        const [categoriesResult, departmentsResult] = await Promise.all([
-          getCategories().catch(() => ({ value: [] })),
-          getDeparments().catch(() => ({ value: [] })),
-        ]);
-
-        const categories = categoriesResult?.value || [];
-        const departmentsData = departmentsResult?.value || [];
+        const categories =
+          categoriesData?.value ?? (Array.isArray(categoriesData) ? categoriesData : []);
+        const deptData = Array.isArray(departments) ? departments : (departments?.value ?? []);
 
         // Create workbook
         const workbook = new ExcelJS.Workbook();
@@ -262,7 +255,7 @@ export default function AddSubscriptionModal({
           freqUnit: "Months",
           vendorProfile: "Strategic",
           subCategory: categories[0]?.yiic_name || "",
-          subDepartment: departmentsData[0]?.yiic_name || "",
+          subDepartment: deptData[0]?.yiic_name || "",
         });
 
         // Apply dropdowns for static fields
@@ -339,7 +332,7 @@ export default function AddSubscriptionModal({
         setIsDownloading(false);
       }
     },
-    [onDownloadTemplate]
+    [onDownloadTemplate, categoriesData, departments]
   );
 
   return (
@@ -400,7 +393,7 @@ export default function AddSubscriptionModal({
                       clipRule="evenodd"
                     />
                   </svg>
-                  <span className="font-medium">{vendorsError}</span>
+                  <span className="font-medium">{vendorsError?.message ?? vendorsError}</span>
                 </div>
               )}
 

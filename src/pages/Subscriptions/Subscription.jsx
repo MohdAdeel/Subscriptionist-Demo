@@ -3,15 +3,16 @@ import {
   ButtonSkeleton,
   TableHeaderSkeleton,
 } from "../../components/SkeletonLoader";
+import { useQueryClient } from "@tanstack/react-query";
 import {
-  getDeparments,
-  fetchBudgetData,
-  populateEditForm,
-  updateSubscription,
-  getRelationshipSubsLines,
+  useSubscriptionData,
+  usePopulateEditForm,
+  useDepartments,
+  useUpdateSubscriptionMutation,
+  useDeleteSubscriptionActivityLineMutation,
+  SUBSCRIPTION_DATA_QUERY_KEY,
   checkSubscriptionExistance,
-  deleteSubscriptionActivityLine,
-} from "../../lib/api/Subscription/subscriptions";
+} from "../../hooks/useSubscriptions";
 import { usePopup } from "../../components/Popup";
 import AddSubscriptionModal from "./components/AddSubscriptionModal";
 import EditSubscriptionModal from "./components/EditSubscriptionModal";
@@ -99,20 +100,13 @@ const Subscription = () => {
   const vendorDropdownRef = useRef(null);
   const vendorSearchInputRef = useRef(null);
   const [endDate, setEndDate] = useState(null);
-  const [totalCount, setTotalCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const [startDate, setStartDate] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [budgetData, setBudgetData] = useState(null);
-  const [departments, setDepartments] = useState([]);
   const [statusFilter, setStatusFilter] = useState("3");
-  const [editFormData, setEditFormData] = useState(null);
   const [dateRangeText, setDateRangeText] = useState("");
-  const [ActivityLines, setActivityLines] = useState([]);
   const [goToPageInput, setGoToPageInput] = useState("");
   const [vendorFilter, setVendorFilter] = useState("All");
   const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedRowId, setSelectedRowId] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -121,12 +115,41 @@ const Subscription = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showBudgetModal, setShowBudgetModal] = useState(false);
-  const [isBudgetLoading, setIsBudgetLoading] = useState(false);
   const [appliedStartDate, setAppliedStartDate] = useState(null);
   const [isVendorDropdownOpen, setIsVendorDropdownOpen] = useState(false);
   const [subscriptionNameFilter, setSubscriptionNameFilter] = useState("");
-  const [isDeletingSubscription, setIsDeletingSubscription] = useState(false);
   const [debouncedSubscriptionName, setDebouncedSubscriptionName] = useState("");
+
+  const hasAppliedDateRange = appliedStartDate && appliedEndDate;
+  const {
+    data: subscriptionResult,
+    isLoading,
+    error: subscriptionError,
+  } = useSubscriptionData({
+    status: statusFilter,
+    pagenumber: currentPage,
+    vendorName: vendorFilter && vendorFilter !== "All" ? vendorFilter : null,
+    subsciptionActivityline: debouncedSubscriptionName.trim() || null,
+    startdate: hasAppliedDateRange ? formatDateForDisplay(appliedStartDate) : null,
+    enddate: hasAppliedDateRange ? formatDateForDisplay(appliedEndDate) : null,
+  });
+
+  const { data: departmentsData = [] } = useDepartments();
+  const departments = Array.isArray(departmentsData) ? departmentsData : [];
+
+  const { data: editFormData, isLoading: isLoadingEditForm } = usePopulateEditForm(
+    showEditModal && selectedRowId ? selectedRowId : null,
+    { enabled: showEditModal && !!selectedRowId }
+  );
+
+  const queryClient = useQueryClient();
+  const updateMutation = useUpdateSubscriptionMutation();
+  const deleteMutation = useDeleteSubscriptionActivityLineMutation();
+  const isSavingEdit = updateMutation.isPending;
+  const isDeletingSubscription = deleteMutation.isPending;
+
+  const totalCount = Number(subscriptionResult?.TotalCount) ?? 0;
+  const ActivityLines = mapActivityLinesToTableRows(subscriptionResult ?? {});
 
   const vendorOptions = useMemo(() => {
     const unique = new Set();
@@ -173,35 +196,6 @@ const Subscription = () => {
     }, 400);
     return () => clearTimeout(timeoutId);
   }, [subscriptionNameFilter]);
-
-  const handleFetchBudgetData = useCallback(
-    (pageNumber, tab) => {
-      setIsBudgetLoading(true);
-      if (pageNumber === 1) {
-        setBudgetData(null);
-      }
-      fetchBudgetData({ pageNumber })
-        .then((result) => {
-          if (Array.isArray(result)) {
-            setBudgetData((prev) => ({
-              ...(prev || {}),
-              [tab === "department" ? "DepartmentBudget" : "SubscriptionBudget"]: result,
-            }));
-          } else {
-            setBudgetData(result);
-          }
-        })
-        .catch((err) => {
-          console.error("Budget data fetch failed:", err);
-          setBudgetData((prev) => prev || { SubscriptionBudget: [], DepartmentBudget: [] });
-          showError("Unable to load budget data. Please try again.");
-        })
-        .finally(() => {
-          setIsBudgetLoading(false);
-        });
-    },
-    [showError]
-  );
 
   const openEditModal = useCallback(() => {
     if (selectedRowId) setShowEditModal(true);
@@ -415,125 +409,41 @@ const Subscription = () => {
   };
 
   useEffect(() => {
-    setIsLoading(true);
-    const parsedStatus = Number.parseInt(statusFilter, 10);
-    const normalizedStatus = Number.isNaN(parsedStatus) ? 3 : parsedStatus;
-    const vendorName = vendorFilter && vendorFilter !== "All" ? vendorFilter : null;
-    const subsciptionActivityline = debouncedSubscriptionName.trim()
-      ? debouncedSubscriptionName.trim()
-      : null;
-    const hasAppliedDateRange = appliedStartDate && appliedEndDate;
-    getRelationshipSubsLines({
-      contactId: "c199b131-4c62-f011-bec2-6045bdffa665",
-      status: normalizedStatus,
-      pagenumber: currentPage,
-      startdate: hasAppliedDateRange ? formatDateForDisplay(appliedStartDate) : null,
-      enddate: hasAppliedDateRange ? formatDateForDisplay(appliedEndDate) : null,
-      vendorName,
-      subsciptionActivityline,
-    })
-      .then((result) => {
-        getDeparments()
-          .then((result) => {
-            setDepartments(result?.value);
-          })
-          .catch((error) => {
-            console.error("Failed to load departments:", error);
-            showError("Unable to load departments. Please refresh the page.");
-          });
-        setTotalCount(Number(result?.TotalCount) ?? 0);
-        const rows = mapActivityLinesToTableRows(result);
-        setActivityLines(rows);
-      })
-      .catch((error) => {
-        console.error(error);
-        setActivityLines([]);
-        setDepartments([]);
-        setTotalCount(0);
-        showError("Unable to load subscriptions. Please refresh the page.");
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  }, [
-    currentPage,
-    statusFilter,
-    vendorFilter,
-    debouncedSubscriptionName,
-    appliedStartDate,
-    appliedEndDate,
-    showError,
-  ]);
-
-  // When edit modal opens (Edit button or double-click), fetch row data by SubscriptionActivityLineId
-  useEffect(() => {
-    if (showEditModal && selectedRowId) {
-      populateEditForm(selectedRowId)
-        .then((result) => {
-          setEditFormData(result);
-        })
-        .catch((err) => {
-          console.error("Failed to load edit form data:", err);
-          showError("Unable to load subscription details. Please try again.");
-        });
+    if (subscriptionError) {
+      showError("Unable to load subscriptions. Please refresh the page.");
     }
-  }, [showEditModal, selectedRowId, showError]);
+  }, [subscriptionError, showError]);
 
   const handleUpdateSubscription = useCallback(
-    (formData) => {
+    async (formData) => {
       if (!formData) return;
-      setIsSavingEdit(true);
       const subscriptionName = formData.subsname;
       const subscriptionActivityId = formData.activityLineId;
-      checkSubscriptionExistance(subscriptionName, subscriptionActivityId)
-        .then((result) => {
-          const value = result?.value;
-          const hasDuplicate = Array.isArray(value) && value.length > 0;
-          if (hasDuplicate) {
-            showWarning("A subscription with this name already exists.");
-            return;
-          }
-          // No duplicate: call update API
-          return updateSubscription(formData);
-        })
-        .then((updateResult) => {
-          if (updateResult !== undefined) {
-            showSuccess("Subscription updated successfully.");
-            setShowEditModal(false);
-            setEditFormData(null);
-            // Refetch table data
-            return getRelationshipSubsLines(currentPage);
-          }
-        })
-        .then((refetchResult) => {
-          if (refetchResult) {
-            setTotalCount(Number(refetchResult?.TotalCount) ?? 0);
-            setActivityLines(mapActivityLinesToTableRows(refetchResult));
-          }
-        })
-        .catch((err) => {
-          console.error("Subscription check or update failed:", err);
-          showError("Unable to save subscription. Please try again.");
-          setShowEditModal(false);
-          setEditFormData(null);
-        })
-        .finally(() => {
-          setIsSavingEdit(false);
-        });
+      try {
+        const result = await checkSubscriptionExistance(subscriptionName, subscriptionActivityId);
+        const value = result?.value;
+        const hasDuplicate = Array.isArray(value) && value.length > 0;
+        if (hasDuplicate) {
+          showWarning("A subscription with this name already exists.");
+          return;
+        }
+        await updateMutation.mutateAsync(formData);
+        showSuccess("Subscription updated successfully.");
+        setShowEditModal(false);
+      } catch (err) {
+        console.error("Subscription check or update failed:", err);
+        showError("Unable to save subscription. Please try again.");
+        setShowEditModal(false);
+      }
     },
-    [currentPage, showSuccess, showError, showWarning]
+    [updateMutation, showSuccess, showError, showWarning]
   );
 
   const handleAddSuccess = useCallback(() => {
     showSuccess("Subscription added successfully.");
     setShowAddModal(false);
-    getRelationshipSubsLines(currentPage).then((refetchResult) => {
-      if (refetchResult) {
-        setTotalCount(Number(refetchResult?.TotalCount) ?? 0);
-        setActivityLines(mapActivityLinesToTableRows(refetchResult));
-      }
-    });
-  }, [currentPage, showSuccess]);
+    queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_DATA_QUERY_KEY });
+  }, [queryClient, showSuccess]);
 
   const openDeleteConfirm = useCallback((row) => {
     setDeleteConfirm({
@@ -546,30 +456,18 @@ const Subscription = () => {
     setDeleteConfirm(null);
   }, []);
 
-  const handleConfirmDelete = useCallback(() => {
+  const handleConfirmDelete = useCallback(async () => {
     if (!deleteConfirm?.rowId) return;
-    setIsDeletingSubscription(true);
-    deleteSubscriptionActivityLine(deleteConfirm.rowId)
-      .then(() => {
-        closeDeleteConfirm();
-        showSuccess("Subscription deleted successfully.");
-        return getRelationshipSubsLines(currentPage);
-      })
-      .then((result) => {
-        if (result) {
-          setActivityLines(mapActivityLinesToTableRows(result));
-          setTotalCount(Number(result?.TotalCount) ?? 0);
-        }
-        setSelectedRowId(null);
-      })
-      .catch((err) => {
-        console.error("Delete failed:", err);
-        showError(err?.message || "Unable to delete subscription. Please try again.");
-      })
-      .finally(() => {
-        setIsDeletingSubscription(false);
-      });
-  }, [deleteConfirm, currentPage, closeDeleteConfirm, showSuccess, showError]);
+    try {
+      await deleteMutation.mutateAsync(deleteConfirm.rowId);
+      closeDeleteConfirm();
+      showSuccess("Subscription deleted successfully.");
+      setSelectedRowId(null);
+    } catch (err) {
+      console.error("Delete failed:", err);
+      showError(err?.message || "Unable to delete subscription. Please try again.");
+    }
+  }, [deleteConfirm?.rowId, deleteMutation, closeDeleteConfirm, showSuccess, showError]);
 
   return (
     <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-screen">
@@ -1027,25 +925,13 @@ const Subscription = () => {
       />
       <EditSubscriptionModal
         open={showEditModal}
-        onClose={() => {
-          setEditFormData(null);
-          setShowEditModal(false);
-        }}
+        onClose={() => setShowEditModal(false)}
         editFormData={editFormData}
         departments={departments}
         onSave={handleUpdateSubscription}
         isSaving={isSavingEdit}
       />
-      <BudgetManagementModal
-        open={showBudgetModal}
-        onClose={() => {
-          setShowBudgetModal(false);
-          setBudgetData(null);
-        }}
-        budgetData={budgetData}
-        onFetchBudgetData={handleFetchBudgetData}
-        isBudgetLoading={isBudgetLoading}
-      />
+      <BudgetManagementModal open={showBudgetModal} onClose={() => setShowBudgetModal(false)} />
 
       {/* Confirm Delete subscription modal */}
       {deleteConfirm && (

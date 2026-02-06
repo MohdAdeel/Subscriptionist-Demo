@@ -1,18 +1,11 @@
 import AddBudgetModal from "./AddBudgetModal";
 import EditBudgetModal from "./EditBudgetModal";
-import { useState, useEffect, useRef } from "react";
+import { useBudgetData } from "../../../hooks/useSubscriptions";
+import { useState, useEffect } from "react";
 
 const ITEMS_PER_PAGE = 8;
 
-export default function BudgetManagementModal({
-  open = false,
-  onClose,
-  budgetData,
-  onFetchBudgetData,
-  isBudgetLoading = false,
-}) {
-  const wasOpenRef = useRef(false);
-  const lastFetchedPageRef = useRef(null);
+export default function BudgetManagementModal({ open = false, onClose }) {
   const [goToPageInput, setGoToPageInput] = useState("");
   const [editBudgetRow, setEditBudgetRow] = useState(null);
   const [editBudgetType, setEditBudgetType] = useState(null);
@@ -26,6 +19,10 @@ export default function BudgetManagementModal({
 
   const effectivePage =
     activeTab === "subscription" ? currentPageSubscription : currentPageDepartment;
+
+  const { data: budgetData, isLoading: isBudgetLoading } = useBudgetData(effectivePage, {
+    enabled: open,
+  });
 
   useEffect(() => {
     if (budgetData) {
@@ -57,21 +54,6 @@ export default function BudgetManagementModal({
       setCurrentPageDepartment(1);
     }
   }, [open]);
-
-  useEffect(() => {
-    if (!open) {
-      lastFetchedPageRef.current = null;
-      wasOpenRef.current = false;
-      return;
-    }
-    if (!onFetchBudgetData) return;
-    const isInitialOpen = !wasOpenRef.current;
-    wasOpenRef.current = true;
-    const pageToFetch = isInitialOpen ? 1 : effectivePage;
-    if (!isInitialOpen && lastFetchedPageRef.current === effectivePage) return;
-    lastFetchedPageRef.current = pageToFetch;
-    onFetchBudgetData(pageToFetch, activeTab);
-  }, [open, effectivePage, activeTab, onFetchBudgetData]);
 
   if (!open) return null;
 
@@ -155,15 +137,7 @@ export default function BudgetManagementModal({
           </div>
         </div>
 
-        {showAddBudgetModal && (
-          <AddBudgetModal
-            onClose={() => setShowAddBudgetModal(false)}
-            onSuccess={() => {
-              onFetchBudgetData?.(currentPageSubscription, "subscription");
-              onFetchBudgetData?.(currentPageDepartment, "department");
-            }}
-          />
-        )}
+        {showAddBudgetModal && <AddBudgetModal onClose={() => setShowAddBudgetModal(false)} />}
         {showEditBudgetModal && editBudgetRow && editBudgetType && (
           <EditBudgetModal
             open={showEditBudgetModal}
@@ -174,10 +148,6 @@ export default function BudgetManagementModal({
             }}
             budgetRow={editBudgetRow}
             budgetType={editBudgetType}
-            onSuccess={() => {
-              onFetchBudgetData?.(currentPageSubscription, "subscription");
-              onFetchBudgetData?.(currentPageDepartment, "department");
-            }}
           />
         )}
 
