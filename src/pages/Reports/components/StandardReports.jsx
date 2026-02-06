@@ -1,25 +1,18 @@
 import Chart from "chart.js/auto";
-import { FiRefreshCw, FiInfo } from "react-icons/fi";
+import { FiRefreshCw } from "react-icons/fi";
 import { useReportsPageStore } from "../../../stores";
 import { useEffect, useRef, useCallback, useMemo, useState } from "react";
 
-const InfoTooltipButton = ({ text }) => (
-  <button
-    type="button"
-    className="relative group p-1 hover:bg-gray-100 rounded-full transition-colors"
-    aria-label={text}
-  >
-    <FiInfo className="w-4 h-4 text-gray-400" />
-    <span
-      role="tooltip"
-      className="pointer-events-none absolute right-0 top-full mt-2 w-64 rounded-lg bg-gray-900 text-white text-xs leading-snug px-3 py-2 shadow-lg opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity z-20 text-left"
-    >
-      {text}
-    </span>
-  </button>
-);
+const TOOLTIP_COPY = {
+  "Total Active Cost": "Monetary value of current active subscriptions",
+  "Active Subscriptions": "Number of current active subscriptions",
+  "Upcoming Renewal":
+    "This total reflects renewals from the current month to the end of the financial year unless a filter is applied",
+  "Cost Savings Identified": "Number of subscriptions expired during the last 12 months",
+};
 
 const StandardReports = ({ formatCurrency, formatDate, chartRef: externalChartRef }) => {
+  const [hoveredInfo, setHoveredInfo] = useState(null);
   const formatTopCardValue = (value) => {
     const numericValue = value === null || value === undefined ? 0 : Number(value);
     if (Number.isNaN(numericValue)) return "0";
@@ -210,7 +203,23 @@ const StandardReports = ({ formatCurrency, formatDate, chartRef: externalChartRe
             <div className="w-12 h-12 bg-gradient-to-br from-teal-100 to-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <FiRefreshCw className="w-6 h-6 text-teal-600" />
             </div>
-            <InfoTooltipButton text="Monetary value of current active subscription" />
+            <div className="relative">
+              <span
+                className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#E4E7EC] bg-white text-[10px] font-semibold text-[#667085] shadow-sm cursor-pointer"
+                onMouseEnter={() => setHoveredInfo("Total Active Cost")}
+                onMouseLeave={() => setHoveredInfo(null)}
+              >
+                i
+              </span>
+              {hoveredInfo === "Total Active Cost" && (
+                <div className="absolute right-0 top-8 z-20 w-72 rounded-xl border border-[#E4E7EC] bg-white p-3 shadow-lg animate-fadeIn">
+                  <p className="text-sm font-semibold text-[#0F172A]">Total Active Cost</p>
+                  <p className="mt-1 text-xs leading-snug text-[#475467]">
+                    {TOOLTIP_COPY["Total Active Cost"]}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
           <h3 className="text-sm font-medium text-gray-600 mb-2">Total Active Cost</h3>
           <p className="text-2xl sm:text-3xl font-bold text-gray-800">
@@ -224,7 +233,23 @@ const StandardReports = ({ formatCurrency, formatDate, chartRef: externalChartRe
             <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-lg flex items-center justify-center flex-shrink-0">
               <FiRefreshCw className="w-6 h-6 text-blue-600" />
             </div>
-            <InfoTooltipButton text="Number of current active subscription" />
+            <div className="relative">
+              <span
+                className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#E4E7EC] bg-white text-[10px] font-semibold text-[#667085] shadow-sm cursor-pointer"
+                onMouseEnter={() => setHoveredInfo("Active Subscriptions")}
+                onMouseLeave={() => setHoveredInfo(null)}
+              >
+                i
+              </span>
+              {hoveredInfo === "Active Subscriptions" && (
+                <div className="absolute right-0 top-8 z-20 w-72 rounded-xl border border-[#E4E7EC] bg-white p-3 shadow-lg animate-fadeIn">
+                  <p className="text-sm font-semibold text-[#0F172A]">Active Subscriptions</p>
+                  <p className="mt-1 text-xs leading-snug text-[#475467]">
+                    {TOOLTIP_COPY["Active Subscriptions"]}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
           <h3 className="text-sm font-medium text-gray-600 mb-2">Active Subscriptions</h3>
           <p className="text-2xl sm:text-3xl font-bold text-gray-800">{TopCards.ActiveCount}</p>
@@ -236,7 +261,23 @@ const StandardReports = ({ formatCurrency, formatDate, chartRef: externalChartRe
             <div className="w-12 h-12 bg-gradient-to-br from-yellow-100 to-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <FiRefreshCw className="w-6 h-6 text-yellow-600" />
             </div>
-            <InfoTooltipButton text="This total reflects renewals from the current month to the end of the financial year unless a filter is applied" />
+            <div className="relative">
+              <span
+                className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#E4E7EC] bg-white text-[10px] font-semibold text-[#667085] shadow-sm cursor-pointer"
+                onMouseEnter={() => setHoveredInfo("Upcoming Renewal")}
+                onMouseLeave={() => setHoveredInfo(null)}
+              >
+                i
+              </span>
+              {hoveredInfo === "Upcoming Renewal" && (
+                <div className="absolute right-0 top-8 z-20 w-72 rounded-xl border border-[#E4E7EC] bg-white p-3 shadow-lg animate-fadeIn">
+                  <p className="text-sm font-semibold text-[#0F172A]">Upcoming Renewal</p>
+                  <p className="mt-1 text-xs leading-snug text-[#475467]">
+                    {TOOLTIP_COPY["Upcoming Renewal"]}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
           <h3 className="text-sm font-medium text-gray-600 mb-2">Upcoming Renewal</h3>
           <p className="text-2xl sm:text-3xl font-bold text-gray-800">
@@ -250,7 +291,23 @@ const StandardReports = ({ formatCurrency, formatDate, chartRef: externalChartRe
             <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
               <FiRefreshCw className="w-6 h-6 text-purple-600" />
             </div>
-            <InfoTooltipButton text="Number of subscriptions expired during the last 12 months" />
+            <div className="relative">
+              <span
+                className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#E4E7EC] bg-white text-[10px] font-semibold text-[#667085] shadow-sm cursor-pointer"
+                onMouseEnter={() => setHoveredInfo("Cost Savings Identified")}
+                onMouseLeave={() => setHoveredInfo(null)}
+              >
+                i
+              </span>
+              {hoveredInfo === "Cost Savings Identified" && (
+                <div className="absolute right-0 top-8 z-20 w-72 rounded-xl border border-[#E4E7EC] bg-white p-3 shadow-lg animate-fadeIn">
+                  <p className="text-sm font-semibold text-[#0F172A]">Cost Savings Identified</p>
+                  <p className="mt-1 text-xs leading-snug text-[#475467]">
+                    {TOOLTIP_COPY["Cost Savings Identified"]}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
           <h3 className="text-sm font-medium text-gray-600 mb-2">Cost Savings Identified</h3>
           <p className="text-2xl sm:text-3xl font-bold text-gray-800">0</p>

@@ -1,5 +1,5 @@
 import Chart from "chart.js/auto";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 const VendorProfileChart = ({
   vendorProfileSeries = {
@@ -19,6 +19,7 @@ const VendorProfileChart = ({
 }) => {
   const chartRef = useRef(null);
   const chartInstanceRef = useRef(null);
+  const [hoveredInfo, setHoveredInfo] = useState(false);
   const hasVendorProfile = !isLoading && vendorProfileSeries.hasValidData;
 
   useEffect(() => {
@@ -115,7 +116,23 @@ const VendorProfileChart = ({
     <div className="rounded-2xl bg-white p-5 shadow-sm border border-[#EEF2F6]">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[#111827]">Vendors by Profile</h3>
-        <span className="text-xs text-[#98A2B3]">i</span>
+        <div className="relative">
+          <span
+            className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#E4E7EC] bg-white text-[10px] font-semibold text-[#667085] shadow-sm cursor-pointer"
+            onMouseEnter={() => setHoveredInfo(true)}
+            onMouseLeave={() => setHoveredInfo(false)}
+          >
+            i
+          </span>
+          {hoveredInfo && (
+            <div className="absolute right-0 top-8 z-20 w-72 rounded-xl border border-[#E4E7EC] bg-white p-3 shadow-lg animate-fadeIn">
+              <p className="text-sm font-semibold text-[#0F172A]">Vendors by Profile</p>
+              <p className="mt-1 text-xs leading-snug text-[#475467]">
+                Vendors categorized upon initial setup based on categories
+              </p>
+            </div>
+          )}
+        </div>
       </div>
       {selectedVendorProfileKey ? (
         <div className="mt-4">
