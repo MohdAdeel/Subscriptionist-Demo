@@ -912,13 +912,12 @@ function processVendorprofiles(filteredSubscriptions) {
       }
     });
   });
-
+  console.log("here is filtered subscriptions", filteredSubscriptions);
   // Convert the map to an array of objects with count and VendorProfile attributes
   vendorProfileCounts = Array.from(profileMap, ([VendorProfile, count]) => ({
     VendorProfile,
     count,
   }));
-  console.log("Here is the profile map", profileMap);
   mapVendorProfileNames();
   // setVendorProfileChart();
 }
@@ -947,8 +946,6 @@ function filtermonthlysubsinRangeforDepartment() {
 }
 
 function ModifyRenewalSubscriptionsWithchartLimit() {
-  "use strict"; // Enable strict mode
-
   monthlyrenewal = [];
 
   // Remove duplicate objects based on their time properties

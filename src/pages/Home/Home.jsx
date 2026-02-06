@@ -1,7 +1,7 @@
 import Chart from "chart.js/auto";
 import { useHomeStore } from "../../stores";
 import { useActivityLines } from "../../hooks";
-import { handleDataProcessing } from "../../lib/utils/home";
+import { calculateSubscriptionAmount, handleDataProcessing } from "../../lib/utils/home";
 import TotalActiveCostIcon from "../../assets/TotalActiveCost.svg";
 import RenewalTimelineIcon from "../../assets/RenewalTimeline.svg";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -119,7 +119,7 @@ const Home = () => {
   const departmentSpendChartData = useHomeStore((state) => state.departmentSpendChartData) ?? [];
   const ActualVsBudgetData = useHomeStore((state) => state.ActualVsBudgetData) ?? [];
   const upcomingRenewalRecords = useHomeStore((state) => state.upcomingRenewalRecords) ?? [];
-  const [timelineRange, setTimelineRange] = useState("12 Months");
+  const [timelineRange, setTimelineRange] = useState("4");
   const [hoveredInfo, setHoveredInfo] = useState(null);
   const [maxLabelLength, setMaxLabelLength] = useState(() => getMaxLabelLength());
   const [departmentLabelLength, setDepartmentLabelLength] = useState(() =>
@@ -155,6 +155,13 @@ const Home = () => {
       handleDataProcessing(activityLinesData);
     }
   }, [activityLinesData]);
+
+  useEffect(() => {
+    if (!activityLinesData) return;
+    const { setRenewalTimelineCards } = useHomeStore.getState();
+    const result = calculateSubscriptionAmount(timelineRange);
+    setRenewalTimelineCards(result.upcomingRenewalAmount, result.renewalTimelineCount);
+  }, [activityLinesData, timelineRange]);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -1027,12 +1034,12 @@ const Home = () => {
                 <select
                   value={timelineRange}
                   onChange={(event) => setTimelineRange(event.target.value)}
-                  className="rounded-lg border border-[#D0D5DD] bg-white px-3 py-1.5 text-xs text-[#344054] focus:outline-none"
+                  className="rounded-lg border border-[#D0D5DD] bg-transparent px-3 py-1.5 text-xs text-[#344054] focus:outline-none"
                 >
-                  <option>12 Months</option>
-                  <option>6 Months</option>
-                  <option>3 Months</option>
-                  <option>1 Month</option>
+                  <option value="4">12 Months</option>
+                  <option value="3">6 Months</option>
+                  <option value="2">3 Months</option>
+                  <option value="1">1 Month</option>
                 </select>
               </div>
             ) : (
