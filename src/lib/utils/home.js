@@ -893,7 +893,6 @@ function filterSubscriptionsByCurrentYear(subscriptions) {
       })
     )
     .filter((subscriptionGroup) => subscriptionGroup.length > 0); // Removes empty groups
-  console.log("here is the filtered subscriptions from previous func", filteredSubscriptions);
   //  createVendorMonthChart(filteredSubscriptions);
   processVendorprofiles(filteredSubscriptions);
 }
@@ -906,7 +905,6 @@ function processVendorprofiles(filteredSubscriptions) {
     subArray.forEach((subscription) => {
       // Check if the subscription object has a VendorProfile
       let vendorProfile = subscription.VendorProfile;
-      console.log("here is the vendor profile", subscription);
       if (vendorProfile !== null && vendorProfile !== undefined) {
         // Increment the count for this VendorProfile
         if (profileMap.has(vendorProfile)) {
@@ -939,7 +937,6 @@ function setVendorProfileChart() {
       }
     });
   });
-  console.log("here is the filtered data", filteredData);
   const { setVendorProfileChartData } = useHomeStore.getState();
   setVendorProfileChartData(filteredData);
 }

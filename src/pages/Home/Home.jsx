@@ -130,7 +130,6 @@ const Home = () => {
     getDepartmentLabelLength()
   );
 
-  console.log("here is the vendor profile chart data", VendorProfileChartData);
   const [monthlyStartMonthIndex, setMonthlyStartMonthIndex] = useState(() => {
     const currentMonth = new Date().getMonth();
     return Math.min(currentMonth, 12 - MONTHLY_WINDOW);

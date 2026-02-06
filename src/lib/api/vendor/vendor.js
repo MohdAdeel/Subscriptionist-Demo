@@ -35,7 +35,7 @@ export async function createVendor(record) {
       data = await response.json();
     } catch (e) {
       // Response might be empty, that's okay for 201
-      console.log("Response body is empty or not JSON, which is fine for 201 status");
+      console.warn("Response body is empty or not JSON, which is fine for 201 status");
     }
   }
 
@@ -135,7 +135,7 @@ export async function deleteVendor(vendorId) {
       data = await response.json();
     } catch (e) {
       // Empty response is fine for DELETE operations
-      console.log("Delete response is empty, which is normal");
+      console.warn("Delete response is empty, which is normal");
     }
   }
 
@@ -192,7 +192,7 @@ export async function deleteSubscriptionActivityLine(activityLineId) {
     try {
       data = await response.json();
     } catch (e) {
-      console.log("Delete response is empty, which is normal");
+      console.warn("Delete response is empty, which is normal");
     }
   }
 

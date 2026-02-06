@@ -100,7 +100,6 @@ export default function AddEditVendorModal({
   };
 
   if (!open) return null;
-  console.log("here vendor", vendor);
   const inputClass =
     "w-full border border-[#d0d5dd] rounded-lg px-3 py-2.5 text-sm text-[#343A40] bg-white placeholder:text-[#9CA3AF] focus:outline-none focus:ring-2 focus:ring-[#172B4D]/30 focus:border-[#172B4D]";
 

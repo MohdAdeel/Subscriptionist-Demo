@@ -72,7 +72,7 @@ const Header = ({ userName = "John Doe", userPhoto = null, lastUpdateTime = null
   };
 
   const handleLogout = () => {
-    console.log("Logout clicked");
+    console.warn("Logout clicked");
     setIsDropdownOpen(false);
     // Add your logout logic here
   };
