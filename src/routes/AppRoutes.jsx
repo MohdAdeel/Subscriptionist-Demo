@@ -13,10 +13,10 @@ import UnderConstruction from "../components/UnderConstruction";
 function AppRoutes() {
   return (
     <Routes>
+      <Route path="/login" element={<Login />} />
       <Route element={<ProtectedRoutes />}>
         <Route path="/" element={<Home />} />
         <Route path="*" element={<NotFound />} />
-        <Route path="/login" element={<Login />} />
         <Route path="/reports" element={<Report />} />
         <Route path="/vendors" element={<Vendor />} />
         <Route path="/profile" element={<Profile />} />

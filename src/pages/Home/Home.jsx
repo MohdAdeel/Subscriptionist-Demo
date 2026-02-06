@@ -1,13 +1,13 @@
 import Chart from "chart.js/auto";
 import { useHomeStore } from "../../stores";
 import { useActivityLines } from "../../hooks";
-import { calculateSubscriptionAmount, handleDataProcessing } from "../../lib/utils/home";
 import TotalActiveCostIcon from "../../assets/TotalActiveCost.svg";
 import RenewalTimelineIcon from "../../assets/RenewalTimeline.svg";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import UpcomingRenewalsIcon from "../../assets/UpcomingRenewals.svg";
 import RecentlyConcludedIcon from "../../assets/RecentlyConcluded.svg";
 import ActiveSubscriptionsIcon from "../../assets/ActiveSubscriptions.svg";
+import { calculateSubscriptionAmount, handleDataProcessing } from "../../lib/utils/home";
 import { CircleSkeleton, RectangleSkeleton, TextSkeleton } from "../../components/SkeletonLoader";
 
 const BarSkeleton = ({ bars = 6, heights }) => {
@@ -51,6 +51,8 @@ const VENDOR_CHART_COLORS = [
   "#D4F1F4",
   "#E1DBFE",
 ];
+
+const VENDOR_PROFILE_COLORS = ["#93E8FF", "#BFF1FF", "#00C2FA"];
 
 const DEPARTMENT_CHART_COLORS = ["#E1DBFE", "#BFF1FF", "#E1FFBB", "#EAECF0", "#CFE1FF", "#BFF1FF"];
 
@@ -115,6 +117,8 @@ const Home = () => {
   const renewalTimelineCards = useHomeStore((state) => state.renewalTimelineCards);
   const RecentlyConcluded = useHomeStore((state) => state.RecentlyConcluded);
   const VendorDoughnutChartData = useHomeStore((state) => state.VendorDoughnutChartData) ?? [];
+  const vendorProfileCounts = useHomeStore((state) => state.vendorProfileCounts) ?? [];
+  const VendorProfileChartData = useHomeStore((state) => state.VendorProfileChartData) ?? {};
   const monthlySpendChartData = useHomeStore((state) => state.monthlySpendChartData) ?? [];
   const departmentSpendChartData = useHomeStore((state) => state.departmentSpendChartData) ?? [];
   const ActualVsBudgetData = useHomeStore((state) => state.ActualVsBudgetData) ?? [];
@@ -125,6 +129,8 @@ const Home = () => {
   const [departmentLabelLength, setDepartmentLabelLength] = useState(() =>
     getDepartmentLabelLength()
   );
+
+  console.log("here is the vendor profile chart data", VendorProfileChartData);
   const [monthlyStartMonthIndex, setMonthlyStartMonthIndex] = useState(() => {
     const currentMonth = new Date().getMonth();
     return Math.min(currentMonth, 12 - MONTHLY_WINDOW);
@@ -135,6 +141,7 @@ const Home = () => {
     new Date().getMonth() < 6 ? UPCOMING_HALF_FIRST : UPCOMING_HALF_LAST
   );
   const [selectedUpcomingRenewalKey, setSelectedUpcomingRenewalKey] = useState(null);
+  const [selectedVendorProfileKey, setSelectedVendorProfileKey] = useState(null);
 
   const vendorsChartRef = useRef(null);
   const monthlySpendChartRef = useRef(null);
@@ -414,7 +421,30 @@ const Home = () => {
     return { labels, values, monthKeys, byMonth, maxValue, stepSize };
   }, [upcomingRenewalRecords, upcomingRenewalYear, upcomingRenewalHalf, maxLabelLength]);
 
-  const vendorProfile = useMemo(() => [{ label: "Strategic", value: 1 }], []);
+  const vendorProfileSeries = useMemo(() => {
+    const hasValidData = vendorProfileCounts.length > 0;
+    const labels = hasValidData
+      ? vendorProfileCounts.map((profile) => profile?.VendorProfile || "Unknown")
+      : ["No Data Available"];
+    const values = hasValidData ? vendorProfileCounts.map((profile) => profile?.count || 0) : [0];
+    const maxValue = hasValidData ? Math.max(...values) : 0;
+    const stepSize = Math.max(1, Math.ceil(maxValue / 6));
+    const colors = hasValidData
+      ? values.map((_, idx) => VENDOR_PROFILE_COLORS[idx % VENDOR_PROFILE_COLORS.length])
+      : ["rgba(0, 0, 0, 0.1)"];
+
+    return { labels, values, colors, maxValue, stepSize, hasValidData };
+  }, [vendorProfileCounts]);
+
+  const vendorProfileDataMap = useMemo(() => {
+    if (Array.isArray(VendorProfileChartData)) {
+      const defaultLabel = vendorProfileCounts[0]?.VendorProfile;
+      return defaultLabel ? { [defaultLabel]: VendorProfileChartData } : {};
+    }
+    return VendorProfileChartData && typeof VendorProfileChartData === "object"
+      ? VendorProfileChartData
+      : {};
+  }, [VendorProfileChartData, vendorProfileCounts]);
 
   const upcomingTasks = useMemo(
     () => [
@@ -440,7 +470,7 @@ const Home = () => {
   const hasMonthlySpend = !isLoading && monthlySpendChartData.length > 0;
   const hasDepartmentSpend = !isLoading;
   const hasActualVsBudget = !isLoading;
-  const hasVendorProfile = !isLoading && vendorProfile.length > 0;
+  const hasVendorProfile = !isLoading && vendorProfileSeries.hasValidData;
   const hasUpcomingRenewal = !isLoading;
   const hasUpcomingTasks = !isLoading && upcomingTasks.length > 0;
   const hasOverdueTasks = !isLoading && overdueTasks.length > 0;
@@ -485,12 +515,37 @@ const Home = () => {
     });
   }, [selectedUpcomingRenewalKey, upcomingRenewalSeries]);
 
+  const selectedVendorProfileRows = useMemo(() => {
+    if (!selectedVendorProfileKey) return [];
+    const rows = vendorProfileDataMap[selectedVendorProfileKey] ?? [];
+    const filtered = rows.filter(
+      (row) => toSafeDate(row.SubscriptionStartDate) && toSafeDate(row.SubscriptionEndDate)
+    );
+    return [...filtered].sort((a, b) => {
+      const aDate = toSafeDate(a.SubscriptionStartDate)?.getTime() ?? 0;
+      const bDate = toSafeDate(b.SubscriptionStartDate)?.getTime() ?? 0;
+      return aDate - bDate;
+    });
+  }, [selectedVendorProfileKey, vendorProfileDataMap]);
+
   useEffect(() => {
     if (!selectedUpcomingRenewalKey) return;
     if (!upcomingRenewalSeries.monthKeys.includes(selectedUpcomingRenewalKey)) {
       setSelectedUpcomingRenewalKey(null);
     }
   }, [selectedUpcomingRenewalKey, upcomingRenewalSeries.monthKeys]);
+
+  useEffect(() => {
+    if (!selectedVendorProfileKey) return;
+    if (Array.isArray(VendorProfileChartData)) return;
+    if (
+      !VendorProfileChartData ||
+      typeof VendorProfileChartData !== "object" ||
+      !(selectedVendorProfileKey in VendorProfileChartData)
+    ) {
+      setSelectedVendorProfileKey(null);
+    }
+  }, [selectedVendorProfileKey, VendorProfileChartData]);
   const maxMonthlyStartMonthIndex = Math.max(0, 12 - MONTHLY_WINDOW);
   const canMonthlyPrev = monthlyStartMonthIndex > 0;
   const canMonthlyNext = monthlyStartMonthIndex < maxMonthlyStartMonthIndex;
@@ -848,20 +903,32 @@ const Home = () => {
   }, [actualVsBudgetSeries, isLoading]);
 
   useEffect(() => {
-    if (isLoading || !vendorProfileChartRef.current) return;
+    if (isLoading || !vendorProfileChartRef.current || selectedVendorProfileKey) {
+      if (vendorProfileChartInstanceRef.current) {
+        vendorProfileChartInstanceRef.current.destroy();
+        vendorProfileChartInstanceRef.current = null;
+      }
+      return;
+    }
     const ctx = vendorProfileChartRef.current.getContext("2d");
     if (vendorProfileChartInstanceRef.current) {
       vendorProfileChartInstanceRef.current.destroy();
     }
+    const suggestedMax = vendorProfileSeries.hasValidData
+      ? Math.max(1, Math.ceil(vendorProfileSeries.maxValue * 1.1))
+      : 1;
     vendorProfileChartInstanceRef.current = new Chart(ctx, {
       type: "bar",
       data: {
-        labels: vendorProfile.map((item) => item.label),
+        labels: vendorProfileSeries.labels,
         datasets: [
           {
-            data: vendorProfile.map((item) => item.value),
-            backgroundColor: "#99E6FF",
-            borderRadius: 12,
+            label: vendorProfileSeries.hasValidData ? "Vendor Profile Counts" : "",
+            data: vendorProfileSeries.values,
+            backgroundColor: vendorProfileSeries.colors,
+            hoverBackgroundColor: vendorProfileSeries.colors,
+            borderWidth: 0,
+            borderRadius: 10,
             maxBarThickness: 200,
           },
         ],
@@ -869,14 +936,50 @@ const Home = () => {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: (tooltipItem) => Number(tooltipItem.raw || 0).toLocaleString(),
+            },
+          },
+          legend: { display: false },
+        },
+        onHover: (event, elements) => {
+          const target = event?.native?.target;
+          if (target) {
+            target.style.cursor = elements.length ? "pointer" : "default";
+          }
+        },
+        onClick: (event, elements) => {
+          if (!elements?.length) return;
+          const index = elements[0].index;
+          const label = vendorProfileSeries.labels[index];
+          if (label) setSelectedVendorProfileKey(label);
+        },
         scales: {
-          x: { grid: { display: false }, ticks: { color: "#667085" } },
+          x: {
+            grid: { display: false },
+            ticks: { color: "#000000", font: { size: 12 } },
+          },
           y: {
-            min: 0,
-            max: 2,
-            ticks: { stepSize: 1, color: "#667085" },
-            grid: { color: "#EEF2F6" },
+            ticks: {
+              color: "#000000",
+              font: { size: 12 },
+              callback: (value) => Number(value).toLocaleString(),
+              maxTicksLimit: 6,
+              stepSize: vendorProfileSeries.stepSize,
+            },
+            grid: {
+              display: true,
+              color: "#EAECF0",
+              borderDash: [5, 5],
+              drawBorder: false,
+              drawTicks: false,
+            },
+            beginAtZero: true,
+            suggestedMin: 0,
+            suggestedMax,
+            border: { color: "#FFFFFF", width: 1 },
           },
         },
       },
@@ -887,7 +990,7 @@ const Home = () => {
         vendorProfileChartInstanceRef.current = null;
       }
     };
-  }, [vendorProfile, isLoading]);
+  }, [vendorProfileSeries, isLoading, selectedVendorProfileKey]);
 
   useEffect(() => {
     if (isLoading || !upcomingRenewalChartRef.current || selectedUpcomingRenewalKey) {
@@ -1197,9 +1300,71 @@ const Home = () => {
             <h3 className="text-sm font-semibold text-[#111827]">Vendors by Profile</h3>
             <span className="text-xs text-[#98A2B3]">i</span>
           </div>
-          <div className="mt-4 h-56">
-            {hasVendorProfile ? <canvas ref={vendorProfileChartRef} /> : <BarSkeleton bars={3} />}
-          </div>
+          {selectedVendorProfileKey ? (
+            <div className="mt-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-[#111827]">
+                  Subscriptions for {selectedVendorProfileKey}
+                </h4>
+                <button
+                  type="button"
+                  className="rounded-full bg-[#1D4ED8] px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-[#1E40AF]"
+                  onClick={() => setSelectedVendorProfileKey(null)}
+                >
+                  Back to chart
+                </button>
+              </div>
+              <div className="mt-3 max-h-56 overflow-y-auto overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-[#F2F4F7] sticky top-0">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-semibold text-[#667085]">Name</th>
+                      <th className="px-3 py-2 text-left font-semibold text-[#667085]">
+                        Start Date
+                      </th>
+                      <th className="px-3 py-2 text-left font-semibold text-[#667085]">End Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#EEF2F6]">
+                    {selectedVendorProfileRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="px-3 py-3 text-center text-[#98A2B3]">
+                          No subscriptions in this profile.
+                        </td>
+                      </tr>
+                    ) : (
+                      selectedVendorProfileRows.map((row, idx) => (
+                        <tr key={`${row.SubscriptionName || row.VendorName}-${idx}`}>
+                          <td className="px-3 py-2 text-[#101828]">
+                            {row.SubscriptionName || row.VendorName || "Unknown"}
+                          </td>
+                          <td className="px-3 py-2 text-[#475467]">
+                            {formatShortDate(row.SubscriptionStartDate)}
+                          </td>
+                          <td className="px-3 py-2 text-[#475467]">
+                            {formatShortDate(row.SubscriptionEndDate)}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="mt-4 h-56">
+                {hasVendorProfile ? (
+                  <canvas ref={vendorProfileChartRef} />
+                ) : (
+                  <BarSkeleton bars={3} />
+                )}
+              </div>
+              {hasVendorProfile && (
+                <p className="mt-3 text-xs text-[#98A2B3]">Click a bar to view subscriptions.</p>
+              )}
+            </>
+          )}
         </div>
 
         <div className="rounded-2xl bg-white p-5 shadow-sm border border-[#EEF2F6]">

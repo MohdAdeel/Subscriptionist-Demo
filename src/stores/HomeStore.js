@@ -41,6 +41,16 @@ export const useHomeStore = create((set) => ({
 
   setVendorDoughnutChartData: (VendorDoughnutChartData) => set({ VendorDoughnutChartData }),
 
+  /** Vendor profile chart: array of { VendorProfile, count } */
+  vendorProfileCounts: [],
+
+  setVendorProfileCounts: (vendorProfileCounts) => set({ vendorProfileCounts }),
+
+  /** Vendor profile chart detail: { [profileLabel]: subscription[] } for table on label click */
+  VendorProfileChartData: {},
+
+  setVendorProfileChartData: (VendorProfileChartData) => set({ VendorProfileChartData }),
+
   /** Monthly spend chart: array of { SubscriptionStartDate, SubscriptionContractAmount } from mergeRecordsByMonth */
   monthlySpendChartData: [],
 

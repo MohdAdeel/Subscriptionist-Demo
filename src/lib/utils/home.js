@@ -12,7 +12,11 @@ var startDateforDep = new Date(currentDate.getFullYear(), startMonthIndex, 1);
 var endDatefordep = new Date(currentDate.getFullYear(), endMonthIndex + 1, 0);
 var BugetDeprartment = [];
 var vendorProfileCounts = [];
-var vendorProfileMap = {};
+var vendorProfileMap = {
+  0: "Strategic",
+  1: "Tactical",
+  2: "Operational",
+};
 var monthlyrenewal = [];
 
 var startDateforRenwal = new Date();
@@ -889,7 +893,7 @@ function filterSubscriptionsByCurrentYear(subscriptions) {
       })
     )
     .filter((subscriptionGroup) => subscriptionGroup.length > 0); // Removes empty groups
-
+  console.log("here is the filtered subscriptions from previous func", filteredSubscriptions);
   //  createVendorMonthChart(filteredSubscriptions);
   processVendorprofiles(filteredSubscriptions);
 }
@@ -902,7 +906,8 @@ function processVendorprofiles(filteredSubscriptions) {
     subArray.forEach((subscription) => {
       // Check if the subscription object has a VendorProfile
       let vendorProfile = subscription.VendorProfile;
-      if (vendorProfile !== null) {
+      console.log("here is the vendor profile", subscription);
+      if (vendorProfile !== null && vendorProfile !== undefined) {
         // Increment the count for this VendorProfile
         if (profileMap.has(vendorProfile)) {
           profileMap.set(vendorProfile, profileMap.get(vendorProfile) + 1);
@@ -912,22 +917,37 @@ function processVendorprofiles(filteredSubscriptions) {
       }
     });
   });
-  console.log("here is filtered subscriptions", filteredSubscriptions);
+
   // Convert the map to an array of objects with count and VendorProfile attributes
   vendorProfileCounts = Array.from(profileMap, ([VendorProfile, count]) => ({
     VendorProfile,
     count,
   }));
   mapVendorProfileNames();
-  // setVendorProfileChart();
+  const { setVendorProfileCounts } = useHomeStore.getState();
+  setVendorProfileCounts(vendorProfileCounts.map((profile) => ({ ...profile })));
+  setVendorProfileChart();
 }
-
+function setVendorProfileChart() {
+  const profileValue = useHomeStore.getState().vendorProfileCounts ?? [];
+  const profileName = profileValue[0]?.VendorProfile;
+  let filteredData = [];
+  SubscriptionJSon.forEach((subArray) => {
+    subArray.forEach((subscription) => {
+      if (vendorProfileMap[subscription.VendorProfile] === profileName) {
+        filteredData.push(subscription);
+      }
+    });
+  });
+  console.log("here is the filtered data", filteredData);
+  const { setVendorProfileChartData } = useHomeStore.getState();
+  setVendorProfileChartData(filteredData);
+}
 function mapVendorProfileNames() {
   vendorProfileCounts.forEach((profile) => {
-    profile.VendorProfile = vendorProfileMap[profile.VendorProfile];
+    const mappedProfile = vendorProfileMap[profile.VendorProfile];
+    profile.VendorProfile = mappedProfile ?? profile.VendorProfile ?? "Unknown";
   });
-  console.log("here is the vendor profile counts", vendorProfileCounts);
-  console.log("here is the vendor profile map", vendorProfileMap);
 }
 
 function filtermonthlysubsinRangeforDepartment() {
@@ -1003,7 +1023,6 @@ function filtermonthlysubsinRangeforRenewal() {
   });
 
   monthlyrenewal = tempMonthly;
-  console.log("here is the monthly renewal", monthlyrenewal);
 
   const { setUpcomingRenewalRecords } = useHomeStore.getState();
   setUpcomingRenewalRecords(allRenewals);
