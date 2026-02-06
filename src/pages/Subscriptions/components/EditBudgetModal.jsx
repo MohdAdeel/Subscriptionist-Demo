@@ -1,6 +1,6 @@
 import { usePopup } from "../../../components/Popup";
 import { useState, useCallback, useEffect } from "react";
-import { updateBudget } from "../../../lib/utils/subscriptions";
+import { updateBudget } from "../../../lib/api/Subscription/subscriptions";
 
 const BUDGET_TYPE = {
   DEPARTMENT: "department",

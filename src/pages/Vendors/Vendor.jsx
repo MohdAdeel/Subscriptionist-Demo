@@ -1,6 +1,6 @@
 import Chart from "chart.js/auto";
 import { usePopup } from "../../components/Popup";
-import { getVendorData } from "../../lib/api/vendor/vendor";
+import { useVendorData } from "../../hooks/useVendors";
 import { useEffect, useRef, useState, useMemo } from "react";
 import AddEditVendorModal from "./component/AddEditVendorModal";
 import { FiSearch, FiBell, FiUser, FiChevronDown } from "react-icons/fi";
@@ -75,18 +75,30 @@ const DUMMY_DEPARTMENT_SPEND = [
 
 export default function Vendor() {
   const { showError } = usePopup();
-  const [vendors, setVendors] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [editVendor, setEditVendor] = useState(null);
   const [statusFilter, setStatusFilter] = useState("3");
   const [selectedRowId, setSelectedRowId] = useState(null);
   const [vendorNameFilter, setVendorNameFilter] = useState("");
-  const [isLoadingVendors, setIsLoadingVendors] = useState(true);
-  const [vendorsLengthCount, setVendorsLengthCount] = useState(0);
   const [debouncedVendorName, setDebouncedVendorName] = useState("");
   const [showAddVendorModal, setShowAddVendorModal] = useState(false);
   const [showEditVendorModal, setShowEditVendorModal] = useState(false);
-  const [activityLineCountForVendor, setActivityLineCountForVendor] = useState([]);
+
+  const {
+    data: vendorData,
+    isLoading: isLoadingVendors,
+    error: vendorError,
+  } = useVendorData({
+    status: statusFilter,
+    pagenumber: currentPage,
+    vendor: debouncedVendorName,
+  });
+
+  const vendors = vendorData?.vendor ?? [];
+  const vendorsLengthCount = vendorData?.count ?? 0;
+  const activityLineCountForVendor = Array.isArray(vendorData?.activityLineCountForVendor)
+    ? vendorData.activityLineCountForVendor
+    : (vendorData?.activityLineCountForVendor?.value ?? []);
 
   const activityCountChartRef = useRef(null);
   const amountByVendorChartRef = useRef(null);
@@ -282,35 +294,6 @@ export default function Vendor() {
     };
   }, [isLoadingVendors]);
 
-  const refetchVendorData = () => {
-    setIsLoadingVendors(true);
-    const normalizedStatus = Number.parseInt(statusFilter, 10);
-    const status = Number.isNaN(normalizedStatus) || statusFilter === "" ? 3 : normalizedStatus;
-    const vendor = debouncedVendorName.trim() ? debouncedVendorName.trim() : null;
-    getVendorData({
-      contactId: "c199b131-4c62-f011-bec2-6045bdffa665",
-      status,
-      pagenumber: currentPage,
-      vendor,
-    })
-      .then((data) => {
-        setActivityLineCountForVendor(
-          Array.isArray(data?.activityLineCountForVendor)
-            ? data.activityLineCountForVendor
-            : (data?.activityLineCountForVendor?.value ?? [])
-        );
-        setVendors(data?.vendor ?? []);
-        setVendorsLengthCount(data?.count ?? 0);
-      })
-      .catch((error) => {
-        console.error(error);
-        showError("Unable to load vendors. Please refresh the page.");
-      })
-      .finally(() => {
-        setIsLoadingVendors(false);
-      });
-  };
-
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       setDebouncedVendorName(vendorNameFilter);
@@ -319,8 +302,10 @@ export default function Vendor() {
   }, [vendorNameFilter]);
 
   useEffect(() => {
-    refetchVendorData();
-  }, [currentPage, statusFilter, debouncedVendorName]);
+    if (vendorError) {
+      showError("Unable to load vendors. Please refresh the page.");
+    }
+  }, [vendorError, showError]);
 
   return (
     <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-screen">
@@ -641,22 +626,13 @@ export default function Vendor() {
         </div>
       </div>
 
-      <AddEditVendorModal
-        open={showAddVendorModal}
-        onClose={() => setShowAddVendorModal(false)}
-        onAdd={() => {
-          refetchVendorData();
-        }}
-      />
+      <AddEditVendorModal open={showAddVendorModal} onClose={() => setShowAddVendorModal(false)} />
       <AddEditVendorModal
         open={showEditVendorModal}
         vendor={editVendor}
         onClose={() => {
           setShowEditVendorModal(false);
           setEditVendor(null);
-        }}
-        onSave={() => {
-          refetchVendorData();
         }}
       />
     </div>

@@ -2,7 +2,7 @@ import {
   addSubscription,
   fetchVendorList,
   checkSubscriptionExistance,
-} from "../../../lib/utils/subscriptions";
+} from "../../../lib/api/Subscription/subscriptions";
 import AddNewVendor from "./AddNewVendor";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { usePopup } from "../../../components/Popup";

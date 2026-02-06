@@ -4,7 +4,11 @@ import { useState, useCallback, useRef } from "react";
 import AddVendorManually from "./AddSubscriptionManually";
 import UploadSubscriptionModal from "./UploadSubscriptionModal";
 import { FiX, FiPlus, FiUpload, FiDownload } from "react-icons/fi";
-import { fetchVendorList, getDeparments, getCategories } from "../../../lib/utils/subscriptions";
+import {
+  fetchVendorList,
+  getDeparments,
+  getCategories,
+} from "../../../lib/api/Subscription/subscriptions";
 
 export default function AddSubscriptionModal({
   open = false,

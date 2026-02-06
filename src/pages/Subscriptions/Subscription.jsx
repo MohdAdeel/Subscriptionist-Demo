@@ -11,7 +11,7 @@ import {
   getRelationshipSubsLines,
   checkSubscriptionExistance,
   deleteSubscriptionActivityLine,
-} from "../../lib/utils/subscriptions";
+} from "../../lib/api/Subscription/subscriptions";
 import { usePopup } from "../../components/Popup";
 import AddSubscriptionModal from "./components/AddSubscriptionModal";
 import EditSubscriptionModal from "./components/EditSubscriptionModal";

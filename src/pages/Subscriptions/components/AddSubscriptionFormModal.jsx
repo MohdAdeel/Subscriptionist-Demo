@@ -1,7 +1,10 @@
 import { FiCalendar, FiLock } from "react-icons/fi";
 import { usePopup } from "../../../components/Popup";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { addSubscription, checkSubscriptionExistance } from "../../../lib/utils/subscriptions";
+import {
+  addSubscription,
+  checkSubscriptionExistance,
+} from "../../../lib/api/Subscription/subscriptions";
 
 const DESC_MAX = 2000;
 

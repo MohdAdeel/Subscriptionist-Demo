@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { FiX, FiChevronLeft } from "react-icons/fi";
 import { usePopup } from "../../../components/Popup";
-import { checkVendorExistance, createVendorRecord } from "../../../lib/utils/subscriptions";
+import {
+  checkVendorExistance,
+  createVendorRecord,
+} from "../../../lib/api/Subscription/subscriptions";
 
 const DEFAULT_ACCOUNT_ID = "c199b131-4c62-f011-bec2-6045bdffa665";
 

@@ -4,7 +4,7 @@ import {
   getDeparments,
   getFinancialYear,
   getActivityLines,
-} from "../../../lib/utils/subscriptions";
+} from "../../../lib/api/Subscription/subscriptions";
 import { usePopup } from "../../../components/Popup";
 import { useState, useCallback, useEffect } from "react";
 

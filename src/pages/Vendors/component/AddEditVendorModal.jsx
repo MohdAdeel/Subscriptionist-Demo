@@ -1,7 +1,7 @@
 import { FiX } from "react-icons/fi";
 import { useState, useEffect } from "react";
 import { usePopup } from "../../../components/Popup";
-import { createVendor, updateVendor } from "../../../lib/api/vendor/vendor";
+import { useCreateVendorMutation, useUpdateVendorMutation } from "../../../hooks/useVendors";
 
 const initialFormState = {
   vendorName: "",
@@ -10,17 +10,14 @@ const initialFormState = {
   accountManagerPhone: "",
 };
 
-export default function AddEditVendorModal({
-  open = false,
-  onClose,
-  onAdd,
-  onSave,
-  vendor = null,
-}) {
+export default function AddEditVendorModal({ open = false, onClose, vendor = null }) {
   const isEditMode = Boolean(vendor);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { showSuccess, showError, showWarning } = usePopup();
   const [formData, setFormData] = useState(initialFormState);
+
+  const createMutation = useCreateVendorMutation();
+  const updateMutation = useUpdateVendorMutation();
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
   useEffect(() => {
     if (open && vendor) {
@@ -47,7 +44,6 @@ export default function AddEditVendorModal({
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.vendorName.trim()) return;
-    setIsSubmitting(true);
     const vendorName = formData.vendorName.trim();
     const accountManagerName = formData.accountManagerName.trim() || "";
     const accountManagerEmail = formData.accountManagerEmail.trim() || "";
@@ -65,37 +61,27 @@ export default function AddEditVendorModal({
           showWarning(
             "Unable to edit: vendor information is missing. Please select the vendor again."
           );
-          setIsSubmitting(false);
           return;
         }
         const updateBody = { ...requestBody, activityID };
-        await updateVendor(activityID, updateBody);
+        await updateMutation.mutateAsync({ activityID, updateData: updateBody });
         showSuccess("Vendor has been updated successfully.");
-        onSave?.({
-          vendorName,
-          accountManagerName,
-          accountManagerEmail,
-          accountManagerPhone,
-          activityID,
-          id: vendor?.id ?? activityID,
-        });
+        setFormData(initialFormState);
+        onClose?.();
       } else {
         const createBody = {
           ...requestBody,
           "yiic_Account_yiic_subscriptionsactivity@odata.bind":
             "/accounts(f0983e34-d2c5-ee11-9079-00224827e0df)",
         };
-        await createVendor(createBody);
+        await createMutation.mutateAsync(createBody);
         showSuccess("Vendor has been added successfully.");
-        onAdd?.({ vendorName, accountManagerName, accountManagerEmail, accountManagerPhone });
+        setFormData(initialFormState);
+        onClose?.();
       }
-      setFormData(initialFormState);
-      onClose?.();
     } catch (err) {
       console.error(isEditMode ? "Update vendor failed:" : "Add vendor failed:", err);
       showError("Unable to save vendor. Please try again.");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
