@@ -191,8 +191,7 @@ const Report = () => {
       summarySheet.getColumn(col).width = 18;
     }
 
-    const fillBackground = (rowStart, rowEnd, colStart, colEnd, color) => {
-      summarySheet.mergeCells(rowStart, colStart, rowEnd, colEnd);
+    const fillAndMerge = (rowStart, rowEnd, colStart, colEnd, color) => {
       for (let row = rowStart; row <= rowEnd; row += 1) {
         for (let col = colStart; col <= colEnd; col += 1) {
           summarySheet.getCell(row, col).fill = {
@@ -202,13 +201,14 @@ const Report = () => {
           };
         }
       }
+      summarySheet.mergeCells(rowStart, colStart, rowEnd, colEnd);
     };
 
     const setCardText = (row, col, text, fontSize, bold = false) => {
       const cell = summarySheet.getCell(row, col);
       cell.value = text;
       cell.font = { bold, size: fontSize, color: { argb: "FF1F2937" } };
-      cell.alignment = { vertical: "middle", horizontal: "left" };
+      cell.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
     };
 
     const cards = [
@@ -243,14 +243,15 @@ const Report = () => {
     ];
 
     cards.forEach((card) => {
-      fillBackground(2, 6, card.startCol, card.endCol, card.color);
-      setCardText(3, card.startCol, card.title, 10, false);
-      setCardText(5, card.startCol, card.value, 16, true);
+      fillAndMerge(2, 3, card.startCol, card.endCol, card.color);
+      setCardText(2, card.startCol, card.title, 10, false);
+      fillAndMerge(4, 6, card.startCol, card.endCol, card.color);
+      setCardText(4, card.startCol, card.value, 16, true);
     });
 
     summarySheet.mergeCells(8, 1, 8, 7);
     const chartTitleCell = summarySheet.getCell(8, 1);
-    chartTitleCell.value = "Monthly Spend";
+    chartTitleCell.value = "Subscription Tenure";
     chartTitleCell.font = { bold: true, size: 14, color: { argb: "FF111827" } };
     chartTitleCell.alignment = { vertical: "middle", horizontal: "left" };
 
