@@ -1,14 +1,19 @@
-import Chart from "chart.js/auto";
 import { useHomeStore } from "../../stores";
 import { useActivityLines } from "../../hooks";
+import React, { useEffect, useMemo, useState } from "react";
+import MonthlySpendChart from "./components/MonthlySpendChart";
+import VendorProfileChart from "./components/VendorProfileChart";
+import VendorDoughnutChart from "./components/VendorDoughnutChart";
 import TotalActiveCostIcon from "../../assets/TotalActiveCost.svg";
 import RenewalTimelineIcon from "../../assets/RenewalTimeline.svg";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import ActualVsBudgetChart from "./components/ActualVsBudgetChart";
+import { RectangleSkeleton } from "../../components/SkeletonLoader";
 import UpcomingRenewalsIcon from "../../assets/UpcomingRenewals.svg";
+import DepartmentSpendChart from "./components/DepartmentSpendChart";
+import UpcomingRenewalChart from "./components/UpcomingRenewalChart";
 import RecentlyConcludedIcon from "../../assets/RecentlyConcluded.svg";
 import ActiveSubscriptionsIcon from "../../assets/ActiveSubscriptions.svg";
 import { calculateSubscriptionAmount, handleDataProcessing } from "../../lib/utils/home";
-import { CircleSkeleton, RectangleSkeleton, TextSkeleton } from "../../components/SkeletonLoader";
 
 const BarSkeleton = ({ bars = 6, heights }) => {
   const presetHeights = heights ?? [35, 60, 55, 72, 50, 66];
@@ -42,21 +47,9 @@ const LineSkeleton = () => (
 
 const CARD_COLORS = ["#E8E4FF", "#D9E8FF", "#D2F3FF", "#E5FCD5", "#D8DEEE"];
 
-const VENDOR_CHART_COLORS = [
-  "#CCD6EB",
-  "#E1FFBB",
-  "#1D225D",
-  "#BFF1FF",
-  "#CFE1FF",
-  "#D4F1F4",
-  "#E1DBFE",
-];
-
 const VENDOR_PROFILE_COLORS = ["#93E8FF", "#BFF1FF", "#00C2FA"];
 
 const DEPARTMENT_CHART_COLORS = ["#E1DBFE", "#BFF1FF", "#E1FFBB", "#EAECF0", "#CFE1FF", "#BFF1FF"];
-
-const UPCOMING_RENEWAL_COLORS = ["#DCEBFF", "#C8DDFF", "#B8D1FF", "#9CC2FF", "#8CB7FF", "#7EAEFF"];
 
 const UPCOMING_WINDOW_MONTHS = 6;
 const UPCOMING_HALF_FIRST = 0;
@@ -112,7 +105,7 @@ const toSafeDate = (value) => {
 const getMonthKey = (date) => `${date.getFullYear()}-${date.getMonth()}`;
 
 const Home = () => {
-  const { data: activityLinesData, isLoading, error } = useActivityLines();
+  const { data: activityLinesData, isLoading } = useActivityLines();
   const FirstTwoCards = useHomeStore((state) => state.FirstTwoCards);
   const renewalTimelineCards = useHomeStore((state) => state.renewalTimelineCards);
   const RecentlyConcluded = useHomeStore((state) => state.RecentlyConcluded);
@@ -141,19 +134,6 @@ const Home = () => {
   );
   const [selectedUpcomingRenewalKey, setSelectedUpcomingRenewalKey] = useState(null);
   const [selectedVendorProfileKey, setSelectedVendorProfileKey] = useState(null);
-
-  const vendorsChartRef = useRef(null);
-  const monthlySpendChartRef = useRef(null);
-  const vendorProfileChartRef = useRef(null);
-  const actualVsBudgetChartRef = useRef(null);
-  const upcomingRenewalChartRef = useRef(null);
-  const vendorsChartInstanceRef = useRef(null);
-  const departmentSpendChartRef = useRef(null);
-  const monthlySpendChartInstanceRef = useRef(null);
-  const vendorProfileChartInstanceRef = useRef(null);
-  const actualVsBudgetChartInstanceRef = useRef(null);
-  const departmentSpendChartInstanceRef = useRef(null);
-  const upcomingRenewalChartInstanceRef = useRef(null);
 
   // Run home data processing when we're on Home and activity lines data is available
   useEffect(() => {
@@ -465,12 +445,9 @@ const Home = () => {
     []
   );
 
-  const hasVendorData = !isLoading && vendorBreakdown.length > 0;
   const hasMonthlySpend = !isLoading && monthlySpendChartData.length > 0;
   const hasDepartmentSpend = !isLoading;
   const hasActualVsBudget = !isLoading;
-  const hasVendorProfile = !isLoading && vendorProfileSeries.hasValidData;
-  const hasUpcomingRenewal = !isLoading;
   const hasUpcomingTasks = !isLoading && upcomingTasks.length > 0;
   const hasOverdueTasks = !isLoading && overdueTasks.length > 0;
   const upcomingRenewalYearLabel = `FY${String(upcomingRenewalYear).slice(-2)}`;
@@ -572,518 +549,6 @@ const Home = () => {
     );
   };
 
-  useEffect(() => {
-    if (isLoading || !vendorsChartRef.current) return;
-    const labels = vendorBreakdown.map((item) => item.label);
-    const values = vendorBreakdown.map((item) => item.value);
-    const ctx = vendorsChartRef.current.getContext("2d");
-    if (vendorsChartInstanceRef.current) {
-      vendorsChartInstanceRef.current.destroy();
-    }
-    vendorsChartInstanceRef.current = new Chart(ctx, {
-      type: "doughnut",
-      data: {
-        labels,
-        datasets: [
-          {
-            data: values,
-            backgroundColor: labels.map(
-              (_, i) => VENDOR_CHART_COLORS[i % VENDOR_CHART_COLORS.length]
-            ),
-            borderWidth: 0,
-          },
-        ],
-      },
-      options: {
-        cutout: "72%",
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: (ctx) => `${ctx.label}: ${ctx.parsed}`,
-            },
-          },
-        },
-      },
-    });
-    return () => {
-      if (vendorsChartInstanceRef.current) {
-        vendorsChartInstanceRef.current.destroy();
-        vendorsChartInstanceRef.current = null;
-      }
-    };
-  }, [vendorBreakdown, isLoading]);
-
-  useEffect(() => {
-    if (isLoading || !monthlySpendChartRef.current || monthlySpendSeries.values.length === 0)
-      return;
-    const ctx = monthlySpendChartRef.current.getContext("2d");
-    if (monthlySpendChartInstanceRef.current) {
-      monthlySpendChartInstanceRef.current.destroy();
-    }
-
-    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, "rgba(207, 255, 147, 0.8)");
-    gradient.addColorStop(1, "rgba(207, 255, 147, 0)");
-
-    const maxValue = Math.max(...monthlySpendSeries.values);
-    const minValue = Math.min(...monthlySpendSeries.values);
-    const range = maxValue - minValue;
-    const stepSize = range > 0 ? Math.ceil(range / 4) : 1;
-
-    monthlySpendChartInstanceRef.current = new Chart(ctx, {
-      type: "line",
-      data: {
-        labels: monthlySpendSeries.labels,
-        datasets: [
-          {
-            label: "Monthly Spend",
-            data: monthlySpendSeries.values,
-            fill: true,
-            backgroundColor: gradient,
-            borderColor: "#AFFF4A",
-            borderWidth: 2,
-            tension: 0.4,
-            pointRadius: 3,
-            pointHoverRadius: 5,
-            pointHoverBackgroundColor: "#ffffff",
-            pointHoverBorderColor: "#AFFF4A",
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: "#ffffff",
-            titleColor: "#000000",
-            bodyColor: "#000000",
-            borderColor: "#AFFF4A",
-            borderWidth: 1,
-            callbacks: {
-              label: (tooltipItem) => `$${Number(tooltipItem.raw || 0).toLocaleString()}`,
-            },
-          },
-        },
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: {
-              color: "#475467",
-              font: { size: 12 },
-              maxRotation: 0,
-              minRotation: 0,
-              callback: function (value) {
-                const label = this.getLabelForValue(value);
-                return typeof label === "string" ? label.split("\n") : label;
-              },
-            },
-          },
-          y: {
-            grid: {
-              display: true,
-              color: "#EAECF0",
-              borderDash: [5, 5],
-            },
-            ticks: {
-              color: "#475467",
-              font: { size: 12 },
-              stepSize,
-              maxTicksLimit: 5,
-              callback: (value) => `$${value}`,
-            },
-            border: {
-              color: "#FFFFFF",
-              width: 0,
-            },
-          },
-        },
-      },
-    });
-    return () => {
-      if (monthlySpendChartInstanceRef.current) {
-        monthlySpendChartInstanceRef.current.destroy();
-        monthlySpendChartInstanceRef.current = null;
-      }
-    };
-  }, [monthlySpendSeries, isLoading]);
-
-  useEffect(() => {
-    if (isLoading || !departmentSpendChartRef.current) return;
-    const ctx = departmentSpendChartRef.current.getContext("2d");
-    if (departmentSpendChartInstanceRef.current) {
-      departmentSpendChartInstanceRef.current.destroy();
-    }
-    departmentSpendChartInstanceRef.current = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: departmentChartSeries.labels,
-        datasets: [
-          {
-            label: departmentChartSeries.chartLabel,
-            data: departmentChartSeries.values,
-            backgroundColor: departmentChartSeries.colors,
-            hoverBackgroundColor: departmentChartSeries.colors,
-            borderWidth: 0,
-            borderRadius: 10,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            ticks: {
-              color: "#000000",
-              font: { size: 12 },
-              maxRotation: 0,
-              minRotation: 0,
-              callback: function (value) {
-                const label = this.getLabelForValue(value);
-                return typeof label === "string" ? label.split("\n") : label;
-              },
-            },
-            grid: { display: false },
-          },
-          y: {
-            ticks: {
-              color: "#000000",
-              font: { size: 12 },
-              callback: (value) => `$${Number(value).toLocaleString()}`,
-              stepSize: departmentChartSeries.stepSize,
-              maxTicksLimit: 5,
-            },
-            grid: {
-              display: true,
-              color: "#EAECF0",
-              borderDash: [5, 5],
-            },
-            beginAtZero: true,
-            suggestedMin: 0,
-            suggestedMax: departmentChartSeries.stepSize * 5,
-            border: {
-              color: "#FFFFFF",
-              width: 1,
-            },
-          },
-        },
-        plugins: {
-          tooltip: {
-            callbacks: {
-              label: (tooltipItem) => `$${Number(tooltipItem.raw || 0).toLocaleString()}`,
-            },
-          },
-          legend: { display: false },
-        },
-      },
-    });
-    return () => {
-      if (departmentSpendChartInstanceRef.current) {
-        departmentSpendChartInstanceRef.current.destroy();
-        departmentSpendChartInstanceRef.current = null;
-      }
-    };
-  }, [departmentChartSeries, isLoading]);
-
-  useEffect(() => {
-    if (isLoading || !actualVsBudgetChartRef.current) return;
-    const ctx = actualVsBudgetChartRef.current.getContext("2d");
-    if (actualVsBudgetChartInstanceRef.current) {
-      actualVsBudgetChartInstanceRef.current.destroy();
-    }
-    actualVsBudgetChartInstanceRef.current = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: actualVsBudgetSeries.labels,
-        datasets: [
-          {
-            label: "Budget",
-            data: actualVsBudgetSeries.budgetAmounts,
-            backgroundColor: "#CCD6EB",
-            borderRadius: 10,
-          },
-          {
-            label: "Actual Spend",
-            data: actualVsBudgetSeries.actualAmounts,
-            backgroundColor: "#E1DBFE",
-            borderRadius: 10,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: {
-          duration: 800,
-          easing: "easeOutQuart",
-        },
-        animations: {
-          y: {
-            from: 0,
-          },
-        },
-        plugins: {
-          tooltip: {
-            position: "nearest",
-            backgroundColor: "#ffffff",
-            titleColor: "#000000",
-            bodyColor: "#000000",
-            borderColor: "#cccccc",
-            borderWidth: 1,
-            usePointStyle: true,
-            callbacks: {
-              labelPointStyle: () => ({
-                pointStyle: "circle",
-                rotation: 0,
-              }),
-              label: (tooltipItem) =>
-                `${tooltipItem.dataset.label}: $${Number(tooltipItem.raw || 0).toLocaleString()}`,
-            },
-          },
-          legend: {
-            display: true,
-            position: "top",
-            align: "end",
-            labels: {
-              usePointStyle: true,
-              pointStyle: "circle",
-              color: "#000000",
-              font: { size: 12 },
-            },
-          },
-        },
-        scales: {
-          x: {
-            ticks: {
-              color: "#000000",
-              font: { size: 12 },
-              maxRotation: 0,
-              minRotation: 0,
-              callback: function (value) {
-                const label = this.getLabelForValue(value);
-                return typeof label === "string" ? label.split("\n") : label;
-              },
-            },
-            grid: { display: false },
-            stacked: false,
-          },
-          y: {
-            ticks: {
-              color: "#000000",
-              font: { size: 12 },
-              callback: (value) => `$${Number(value).toLocaleString()}`,
-              stepSize: actualVsBudgetSeries.stepSize,
-              maxTicksLimit: 5,
-            },
-            grid: {
-              display: true,
-              color: "#EAECF0",
-              borderDash: [5, 5],
-              drawBorder: false,
-              drawTicks: false,
-            },
-            beginAtZero: true,
-            suggestedMax: actualVsBudgetSeries.stepSize * 5,
-          },
-        },
-      },
-    });
-    return () => {
-      if (actualVsBudgetChartInstanceRef.current) {
-        actualVsBudgetChartInstanceRef.current.destroy();
-        actualVsBudgetChartInstanceRef.current = null;
-      }
-    };
-  }, [actualVsBudgetSeries, isLoading]);
-
-  useEffect(() => {
-    if (isLoading || !vendorProfileChartRef.current || selectedVendorProfileKey) {
-      if (vendorProfileChartInstanceRef.current) {
-        vendorProfileChartInstanceRef.current.destroy();
-        vendorProfileChartInstanceRef.current = null;
-      }
-      return;
-    }
-    const ctx = vendorProfileChartRef.current.getContext("2d");
-    if (vendorProfileChartInstanceRef.current) {
-      vendorProfileChartInstanceRef.current.destroy();
-    }
-    const suggestedMax = vendorProfileSeries.hasValidData
-      ? Math.max(1, Math.ceil(vendorProfileSeries.maxValue * 1.1))
-      : 1;
-    vendorProfileChartInstanceRef.current = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: vendorProfileSeries.labels,
-        datasets: [
-          {
-            label: vendorProfileSeries.hasValidData ? "Vendor Profile Counts" : "",
-            data: vendorProfileSeries.values,
-            backgroundColor: vendorProfileSeries.colors,
-            hoverBackgroundColor: vendorProfileSeries.colors,
-            borderWidth: 0,
-            borderRadius: 10,
-            maxBarThickness: 200,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          tooltip: {
-            callbacks: {
-              label: (tooltipItem) => Number(tooltipItem.raw || 0).toLocaleString(),
-            },
-          },
-          legend: { display: false },
-        },
-        onHover: (event, elements) => {
-          const target = event?.native?.target;
-          if (target) {
-            target.style.cursor = elements.length ? "pointer" : "default";
-          }
-        },
-        onClick: (event, elements) => {
-          if (!elements?.length) return;
-          const index = elements[0].index;
-          const label = vendorProfileSeries.labels[index];
-          if (label) setSelectedVendorProfileKey(label);
-        },
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: { color: "#000000", font: { size: 12 } },
-          },
-          y: {
-            ticks: {
-              color: "#000000",
-              font: { size: 12 },
-              callback: (value) => Number(value).toLocaleString(),
-              maxTicksLimit: 6,
-              stepSize: vendorProfileSeries.stepSize,
-            },
-            grid: {
-              display: true,
-              color: "#EAECF0",
-              borderDash: [5, 5],
-              drawBorder: false,
-              drawTicks: false,
-            },
-            beginAtZero: true,
-            suggestedMin: 0,
-            suggestedMax,
-            border: { color: "#FFFFFF", width: 1 },
-          },
-        },
-      },
-    });
-    return () => {
-      if (vendorProfileChartInstanceRef.current) {
-        vendorProfileChartInstanceRef.current.destroy();
-        vendorProfileChartInstanceRef.current = null;
-      }
-    };
-  }, [vendorProfileSeries, isLoading, selectedVendorProfileKey]);
-
-  useEffect(() => {
-    if (isLoading || !upcomingRenewalChartRef.current || selectedUpcomingRenewalKey) {
-      if (upcomingRenewalChartInstanceRef.current) {
-        upcomingRenewalChartInstanceRef.current.destroy();
-        upcomingRenewalChartInstanceRef.current = null;
-      }
-      return;
-    }
-    const ctx = upcomingRenewalChartRef.current.getContext("2d");
-    if (upcomingRenewalChartInstanceRef.current) {
-      upcomingRenewalChartInstanceRef.current.destroy();
-    }
-    const barColors = upcomingRenewalSeries.values.map(
-      (_, idx) => UPCOMING_RENEWAL_COLORS[idx % UPCOMING_RENEWAL_COLORS.length]
-    );
-    const suggestedMax = Math.max(1, Math.ceil(upcomingRenewalSeries.maxValue * 1.1));
-    upcomingRenewalChartInstanceRef.current = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: upcomingRenewalSeries.labels,
-        datasets: [
-          {
-            data: upcomingRenewalSeries.values,
-            backgroundColor: barColors,
-            hoverBackgroundColor: barColors,
-            borderWidth: 0,
-            borderRadius: 10,
-            maxBarThickness: 48,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: {
-            grid: { display: false },
-            ticks: {
-              color: "#000000",
-              font: { size: 12 },
-              maxRotation: 0,
-              minRotation: 0,
-              callback: function (value) {
-                const label = this.getLabelForValue(value);
-                return typeof label === "string" ? label.split("\n") : label;
-              },
-            },
-          },
-          y: {
-            ticks: {
-              color: "#000000",
-              font: { size: 12 },
-              callback: (value) => Number(value).toLocaleString(),
-              maxTicksLimit: 5,
-              stepSize: upcomingRenewalSeries.stepSize,
-            },
-            grid: {
-              display: true,
-              color: "#EAECF0",
-              borderDash: [5, 5],
-              drawBorder: false,
-              drawTicks: false,
-            },
-            beginAtZero: true,
-            suggestedMin: 0,
-            suggestedMax,
-          },
-        },
-        onHover: (event, elements) => {
-          const target = event?.native?.target;
-          if (target) {
-            target.style.cursor = elements.length ? "pointer" : "default";
-          }
-        },
-        onClick: (event, elements) => {
-          if (!elements?.length) return;
-          const index = elements[0].index;
-          const key = upcomingRenewalSeries.monthKeys[index];
-          if (key) {
-            setSelectedUpcomingRenewalKey(key);
-          }
-        },
-      },
-    });
-    return () => {
-      if (upcomingRenewalChartInstanceRef.current) {
-        upcomingRenewalChartInstanceRef.current.destroy();
-        upcomingRenewalChartInstanceRef.current = null;
-      }
-    };
-  }, [upcomingRenewalSeries, isLoading, selectedUpcomingRenewalKey]);
-
   return (
     <div className="w-full p-6 space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -1152,305 +617,75 @@ const Home = () => {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="rounded-2xl bg-white p-5 shadow-sm border border-[#EEF2F6]">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-[#111827]">Vendors</h3>
-            <div className="relative">
-              <span
-                className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-[#E4E7EC] bg-white text-[10px] font-semibold text-[#667085] shadow-sm cursor-pointer"
-                onMouseEnter={() => setHoveredInfo("Vendors")}
-                onMouseLeave={() => setHoveredInfo(null)}
-              >
-                i
-              </span>
-              {hoveredInfo === "Vendors" && (
-                <div className="absolute right-0 top-8 z-20 w-64 rounded-xl border border-[#E4E7EC] bg-white p-3 shadow-lg animate-fadeIn">
-                  <p className="text-sm font-semibold text-[#0F172A]">Vendors</p>
-                  <p className="mt-1 text-xs leading-snug text-[#475467]">{tooltipCopy.Vendors}</p>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="mt-4">
-            {hasVendorData ? (
-              <div className="grid grid-cols-[200px_1fr] gap-4 items-center">
-                <div className="h-48 w-48">
-                  <canvas ref={vendorsChartRef} />
-                </div>
-                <div className="max-h-50 overflow-y-auto pr-2 space-y-2">
-                  {vendorBreakdown.map((vendor, index) => (
-                    <div
-                      key={vendor.label}
-                      className="flex items-center gap-6 text-xs text-[#344054]"
-                    >
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{
-                          backgroundColor: VENDOR_CHART_COLORS[index % VENDOR_CHART_COLORS.length],
-                        }}
-                      />
-                      <span className="truncate">{vendor.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-6">
-                <CircleSkeleton size="180px" className="bg-gray-200" />
-                <div className="flex-1 space-y-3">
-                  {Array.from({ length: 6 }).map((_, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <CircleSkeleton size="12px" className="bg-gray-300" />
-                      <TextSkeleton className="h-3 w-32" />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="rounded-2xl bg-white p-5 shadow-sm border border-[#EEF2F6]">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-[#111827]">Monthly Spend Trend</h3>
-            <div className="flex items-center gap-2 text-[#98A2B3]">
-              <button
-                className="h-6 w-6 rounded-full border border-[#E4E7EC] text-xs disabled:opacity-40 disabled:cursor-not-allowed"
-                onClick={() => setMonthlyStartMonthIndex((prev) => Math.max(0, prev - 1))}
-                disabled={!canMonthlyPrev}
-              >
-                &lt;
-              </button>
-              <button
-                className="h-6 w-6 rounded-full border border-[#E4E7EC] text-xs disabled:opacity-40 disabled:cursor-not-allowed"
-                onClick={() =>
-                  setMonthlyStartMonthIndex((prev) => Math.min(maxMonthlyStartMonthIndex, prev + 1))
-                }
-                disabled={!canMonthlyNext}
-              >
-                &gt;
-              </button>
-            </div>
-          </div>
-          <div className="mt-4 h-56">
-            {hasMonthlySpend ? <canvas ref={monthlySpendChartRef} /> : <LineSkeleton />}
-          </div>
-        </div>
-
-        <div className="rounded-2xl bg-white p-5 shadow-sm border border-[#EEF2F6]">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-[#111827]">Departmental Spend Trend</h3>
-            <div className="flex items-center gap-2 text-xs text-[#98A2B3]">
-              <button
-                className="h-6 w-6 rounded-full border border-[#E4E7EC] text-xs disabled:opacity-40 disabled:cursor-not-allowed"
-                onClick={() => {
-                  if (departmentYearIndex > 0) {
-                    setDepartmentYear(departmentYears[departmentYearIndex - 1]);
-                  }
-                }}
-                disabled={!canDepartmentPrev}
-              >
-                &lt;
-              </button>
-              <span>{departmentYearLabel}</span>
-              <button
-                className="h-6 w-6 rounded-full border border-[#E4E7EC] text-xs disabled:opacity-40 disabled:cursor-not-allowed"
-                onClick={() => {
-                  if (
-                    departmentYearIndex !== -1 &&
-                    departmentYearIndex < departmentYears.length - 1
-                  ) {
-                    setDepartmentYear(departmentYears[departmentYearIndex + 1]);
-                  }
-                }}
-                disabled={!canDepartmentNext}
-              >
-                &gt;
-              </button>
-            </div>
-          </div>
-          <div className="mt-4 h-56">
-            {hasDepartmentSpend ? (
-              <canvas ref={departmentSpendChartRef} />
-            ) : (
-              <BarSkeleton bars={4} />
-            )}
-          </div>
-        </div>
+        <VendorDoughnutChart
+          vendorBreakdown={vendorBreakdown}
+          isLoading={isLoading}
+          hoveredInfo={hoveredInfo}
+          onHoverInfoChange={setHoveredInfo}
+          vendorTooltipText={tooltipCopy.Vendors}
+        />
+        <MonthlySpendChart
+          monthlySpendSeries={monthlySpendSeries}
+          isLoading={isLoading}
+          hasMonthlySpend={hasMonthlySpend}
+          canMonthlyPrev={canMonthlyPrev}
+          canMonthlyNext={canMonthlyNext}
+          onMonthlyPrev={() => setMonthlyStartMonthIndex((prev) => Math.max(0, prev - 1))}
+          onMonthlyNext={() =>
+            setMonthlyStartMonthIndex((prev) => Math.min(maxMonthlyStartMonthIndex, prev + 1))
+          }
+          skeleton={<LineSkeleton />}
+        />
+        <DepartmentSpendChart
+          departmentChartSeries={departmentChartSeries}
+          isLoading={isLoading}
+          hasDepartmentSpend={hasDepartmentSpend}
+          departmentYearLabel={departmentYearLabel}
+          canDepartmentPrev={canDepartmentPrev}
+          canDepartmentNext={canDepartmentNext}
+          onDepartmentPrev={() => {
+            if (departmentYearIndex > 0) {
+              setDepartmentYear(departmentYears[departmentYearIndex - 1]);
+            }
+          }}
+          onDepartmentNext={() => {
+            if (departmentYearIndex !== -1 && departmentYearIndex < departmentYears.length - 1) {
+              setDepartmentYear(departmentYears[departmentYearIndex + 1]);
+            }
+          }}
+          skeleton={<BarSkeleton bars={4} />}
+        />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="rounded-2xl bg-white p-5 shadow-sm border border-[#EEF2F6]">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-[#111827]">Actual vs Budget</h3>
-            <div className="flex items-center gap-2 text-xs text-[#98A2B3]">
-              <button className="h-6 w-6 rounded-full border border-[#E4E7EC] text-xs">&lt;</button>
-              <span>FY26</span>
-              <button className="h-6 w-6 rounded-full border border-[#E4E7EC] text-xs">&gt;</button>
-            </div>
-          </div>
-          <div className="mt-4 h-56">
-            {hasActualVsBudget ? <canvas ref={actualVsBudgetChartRef} /> : <BarSkeleton bars={2} />}
-          </div>
-        </div>
-
-        <div className="rounded-2xl bg-white p-5 shadow-sm border border-[#EEF2F6]">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-[#111827]">Vendors by Profile</h3>
-            <span className="text-xs text-[#98A2B3]">i</span>
-          </div>
-          {selectedVendorProfileKey ? (
-            <div className="mt-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-[#111827]">
-                  Subscriptions for {selectedVendorProfileKey}
-                </h4>
-                <button
-                  type="button"
-                  className="rounded-full bg-[#1D4ED8] px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-[#1E40AF]"
-                  onClick={() => setSelectedVendorProfileKey(null)}
-                >
-                  Back to chart
-                </button>
-              </div>
-              <div className="mt-3 max-h-56 overflow-y-auto overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead className="bg-[#F2F4F7] sticky top-0">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-semibold text-[#667085]">Name</th>
-                      <th className="px-3 py-2 text-left font-semibold text-[#667085]">
-                        Start Date
-                      </th>
-                      <th className="px-3 py-2 text-left font-semibold text-[#667085]">End Date</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#EEF2F6]">
-                    {selectedVendorProfileRows.length === 0 ? (
-                      <tr>
-                        <td colSpan={3} className="px-3 py-3 text-center text-[#98A2B3]">
-                          No subscriptions in this profile.
-                        </td>
-                      </tr>
-                    ) : (
-                      selectedVendorProfileRows.map((row, idx) => (
-                        <tr key={`${row.SubscriptionName || row.VendorName}-${idx}`}>
-                          <td className="px-3 py-2 text-[#101828]">
-                            {row.SubscriptionName || row.VendorName || "Unknown"}
-                          </td>
-                          <td className="px-3 py-2 text-[#475467]">
-                            {formatShortDate(row.SubscriptionStartDate)}
-                          </td>
-                          <td className="px-3 py-2 text-[#475467]">
-                            {formatShortDate(row.SubscriptionEndDate)}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="mt-4 h-56">
-                {hasVendorProfile ? (
-                  <canvas ref={vendorProfileChartRef} />
-                ) : (
-                  <BarSkeleton bars={3} />
-                )}
-              </div>
-              {hasVendorProfile && (
-                <p className="mt-3 text-xs text-[#98A2B3]">Click a bar to view subscriptions.</p>
-              )}
-            </>
-          )}
-        </div>
-
-        <div className="rounded-2xl bg-white p-5 shadow-sm border border-[#EEF2F6]">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-[#111827]">Upcoming Renewal Per Month</h3>
-            <div className="flex items-center gap-2 text-xs text-[#98A2B3]">
-              <button
-                className="h-6 w-6 rounded-full border border-[#E4E7EC] text-xs"
-                onClick={handleUpcomingRenewalPrev}
-              >
-                &lt;
-              </button>
-              <span>{upcomingRenewalPeriodLabel}</span>
-              <button
-                className="h-6 w-6 rounded-full border border-[#E4E7EC] text-xs"
-                onClick={handleUpcomingRenewalNext}
-              >
-                &gt;
-              </button>
-            </div>
-          </div>
-          {selectedUpcomingRenewalKey ? (
-            <div className="mt-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-[#111827]">
-                  Renewals for {selectedUpcomingRenewalLabel}
-                </h4>
-                <button
-                  type="button"
-                  className="rounded-full bg-[#1D4ED8] px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-[#1E40AF]"
-                  onClick={() => setSelectedUpcomingRenewalKey(null)}
-                >
-                  Back to chart
-                </button>
-              </div>
-              <div className="mt-3 max-h-56 overflow-y-auto overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead className="bg-[#F2F4F7] sticky top-0">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-semibold text-[#667085]">Name</th>
-                      <th className="px-3 py-2 text-left font-semibold text-[#667085]">Due Date</th>
-                      <th className="px-3 py-2 text-left font-semibold text-[#667085]">
-                        Frequency
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#EEF2F6]">
-                    {selectedUpcomingRenewalRows.length === 0 ? (
-                      <tr>
-                        <td colSpan={3} className="px-3 py-3 text-center text-[#98A2B3]">
-                          No renewals in this month.
-                        </td>
-                      </tr>
-                    ) : (
-                      selectedUpcomingRenewalRows.map((row, idx) => (
-                        <tr key={`${row.SubscriptionName || row.VendorName}-${idx}`}>
-                          <td className="px-3 py-2 text-[#101828]">
-                            {row.SubscriptionName || row.VendorName || "Unknown"}
-                          </td>
-                          <td className="px-3 py-2 text-[#475467]">
-                            {formatShortDate(row.SubscriptionStartDate)}
-                          </td>
-                          <td className="px-3 py-2 text-[#475467]">
-                            {row.SubscriptionFrequency || "N/A"}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="mt-4 h-56">
-                {hasUpcomingRenewal ? (
-                  <canvas ref={upcomingRenewalChartRef} />
-                ) : (
-                  <BarSkeleton bars={6} />
-                )}
-              </div>
-              {hasUpcomingRenewal && (
-                <p className="mt-3 text-xs text-[#98A2B3]">Click a bar to view renewals.</p>
-              )}
-            </>
-          )}
-        </div>
+        <ActualVsBudgetChart
+          actualVsBudgetSeries={actualVsBudgetSeries}
+          isLoading={isLoading}
+          hasActualVsBudget={hasActualVsBudget}
+          skeleton={<BarSkeleton bars={2} />}
+        />
+        <VendorProfileChart
+          vendorProfileSeries={vendorProfileSeries}
+          isLoading={isLoading}
+          selectedVendorProfileKey={selectedVendorProfileKey}
+          selectedVendorProfileRows={selectedVendorProfileRows}
+          onSelectVendorProfileKey={setSelectedVendorProfileKey}
+          formatShortDate={formatShortDate}
+          skeleton={<BarSkeleton bars={3} />}
+        />
+        <UpcomingRenewalChart
+          upcomingRenewalSeries={upcomingRenewalSeries}
+          isLoading={isLoading}
+          selectedUpcomingRenewalKey={selectedUpcomingRenewalKey}
+          selectedUpcomingRenewalLabel={selectedUpcomingRenewalLabel}
+          selectedUpcomingRenewalRows={selectedUpcomingRenewalRows}
+          onSelectUpcomingRenewalKey={setSelectedUpcomingRenewalKey}
+          onUpcomingRenewalPrev={handleUpcomingRenewalPrev}
+          onUpcomingRenewalNext={handleUpcomingRenewalNext}
+          upcomingRenewalPeriodLabel={upcomingRenewalPeriodLabel}
+          formatShortDate={formatShortDate}
+          skeleton={<BarSkeleton bars={6} />}
+        />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

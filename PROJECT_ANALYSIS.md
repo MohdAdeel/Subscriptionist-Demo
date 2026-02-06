@@ -182,7 +182,21 @@ Layout styles come from `App.css` (`.app-layout`, `.app-content`).
 ## Remaining Legacy / TODOs
 
 1. **Auth**: `isAuthenticated` in `ProtectedRoutes` is hardcoded `true` – replace with real auth
-2. **API keys**: Move base URL and key to `.env` / build-time variables
+2. **API keys, base URLs, and IDs** – Move to `.env` / build-time variables. All hardcoded locations:
+
+   | File                                                  | Line(s) | What is hardcoded                                                                                                                                                                                            |
+   | ----------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+   | `src/lib/api/api.js`                                  | 4–9     | `baseURL` (Azure API), `x-functions-key`                                                                                                                                                                     |
+   | `src/lib/api/vendor/vendor.js`                        | 6–8     | `API_BASE_URL`, `API_KEY`; key used at 20, 55, 77, 99, 121, 157, 180                                                                                                                                         |
+   | `src/lib/api/profile/profile.js`                      | 6–10    | `API_BASE_URL`, `API_KEY`, `AZURE_B2C_API_URL` (Power Automate URL with sig); key used at 22, 40, 65, 93, 119, 145, 169, 194, 219                                                                            |
+   | `src/lib/utils/home.js`                               | 27–29   | `API_KEY`, `BUDGETS_API_URL`; key used at 637                                                                                                                                                                |
+   | `src/lib/utils/subscriptions.js`                      | 2–6     | `API_BASE_URL`, `AZURE_FUNCTION_KEY`, `DEFAULT_ACCOUNT_ID` (line 200, 286, 326), `DEFAULT_CONTACT_ID` (line 159); key used at 17, 41, 62, 78, 99, 115, 137, 189, 207, 230, 248, 273, 293, 314, 337, 359, 380 |
+   | `src/lib/api/activityLine/activityLine.js`            | 11      | Default `contactId` in `fetchActivityLines()`                                                                                                                                                                |
+   | `src/pages/Profile/Profile.jsx`                       | 34      | `CONTACT_ID`; used at 85, 114, 140, 170, 449, 457                                                                                                                                                            |
+   | `src/pages/Subscriptions/Subscription.jsx`            | 427     | `contactId` in request body                                                                                                                                                                                  |
+   | `src/pages/Vendors/Vendor.jsx`                        | 291     | `contactId` in request body                                                                                                                                                                                  |
+   | `src/pages/Subscriptions/components/AddNewVendor.jsx` | 6       | `DEFAULT_ACCOUNT_ID`; used at 50, 65                                                                                                                                                                         |
+   | `src/pages/Vendors/component/AddEditVendorModal.jsx`  | 86      | Hardcoded account ID `/accounts(f0983e34-d2c5-ee11-9079-00224827e0df)` in create body                                                                                                                        |
 
 ---
 
