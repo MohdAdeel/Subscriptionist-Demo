@@ -5,10 +5,11 @@ import {
   useCreateVendorRecordMutation,
   checkVendorExistance,
 } from "../../../hooks/useSubscriptions";
-
-const DEFAULT_ACCOUNT_ID = "c199b131-4c62-f011-bec2-6045bdffa665";
+import { useAuthStore } from "../../../stores";
 
 export default function AddNewVendor({ open = false, onBack, onClose, onAddVendor }) {
+  const userAuth = useAuthStore((state) => state.userAuth);
+  const accountId = userAuth?.accountid;
   const createVendorMutation = useCreateVendorRecordMutation();
   const [formData, setFormData] = useState({
     vendorName: "",
@@ -50,11 +51,7 @@ export default function AddNewVendor({ open = false, onBack, onClose, onAddVendo
     if (!formData.vendorName.trim()) return;
     setIsSubmitting(true);
     try {
-      const result = await checkVendorExistance(
-        DEFAULT_ACCOUNT_ID,
-        formData.vendorName.trim(),
-        null
-      );
+      const result = await checkVendorExistance(accountId, formData.vendorName.trim());
       const list = result?.value ?? (Array.isArray(result) ? result : []);
       const exists = Array.isArray(list) && list.length > 0;
       if (exists) {
@@ -66,7 +63,7 @@ export default function AddNewVendor({ open = false, onBack, onClose, onAddVendo
         yiic_accountmanagername: formData.accountManagerName ?? "",
         yiic_accountmanageremail: formData.accountManagerEmail ?? "",
         yiic_accountmanagerphone: formData.accountManagerPhone ?? "",
-        "yiic_Account_yiic_subscriptionsactivity@odata.bind": `/accounts(${DEFAULT_ACCOUNT_ID})`,
+        "yiic_Account_yiic_subscriptionsactivity@odata.bind": `/accounts(${accountId})`,
       };
       const vendorResponse = await createVendorMutation.mutateAsync(payload);
       showSuccess("Vendor added successfully.");

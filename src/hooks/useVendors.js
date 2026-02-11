@@ -8,6 +8,7 @@ import {
   deleteSubscriptionActivityLine,
   getSubscriptionActivityLinesBySubscriptionActivity,
 } from "../lib/api/vendor/vendor";
+import { useAuthStore } from "../stores";
 
 /**
  * Query key for vendor list - used for caching and invalidation.
@@ -15,15 +16,13 @@ import {
  */
 export const VENDOR_DATA_QUERY_KEY = ["vendorData"];
 
-const DEFAULT_CONTACT_ID = "c199b131-4c62-f011-bec2-6045bdffa665";
-
 /**
- * Build query key for vendor list with filters
+ * Build query key for vendor list with filters (pass resolved contactId when calling from useVendorData).
  */
 export const getVendorDataQueryKey = (filters = {}) => [
   ...VENDOR_DATA_QUERY_KEY,
   {
-    contactId: filters.contactId ?? DEFAULT_CONTACT_ID,
+    contactId: filters.contactId,
     status: filters.status ?? 3,
     pagenumber: filters.pagenumber ?? 1,
     vendor: filters.vendor ?? null,
@@ -35,13 +34,15 @@ export const getVendorDataQueryKey = (filters = {}) => [
  * Refetches automatically after create, update, delete via query invalidation.
  */
 export const useVendorData = (filters = {}, options = {}) => {
+  const userAuth = useAuthStore((state) => state.userAuth);
   const normalizedStatus =
     filters.status != null && filters.status !== ""
       ? Number.parseInt(String(filters.status), 10)
       : 3;
   const status = Number.isNaN(normalizedStatus) ? 3 : normalizedStatus;
+  const contactId = filters.contactId ?? userAuth?.contactid;
   const requestBody = {
-    contactId: filters.contactId ?? DEFAULT_CONTACT_ID,
+    contactId,
     status,
     pagenumber: filters.pagenumber ?? 1,
     vendor: filters.vendor?.trim() || null,

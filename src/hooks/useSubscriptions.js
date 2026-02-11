@@ -19,9 +19,7 @@ import {
   getSubscriptionActivityById,
   deleteSubscriptionActivityLine,
 } from "../lib/api/Subscription/subscriptions";
-
-const DEFAULT_CONTACT_ID = "c199b131-4c62-f011-bec2-6045bdffa665";
-const DEFAULT_ACCOUNT_ID = "f0983e34-d2c5-ee11-9079-00224827e0df";
+import { useAuthStore } from "../stores";
 
 /** Query key for main subscription grid - invalidate to refetch after add/update/delete */
 export const SUBSCRIPTION_DATA_QUERY_KEY = ["subscriptionData"];
@@ -42,13 +40,14 @@ export const getSubscriptionDataQueryKey = (filters = {}) => [
  * Main subscription grid data. Refetches when invalidated (after add/update/delete).
  */
 export const useSubscriptionData = (filters = {}, options = {}) => {
+  const userAuth = useAuthStore((state) => state.userAuth);
   const parsedStatus =
     filters.status != null && filters.status !== ""
       ? Number.parseInt(String(filters.status), 10)
       : 3;
   const status = Number.isNaN(parsedStatus) ? 3 : parsedStatus;
   const requestBody = {
-    contactId: filters.contactId ?? DEFAULT_CONTACT_ID,
+    contactId: filters.contactId ?? userAuth?.contactid,
     status,
     pagenumber: filters.pagenumber ?? 1,
     startdate: filters.startdate ?? null,
@@ -101,10 +100,12 @@ export const useCategories = (options = {}) => {
 /**
  * Vendor list for Add Subscription flow
  */
-export const useVendorList = (activityId = DEFAULT_ACCOUNT_ID, options = {}) => {
+export const useVendorList = (activityId, options = {}) => {
+  const userAuth = useAuthStore((state) => state.userAuth);
+  const accountId = activityId ?? userAuth?.accountid;
   return useQuery({
-    queryKey: [...VENDOR_LIST_QUERY_KEY, activityId],
-    queryFn: () => fetchVendorList(activityId),
+    queryKey: [...VENDOR_LIST_QUERY_KEY, accountId],
+    queryFn: () => fetchVendorList(accountId),
     enabled: Boolean(options.enabled !== false),
     ...options,
   });
@@ -114,9 +115,11 @@ export const useVendorList = (activityId = DEFAULT_ACCOUNT_ID, options = {}) => 
  * Budget data for Budget Management modal
  */
 export const useBudgetData = (pageNumber = 1, options = {}) => {
+  const userAuth = useAuthStore((state) => state.userAuth);
+  const contactId = userAuth?.contactid;
   return useQuery({
-    queryKey: [...BUDGET_DATA_QUERY_KEY, pageNumber],
-    queryFn: () => fetchBudgetData({ pageNumber }),
+    queryKey: [...BUDGET_DATA_QUERY_KEY, pageNumber, contactId],
+    queryFn: () => fetchBudgetData({ pageNumber, contactId }),
     enabled: Boolean(options.enabled !== false),
     ...options,
   });
@@ -136,10 +139,12 @@ export const useFinancialYear = (options = {}) => {
 /**
  * Activity lines for Add Budget subscription dropdown
  */
-export const useSubscriptionActivityLines = (accountId = DEFAULT_ACCOUNT_ID, options = {}) => {
+export const useSubscriptionActivityLines = (accountId, options = {}) => {
+  const userAuth = useAuthStore((state) => state.userAuth);
+  const effectiveAccountId = accountId ?? userAuth?.accountid;
   return useQuery({
-    queryKey: ["subscriptionActivityLines", accountId],
-    queryFn: () => getActivityLines(accountId),
+    queryKey: ["subscriptionActivityLines", effectiveAccountId],
+    queryFn: () => getActivityLines(effectiveAccountId),
     enabled: Boolean(options.enabled !== false),
     ...options,
   });

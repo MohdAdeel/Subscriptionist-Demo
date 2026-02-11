@@ -2,8 +2,6 @@
 const API_BASE_URL =
   "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api";
 const AZURE_FUNCTION_KEY = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-const DEFAULT_ACCOUNT_ID = "f0983e34-d2c5-ee11-9079-00224827e0df";
-const DEFAULT_CONTACT_ID = "c199b131-4c62-f011-bec2-6045bdffa665";
 
 export async function getRelationshipSubsLines(body) {
   try {
@@ -156,7 +154,7 @@ export async function deleteSubscriptionActivityLine(activityLineId) {
 // Budget Related Functions
 /** Fetch budget data from GetbudgetData API. Call when opening Budget Management modal. */
 export async function fetchBudgetData(options = {}) {
-  const { pageNumber = 1, contactId = DEFAULT_CONTACT_ID } = options;
+  const { pageNumber = 1, contactId } = options;
   try {
     const url = `${API_BASE_URL}/GetbudgetData?code=${AZURE_FUNCTION_KEY}`;
     const response = await fetch(url, {
@@ -197,7 +195,7 @@ export async function getFinancialYear() {
 }
 
 /** Get subscription activity lines by account. */
-export async function getActivityLines(accountId = DEFAULT_ACCOUNT_ID) {
+export async function getActivityLines(accountId) {
   try {
     const url = `${API_BASE_URL}/getSubscriptionActivityLinesByAccount?accountId=${encodeURIComponent(accountId)}`;
     const response = await fetch(url, {
@@ -283,7 +281,7 @@ export async function updateBudget(budgetId, payload) {
 }
 
 /** Fetch vendor list from getSubscriptionActivities API. Call when opening Add Subscription Manually. */
-export async function fetchVendorList(activityId = DEFAULT_ACCOUNT_ID) {
+export async function fetchVendorList(activityId) {
   try {
     const url = `${API_BASE_URL}/getSubscriptionActivities/${encodeURIComponent(activityId)}`;
     const response = await fetch(url, {
@@ -323,7 +321,7 @@ export async function addSubscription(formData) {
   }
 }
 /** Check if vendor exists for account. GET .../api/checkVendorExists?vendorName=...&accountId=... */
-export async function checkVendorExistance(accountId = DEFAULT_ACCOUNT_ID, vendorName) {
+export async function checkVendorExistance(accountId, vendorName) {
   try {
     const params = new URLSearchParams({
       vendorName: vendorName,

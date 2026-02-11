@@ -1,12 +1,14 @@
 import { create } from "zustand";
 
 export const useAuthStore = create((set) => ({
-  user: null,
-  token: null,
-  status: "idle",
+  accountDetailsAzureResponse: null,
+  userAuth: null,
+  userAuthLoading: false,
 
-  setUser: (user) => set({ user }),
-  setToken: (token) => set({ token }),
-  setStatus: (status) => set({ status }),
-  resetAuth: () => set({ user: null, token: null, status: "idle" }),
+  setAccountDetailsAzureResponse: (account) => set({ accountDetailsAzureResponse: account }),
+  setUserAuth: (user) => set({ userAuth: user }),
+  setUserAuthLoading: (loading) => set({ userAuthLoading: loading }),
+
+  clearAccountDetailsAzureResponse: () => set({ accountDetailsAzureResponse: null }),
+  clearUserAuth: () => set({ userAuth: null }),
 }));

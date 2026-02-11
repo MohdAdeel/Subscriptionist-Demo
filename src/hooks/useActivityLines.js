@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useActivityLineStore } from "../stores";
+import { useActivityLineStore, useAuthStore } from "../stores";
 import { fetchActivityLines } from "../lib/api/activityLine/activityLine";
 import { handleActivityLinesSuccess } from "../lib/utils/reportsPage";
 
@@ -22,11 +22,12 @@ export const ACTIVITY_LINES_QUERY_KEY = ["activityLines"];
  */
 export const useActivityLines = (options = {}) => {
   const setActivityLines = useActivityLineStore((state) => state.setActivityLines);
-
+  const userAuth = useAuthStore((state) => state.userAuth);
+  const contactId = userAuth?.contactid;
   return useQuery({
     queryKey: ACTIVITY_LINES_QUERY_KEY,
     queryFn: async () => {
-      const data = await fetchActivityLines();
+      const data = await fetchActivityLines(contactId);
 
       // Store raw data in Zustand for global access outside React Query
       setActivityLines(data);

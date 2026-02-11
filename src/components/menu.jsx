@@ -25,34 +25,37 @@ const Menu = () => {
 
   return (
     <aside
-      className={`flex flex-col justify-between rounded-r-2xl bg-[#000435] py-6 transition-all duration-300 ease-in-out ${
+      className={`relative flex flex-col justify-between rounded-r-2xl bg-[#000435] py-6 transition-all duration-300 ease-in-out ${
         isCollapsed ? "w-20 px-3" : "w-[245px] px-6"
       }`}
     >
+      {/* Toggle - vertically centered, right side (theme: #172B4D, #1D225D) */}
+      <button
+        type="button"
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 group flex items-center justify-center rounded-xl p-2.5 outline-none bg-white shadow-lg border-2 border-[#1D225D] animate-menu-toggle-pulse focus-visible:ring-2 focus-visible:ring-[#172B4D] focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-all duration-500 ease-in-out hover:scale-[1.15] hover:border-[#172B4D] hover:shadow-[0_0_24px_rgba(23,43,77,0.35)] active:scale-95 active:duration-200"
+        aria-label={isCollapsed ? "Expand menu" : "Collapse menu"}
+      >
+        <span className="absolute inset-0 rounded-xl bg-[#172B4D]/0 transition-all duration-500 ease-in-out group-hover:bg-[#172B4D]/5 group-active:bg-[#172B4D]/10" />
+        <img
+          src={ToggleIcon}
+          alt="Toggle"
+          className={`relative z-10 h-6 w-6 cursor-pointer transition-all duration-500 ease-in-out ${
+            isCollapsed ? "rotate-180" : ""
+          }`}
+          style={{ filter: "brightness(0) saturate(100%)" }}
+        />
+      </button>
+
       <div className="flex flex-col gap-14">
-        {/* Logo + Toggle */}
-        <div className={`flex items-center ${isCollapsed ? "justify-center" : "justify-between"}`}>
-          {!isCollapsed && (
-            <div className="flex items-center gap-2">
-              <img src={Logo} alt="Logo" className="h-8 w-8" />
+        {/* Logo */}
+        <div className={`flex items-center ${isCollapsed ? "justify-center" : "justify-start"}`}>
+          <div className="flex items-center gap-2">
+            <img src={Logo} alt="Logo" className="h-8 w-8" />
+            {!isCollapsed && (
               <span className="text-sm font-semibold text-white">Subscriptionist</span>
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="group relative flex items-center justify-center rounded-xl p-1.5 outline-none transition-all duration-300 ease-out focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[#000435] hover:scale-110 active:scale-95"
-            aria-label={isCollapsed ? "Expand menu" : "Collapse menu"}
-          >
-            <span className="absolute inset-0 rounded-xl bg-white/0 ring-2 ring-transparent transition-all duration-300 ease-out group-hover:bg-white/10 group-hover:ring-white/20 group-hover:scale-125 group-active:bg-white/5 group-active:ring-white/10" />
-            <img
-              src={ToggleIcon}
-              alt="Toggle"
-              className={`relative z-10 h-6 w-6 cursor-pointer transition-all duration-300 ease-out drop-shadow-sm group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] ${
-                isCollapsed ? "rotate-180" : ""
-              }`}
-            />
-          </button>
+            )}
+          </div>
         </div>
 
         {/* Menu */}

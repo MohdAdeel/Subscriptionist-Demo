@@ -1,5 +1,6 @@
 import { FiX } from "react-icons/fi";
 import { useState, useEffect } from "react";
+import { useAuthStore } from "../../../stores";
 import { usePopup } from "../../../components/Popup";
 import { useCreateVendorMutation, useUpdateVendorMutation } from "../../../hooks/useVendors";
 
@@ -14,6 +15,8 @@ export default function AddEditVendorModal({ open = false, onClose, vendor = nul
   const isEditMode = Boolean(vendor);
   const { showSuccess, showError, showWarning } = usePopup();
   const [formData, setFormData] = useState(initialFormState);
+  const userAuth = useAuthStore((state) => state.userAuth);
+  const accountId = userAuth?.accountid;
 
   const createMutation = useCreateVendorMutation();
   const updateMutation = useUpdateVendorMutation();
@@ -71,8 +74,7 @@ export default function AddEditVendorModal({ open = false, onClose, vendor = nul
       } else {
         const createBody = {
           ...requestBody,
-          "yiic_Account_yiic_subscriptionsactivity@odata.bind":
-            "/accounts(f0983e34-d2c5-ee11-9079-00224827e0df)",
+          "yiic_Account_yiic_subscriptionsactivity@odata.bind": `/accounts(${accountId})`,
         };
         await createMutation.mutateAsync(createBody);
         showSuccess("Vendor has been added successfully.");

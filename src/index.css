@@ -1,5 +1,26 @@
 @import "tailwindcss";
 
+/* Global scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1d225d #eef2f6;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: #eef2f6;
+  border-radius: 3px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #1d225d;
+  border-radius: 3px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #15195a;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -13,6 +34,21 @@
 
 .animate-fadeIn {
   animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Smooth skeleton loader - gentle shimmer */
+@keyframes skeletonShimmer {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.skeleton-smooth {
+  animation: skeletonShimmer 1.8s ease-in-out infinite;
 }
 
 /* Popup toast animations */
@@ -112,4 +148,19 @@
 
 .uc-delay-2 {
   animation-delay: 0.4s;
+}
+
+/* Menu toggle button - theme-aligned pulse (#172B4D, #1D225D) */
+@keyframes menuTogglePulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(29, 34, 93, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(29, 34, 93, 0);
+  }
+}
+
+.animate-menu-toggle-pulse {
+  animation: menuTogglePulse 2.5s ease-in-out infinite;
 }

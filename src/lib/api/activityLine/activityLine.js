@@ -8,7 +8,11 @@ import API from "../api";
  * @param {string} contactId - Optional contact ID override
  * @returns {Promise<Array>} Raw activity lines data
  */
-export const fetchActivityLines = async (contactId = "c199b131-4c62-f011-bec2-6045bdffa665") => {
+export const fetchActivityLines = async (contactId) => {
+  if (!contactId) {
+    console.warn("fetchActivityLines: contactId is required");
+    return;
+  }
   const { data } = await API.get("/GetActivityLinesByContactId", {
     params: { contactId },
   });

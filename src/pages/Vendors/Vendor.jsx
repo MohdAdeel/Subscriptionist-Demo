@@ -3,7 +3,7 @@ import { usePopup } from "../../components/Popup";
 import { useVendorData } from "../../hooks/useVendors";
 import { useEffect, useRef, useState, useMemo } from "react";
 import AddEditVendorModal from "./component/AddEditVendorModal";
-import { FiSearch, FiBell, FiUser, FiChevronDown } from "react-icons/fi";
+import { FiSearch } from "react-icons/fi";
 
 // Reuse same palette as Reports/Financial for consistency
 const VENDOR_CHART_COLORS = [

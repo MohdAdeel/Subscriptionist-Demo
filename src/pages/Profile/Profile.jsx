@@ -5,33 +5,17 @@ import {
   updateProfilePicture,
 } from "../../lib/api/profile/profile";
 import { FiUpload } from "react-icons/fi";
+import { useAuthStore } from "../../stores";
 import { usePopup } from "../../components/Popup";
 import React, { useState, useEffect } from "react";
 import Notifications from "./components/Notifications";
 import AssociatedUsers from "./components/AssociatedUsers";
-
-// Dummy profile data
-const DUMMY_PROFILE = {
-  firstName: "test",
-  lastName: "subs 222",
-  email: "abeertest29@gmail.com",
-  role: "",
-  businessPhone: "",
-  organizationName: "",
-  website: "",
-  avatarInitials: "TS",
-  headerInitials: "T2",
-  lastUpdated: "1 day ago",
-  invitationLabel: "test subs 222",
-};
 
 const TABS = [
   { id: "personal", label: "Personal Information" },
   { id: "notification", label: "Notification Settings" },
   { id: "associated", label: "Associated Users" },
 ];
-
-const CONTACT_ID = "c199b131-4c62-f011-bec2-6045bdffa665";
 
 // Map API contact object to form fields (API returns array with one object)
 // Fields: contactid, telephone1, emailaddress1, firstname, lastname, adx_organizationname, accountrolecode, websiteurl
@@ -81,8 +65,11 @@ function Profile() {
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
+  const userAuth = useAuthStore((state) => state.userAuth);
+  const contactId = userAuth?.contactid;
+
   useEffect(() => {
-    getProfile(CONTACT_ID)
+    getProfile(contactId)
       .then((data) => {
         const contact = Array.isArray(data) ? data[0] : (data?.value?.[0] ?? data);
         setProfile(contact ?? null);
@@ -111,7 +98,7 @@ function Profile() {
   };
 
   const handleSaveProfile = () => {
-    const contactId = profile?.contactid ?? CONTACT_ID;
+    const contactId = profile?.contactid;
     const payload = formToUpdatePayload(form);
     setIsSaving(true);
     updateContact(contactId, payload)
@@ -137,7 +124,7 @@ function Profile() {
   const handlePhotoChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const contactId = profile?.contactid ?? CONTACT_ID;
+    const contactId = profile?.contactid;
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result;
@@ -167,7 +154,7 @@ function Profile() {
       : "PP";
 
   useEffect(() => {
-    getProfileImage(CONTACT_ID)
+    getProfileImage(contactId)
       .then((data) => {
         setProfileImageUrl(data?.value[0]?.entityimage_url);
       })
@@ -445,18 +432,12 @@ function Profile() {
 
       {/* Notification Settings tab */}
       {activeTab === "notification" && (
-        <Notifications
-          contactId={profile?.contactid ?? CONTACT_ID}
-          isActive={activeTab === "notification"}
-        />
+        <Notifications contactId={profile?.contactid} isActive={activeTab === "notification"} />
       )}
 
       {/* Associated Users tab */}
       {activeTab === "associated" && (
-        <AssociatedUsers
-          contactId={profile?.contactid ?? CONTACT_ID}
-          isActive={activeTab === "associated"}
-        />
+        <AssociatedUsers contactId={profile?.contactid} isActive={activeTab === "associated"} />
       )}
     </div>
   );

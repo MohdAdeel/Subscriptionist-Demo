@@ -181,22 +181,24 @@ Layout styles come from `App.css` (`.app-layout`, `.app-content`).
 
 ## Remaining Legacy / TODOs
 
-1. **Auth**: `isAuthenticated` in `ProtectedRoutes` is hardcoded `true` – replace with real auth
-2. **API keys, base URLs, and IDs** – Move to `.env` / build-time variables. All hardcoded locations:
+1. **Auth**: `ProtectedRoutes` uses `useIsAuthenticated()` from `@azure/msal-react` (real auth). No change needed.
 
-   | File                                                  | Line(s) | What is hardcoded                                                                                                                                                                                            |
-   | ----------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-   | `src/lib/api/api.js`                                  | 4–9     | `baseURL` (Azure API), `x-functions-key`                                                                                                                                                                     |
-   | `src/lib/api/vendor/vendor.js`                        | 6–8     | `API_BASE_URL`, `API_KEY`; key used at 20, 55, 77, 99, 121, 157, 180                                                                                                                                         |
-   | `src/lib/api/profile/profile.js`                      | 6–10    | `API_BASE_URL`, `API_KEY`, `AZURE_B2C_API_URL` (Power Automate URL with sig); key used at 22, 40, 65, 93, 119, 145, 169, 194, 219                                                                            |
-   | `src/lib/utils/home.js`                               | 27–29   | `API_KEY`, `BUDGETS_API_URL`; key used at 637                                                                                                                                                                |
-   | `src/lib/utils/subscriptions.js`                      | 2–6     | `API_BASE_URL`, `AZURE_FUNCTION_KEY`, `DEFAULT_ACCOUNT_ID` (line 200, 286, 326), `DEFAULT_CONTACT_ID` (line 159); key used at 17, 41, 62, 78, 99, 115, 137, 189, 207, 230, 248, 273, 293, 314, 337, 359, 380 |
-   | `src/lib/api/activityLine/activityLine.js`            | 11      | Default `contactId` in `fetchActivityLines()`                                                                                                                                                                |
-   | `src/pages/Profile/Profile.jsx`                       | 34      | `CONTACT_ID`; used at 85, 114, 140, 170, 449, 457                                                                                                                                                            |
-   | `src/pages/Subscriptions/Subscription.jsx`            | 427     | `contactId` in request body                                                                                                                                                                                  |
-   | `src/pages/Vendors/Vendor.jsx`                        | 291     | `contactId` in request body                                                                                                                                                                                  |
-   | `src/pages/Subscriptions/components/AddNewVendor.jsx` | 6       | `DEFAULT_ACCOUNT_ID`; used at 50, 65                                                                                                                                                                         |
-   | `src/pages/Vendors/component/AddEditVendorModal.jsx`  | 86      | Hardcoded account ID `/accounts(f0983e34-d2c5-ee11-9079-00224827e0df)` in create body                                                                                                                        |
+2. **API keys, base URLs (rechecked)** – Move to `.env` / build-time variables. Hardcoded locations as of recheck:
+
+   | File                                        | Line(s)          | What is hardcoded                                                                                                                                                                            |
+   | ------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `src/lib/api/api.js`                        | 4–9              | `baseURL` (Azure API), `x-functions-key`                                                                                                                                                     |
+   | `src/lib/api/vendor/vendor.js`              | 6–8              | `API_BASE_URL`, `API_KEY`; key used at 20, 55, 77, 99, 121, 157, 180                                                                                                                         |
+   | `src/lib/api/profile/profile.js`            | 6–10             | `API_BASE_URL`, `API_KEY`, `AZURE_B2C_API_URL` (Power Automate URL + sig); key at 22, 40, 65, 93, 119, 145, 169, 194, 219                                                                    |
+   | `src/lib/api/getAccount/getAccount.js`      | 2–3              | `GET_CONTACT_BY_B2C_OBJECT_ID_URL`, `API_KEY`                                                                                                                                                |
+   | `src/lib/utils/home.js`                     | 27–29            | `API_KEY`, `BUDGETS_API_URL`; key at 637                                                                                                                                                     |
+   | `src/lib/api/Subscription/subscriptions.js` | 2–4              | `API_BASE_URL`, `AZURE_FUNCTION_KEY` (no `DEFAULT_ACCOUNT_ID`/`DEFAULT_CONTACT_ID` in this file; key at 15, 39, 60, 76, 97, 113, 135, 159, 187, 205, 228, 246, 271, 291, 312, 335, 357, 378) |
+   | `src/lib/msalConfig/authConfig.js`          | 7, 11–12, 15, 19 | `clientId`, `authority` (B2C), `redirectUri`, `postLogoutRedirectUri` (env vars exist in comments but are overridden by hardcoded values)                                                    |
+
+3. **Summary – still to do**:
+   - Move all API base URLs and keys to `.env` (e.g. `VITE_API_BASE_URL`, `VITE_API_KEY`, `VITE_AZURE_B2C_API_URL`).
+   - Move MSAL config (clientId, authority, redirectUri, postLogoutRedirectUri) to `.env` and uncomment env usage in `authConfig.js`.
+   - In `src/hooks/useVendors.js`: remove `DEFAULT_CONTACT_ID` and use `userAuth?.contactid` from `useAuthStore` when no filter is provided.
 
 ---
 
