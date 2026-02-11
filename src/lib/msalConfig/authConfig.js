@@ -12,11 +12,13 @@ export const msalConfig = {
       "https://subscriptionistportal.b2clogin.com/subscriptionistportal.onmicrosoft.com/B2C_1_SignIn/v2.0",
     knownAuthorities: ["subscriptionistportal.b2clogin.com"],
     //import.meta.env.VITE_LOGIN_AUTHORITY_SUB_DOMAIN,
-    redirectUri: "http://localhost:5173/",
+    // redirectUri: "http://localhost:5173/",
+    redirectUri: "subscriptionist.netlify.app/",
     // isProd
     //   ? import.meta.env.VITE_LOGIN_REDIRECT_URI
     //   : import.meta.env.VITE_LOGIN_REDIRECT_URI_DEV,
-    postLogoutRedirectUri: "http://localhost:5173/login",
+    // postLogoutRedirectUri: "http://localhost:5173/login",
+    postLogoutRedirectUri: "subscriptionist.netlify.app/login",
     // isProd
     //   ? import.meta.env.VITE_LOGIN_POST_LOGOUT_REDIRECT_URI
     //   : import.meta.env.VITE_LOGIN_POST_LOGOUT_REDIRECT_URI_DEV,
