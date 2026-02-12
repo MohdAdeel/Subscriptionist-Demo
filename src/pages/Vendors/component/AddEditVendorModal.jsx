@@ -102,7 +102,7 @@ export default function AddEditVendorModal({ open = false, onClose, vendor = nul
           <button
             type="button"
             onClick={handleClose}
-            className="p-2 text-[#6C757D] hover:text-[#343A40] hover:bg-[#F8F9FA] rounded-lg transition-colors"
+            className="group p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:rotate-90"
             aria-label="Close"
           >
             <FiX className="w-5 h-5" />

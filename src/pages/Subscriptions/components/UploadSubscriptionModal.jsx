@@ -685,7 +685,7 @@ export default function UploadSubscriptionModal({
           <button
             type="button"
             onClick={handleClose}
-            className="p-2 rounded-lg text-[#6C757D] hover:bg-[#f6f7fb] hover:text-[#172B4D] transition-colors"
+            className="group p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:rotate-90"
             aria-label="Close"
           >
             <FiX className="w-5 h-5" />
@@ -1048,7 +1048,7 @@ export default function UploadSubscriptionModal({
               <button
                 type="button"
                 onClick={() => setShowAssociationWarning(false)}
-                className="p-2 rounded-lg text-[#6C757D] hover:bg-[#f6f7fb] hover:text-[#172B4D] transition-colors"
+                className="group p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:rotate-90"
                 aria-label="Close"
               >
                 <FiX className="w-5 h-5" />
@@ -1099,7 +1099,7 @@ export default function UploadSubscriptionModal({
               <button
                 type="button"
                 onClick={() => setShowDuplicateWarning(false)}
-                className="p-2 rounded-lg text-[#6C757D] hover:bg-[#f6f7fb] hover:text-[#172B4D] transition-colors"
+                className="group p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:rotate-90"
                 aria-label="Close"
               >
                 <FiX className="w-5 h-5" />
@@ -1151,7 +1151,7 @@ export default function UploadSubscriptionModal({
               <button
                 type="button"
                 onClick={() => setShowConfirmUpload(false)}
-                className="p-2 rounded-lg text-[#6C757D] hover:bg-[#f6f7fb] hover:text-[#172B4D] transition-colors"
+                className="group p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:rotate-90"
                 aria-label="Close"
               >
                 <FiX className="w-5 h-5" />
@@ -1198,7 +1198,7 @@ export default function UploadSubscriptionModal({
               <button
                 type="button"
                 onClick={() => setShowMappingWarning(false)}
-                className="p-2 rounded-lg text-[#6C757D] hover:bg-[#f6f7fb] hover:text-[#172B4D] transition-colors"
+                className="group p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:rotate-90"
                 aria-label="Close"
               >
                 <FiX className="w-5 h-5" />
@@ -1247,7 +1247,7 @@ export default function UploadSubscriptionModal({
               <button
                 type="button"
                 onClick={() => setShowValidationModal(false)}
-                className="p-2 rounded-lg text-[#6C757D] hover:bg-[#f6f7fb] hover:text-[#172B4D] transition-colors"
+                className="group p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:rotate-90"
                 aria-label="Close"
               >
                 <FiX className="w-5 h-5" />

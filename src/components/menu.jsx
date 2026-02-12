@@ -4,7 +4,6 @@ import HomeIcon from "../assets/Home.svg";
 import FAQsIcon from "../assets/FAQs.svg";
 import MyTasksIcon from "../assets/Mytask.svg";
 import ReportsIcon from "../assets/Reports.svg";
-import ToggleIcon from "../assets/Frame (1).svg";
 import HeartbeatIcon from "../assets/Heartbeat.svg";
 import { Link, useLocation } from "react-router-dom";
 import SubscriptionsIcon from "../assets/Subscriptions.svg";
@@ -29,22 +28,38 @@ const Menu = () => {
         isCollapsed ? "w-20 px-3" : "w-[245px] px-6"
       }`}
     >
-      {/* Toggle - vertically centered, right side (theme: #172B4D, #1D225D) */}
+      {/* Collapse/expand - straight line by default; on hover show direction (close/open) */}
       <button
         type="button"
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 z-10 group flex items-center justify-center rounded-xl p-2.5 outline-none bg-white shadow-lg border-2 border-[#1D225D] animate-menu-toggle-pulse focus-visible:ring-2 focus-visible:ring-[#172B4D] focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-all duration-500 ease-in-out hover:scale-[1.15] hover:border-[#172B4D] hover:shadow-[0_0_24px_rgba(23,43,77,0.35)] active:scale-95 active:duration-200"
+        className="group absolute right-5 top-[54%] -translate-y-1/2 translate-x-1/2 z-10 flex items-center justify-center min-w-11 min-h-11 text-white"
         aria-label={isCollapsed ? "Expand menu" : "Collapse menu"}
       >
-        <span className="absolute inset-0 rounded-xl bg-[#172B4D]/0 transition-all duration-500 ease-in-out group-hover:bg-[#172B4D]/5 group-active:bg-[#172B4D]/10" />
-        <img
-          src={ToggleIcon}
-          alt="Toggle"
-          className={`relative z-10 h-6 w-6 cursor-pointer transition-all duration-500 ease-in-out ${
-            isCollapsed ? "rotate-180" : ""
-          }`}
-          style={{ filter: "brightness(0) saturate(100%)" }}
-        />
+        {/* Default: straight vertical line */}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          className="absolute w-7 h-7 opacity-100 transition-opacity duration-300 ease-in-out group-hover:opacity-0"
+        >
+          <path d="M12 5v14" />
+        </svg>
+        {/* Hover: chevron — open = point left (close), closed = point right (open) */}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`absolute w-7 h-7 opacity-0 transition-all duration-300 ease-in-out group-hover:opacity-100 ${isCollapsed ? "rotate-180" : ""}`}
+        >
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
       </button>
 
       <div className="flex flex-col gap-14">

@@ -386,7 +386,7 @@ export default function Vendor() {
             </div>
 
             {/* Table */}
-            <div className="overflow-x-auto">
+            <div className="overflow-auto h-[595px]">
               <table className="w-full border-collapse min-w-[500px]">
                 <thead>
                   <tr className="bg-[#F8F9FA]">
@@ -607,9 +607,14 @@ export default function Vendor() {
             <h3 className="text-base font-semibold text-[#343A40] mb-3 sm:mb-4">
               Departmental Spend Trend
             </h3>
-            <div className="relative" style={{ height: 200, minHeight: 180 }}>
+            <div
+              className="relative"
+              style={{
+                height: isLoadingVendors ? 220 : 200,
+              }}
+            >
               {isLoadingVendors ? (
-                <div className="flex items-end justify-between gap-2 h-full pt-8 pb-6">
+                <div className="flex items-end justify-between gap-2 h-full pt-8 pb-6 min-h-[260px]">
                   {[40, 65, 45, 55].map((h, i) => (
                     <div
                       key={i}

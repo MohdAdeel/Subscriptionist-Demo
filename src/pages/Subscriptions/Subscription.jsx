@@ -568,7 +568,8 @@ const Subscription = () => {
                             ›
                           </button>
                           <button
-                            className="bg-transparent border-none text-2xl sm:text-[28px] text-gray-600 cursor-pointer p-0 w-7 h-7 sm:w-8 sm:h-8 min-w-[28px] sm:min-w-[32px] flex items-center justify-center leading-none rounded-md transition-all duration-200 flex-shrink-0 hover:bg-gray-100 hover:text-[#1d225d]"
+                            type="button"
+                            className="group p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:rotate-90 flex items-center justify-center text-xl leading-none"
                             onClick={() => setShowDatePicker(false)}
                             aria-label="Close"
                           >

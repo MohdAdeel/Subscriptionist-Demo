@@ -210,7 +210,7 @@ export default function AddBudgetModal({ open = true, onClose, onSuccess }) {
           <button
             type="button"
             onClick={onClose}
-            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors text-xl leading-none justify-self-end"
+            className="group p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:rotate-90 flex items-center justify-center text-xl leading-none justify-self-end"
             aria-label="Close"
           >
             ×

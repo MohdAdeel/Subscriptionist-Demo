@@ -337,8 +337,9 @@ export default function EditSubscriptionModal({
             </h5>
             <button
               type="button"
-              className="border-none bg-transparent text-2xl sm:text-[28px] cursor-pointer text-gray-600 p-0 w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center leading-none rounded-md transition-all duration-200 flex-shrink-0 hover:bg-gray-100 hover:text-[#1d225d]"
+              className="group p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:rotate-90"
               onClick={onClose}
+              aria-label="Close"
             >
               ×
             </button>

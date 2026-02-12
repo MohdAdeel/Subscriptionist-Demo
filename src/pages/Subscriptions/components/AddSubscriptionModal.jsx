@@ -352,11 +352,11 @@ export default function AddSubscriptionModal({
           onClick={handleClose}
         >
           <div
-            className="bg-white rounded-3xl w-full max-w-[580px] shadow-2xl animate-[slideUp_0.3s_ease-out] overflow-hidden"
+            className="bg-white rounded-3xl w-full max-w-[660px] shadow-2xl animate-[slideUp_0.3s_ease-out] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* HEADER with gradient accent */}
-            <div className="relative px-8 py-6 border-b border-gray-100/80 bg-gradient-to-r from-purple-50/50 via-white to-indigo-50/50">
+            <div className="relative px-8 py-4 border-b border-gray-100/80 bg-gradient-to-r from-purple-50/50 via-white to-indigo-50/50">
               <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600"></div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -378,7 +378,7 @@ export default function AddSubscriptionModal({
             </div>
 
             {/* BODY with improved spacing and visual hierarchy */}
-            <div className="px-8 py-8 space-y-7">
+            <div className="px-8 py-6 space-y-5">
               {/* Error Message with better styling */}
               {vendorsError && (
                 <div className="flex items-start gap-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3 animate-[shake_0.3s_ease-in-out]">
@@ -402,7 +402,7 @@ export default function AddSubscriptionModal({
                 type="button"
                 onClick={handleAddManually}
                 disabled={vendorsLoading}
-                className="group relative w-full flex items-center justify-center gap-3 rounded-2xl py-5 text-lg font-semibold text-white bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 hover:from-purple-700 hover:via-violet-700 hover:to-indigo-700 shadow-lg shadow-purple-500/25 hover:shadow-xl hover:shadow-purple-500/40 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg overflow-hidden"
+                className="group relative w-full flex items-center justify-center gap-3 rounded-2xl py-4 text-lg font-semibold text-white bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 hover:from-purple-700 hover:via-violet-700 hover:to-indigo-700 shadow-lg shadow-purple-500/25 hover:shadow-xl hover:shadow-purple-500/40 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg overflow-hidden"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                 {vendorsLoading ? (
@@ -440,7 +440,7 @@ export default function AddSubscriptionModal({
               </button>
 
               {/* Divider with improved styling */}
-              <div className="flex items-center gap-4 py-2">
+              <div className="flex items-center gap-4 py-1">
                 <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
                 <span className="text-sm font-semibold text-gray-400 uppercase tracking-wider px-3 py-1.5 bg-gray-50 rounded-full">
                   or
@@ -449,7 +449,7 @@ export default function AddSubscriptionModal({
               </div>
 
               {/* Excel Import Section with card-like design */}
-              <div className="space-y-4 p-6 bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-2xl border border-gray-200/60">
+              <div className="space-y-3 p-5 bg-gradient-to-br from-gray-50 to-gray-100/50 rounded-2xl border border-gray-200/60">
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
@@ -480,7 +480,7 @@ export default function AddSubscriptionModal({
 
                 {/* Upload Area with enhanced interactivity and drag-and-drop */}
                 <label
-                  className={`group relative block border-2 border-dashed rounded-2xl h-[150px] flex flex-col items-center justify-center cursor-pointer text-gray-600 transition-all duration-300 overflow-hidden bg-white/50 hover:border-indigo-400 hover:bg-white ${
+                  className={`group relative block border-2 border-dashed rounded-2xl h-[120px] flex flex-col items-center justify-center cursor-pointer text-gray-600 transition-all duration-300 overflow-hidden bg-white/50 hover:border-indigo-400 hover:bg-white ${
                     isDragging ? "border-indigo-500 bg-indigo-50/80" : "border-gray-300"
                   }`}
                   onDragOver={handleDragOver}
@@ -489,7 +489,7 @@ export default function AddSubscriptionModal({
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/0 via-purple-50/0 to-indigo-50/0 group-hover:from-indigo-50/50 group-hover:via-purple-50/30 group-hover:to-indigo-50/50 transition-all duration-500"></div>
                   <div className="relative z-10 flex flex-col items-center">
-                    <div className="w-14 h-14 mb-3 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-indigo-100 group-hover:to-purple-100 flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-sm group-hover:shadow-md">
+                    <div className="w-12 h-12 mb-2 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 group-hover:from-indigo-100 group-hover:to-purple-100 flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-sm group-hover:shadow-md">
                       <FiUpload
                         className="w-7 h-7 text-gray-500 group-hover:text-indigo-600 group-hover:-translate-y-1 transition-all duration-300"
                         strokeWidth={2}

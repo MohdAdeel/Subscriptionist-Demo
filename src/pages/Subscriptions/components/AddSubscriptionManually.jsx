@@ -146,7 +146,7 @@ export default function AddVendorManually({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-      <div className="bg-gradient-to-b from-white to-gray-50 rounded-2xl w-full max-w-[520px] shadow-xl">
+      <div className="bg-gradient-to-b from-white to-gray-50 rounded-3xl w-full max-w-[660px] shadow-2xl overflow-visible">
         {/* HEADER */}
         <div className="flex items-center justify-between px-8 py-4 border-b border-gray-100">
           <button
@@ -161,7 +161,7 @@ export default function AddVendorManually({
           </h2>
           <button
             onClick={handleClose}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="group p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:rotate-90"
             aria-label="Close"
           >
             <FiX className="w-5 h-5" />
@@ -169,10 +169,10 @@ export default function AddVendorManually({
         </div>
 
         {/* BODY */}
-        <div className="px-8 py-6 text-base space-y-6">
+        <div className="px-8 py-6 text-base space-y-5">
           <button
             onClick={handleAddVendorManually}
-            className="w-full flex items-center justify-center gap-2.5 rounded-2xl py-5 text-lg font-semibold text-gray-800 border-2 border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
+            className="w-full flex items-center justify-center gap-2.5 rounded-2xl py-4 text-lg font-semibold text-gray-800 border-2 border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
           >
             <FiPlus className="w-6 h-6" strokeWidth={2.5} />
             Add Vendor Manually
@@ -207,7 +207,7 @@ export default function AddVendorManually({
 
               {/* Dropdown Menu */}
               {isDropdownOpen && (
-                <div className="absolute z-10 w-full mt-2 bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden">
+                <div className="absolute z-[100] w-full mt-2 bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden">
                   {/* Search Input */}
                   <div className="p-3 border-b border-gray-100">
                     <div className="relative">
@@ -265,7 +265,7 @@ export default function AddVendorManually({
         </div>
 
         {/* FOOTER */}
-        <div className="flex gap-4 px-8 py-5 border-t border-gray-100">
+        <div className="flex gap-4 px-8 py-4 border-t border-gray-100">
           <button
             type="button"
             onClick={handleClose}

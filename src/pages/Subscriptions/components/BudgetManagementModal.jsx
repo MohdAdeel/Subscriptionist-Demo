@@ -1,7 +1,7 @@
+import { useState, useEffect } from "react";
 import AddBudgetModal from "./AddBudgetModal";
 import EditBudgetModal from "./EditBudgetModal";
 import { useBudgetData } from "../../../hooks/useSubscriptions";
-import { useState, useEffect } from "react";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -129,7 +129,7 @@ export default function BudgetManagementModal({ open = false, onClose }) {
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors text-xl leading-none"
+              className="group p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:rotate-90 flex items-center justify-center text-xl leading-none"
               aria-label="Close"
             >
               ×
@@ -197,20 +197,20 @@ export default function BudgetManagementModal({ open = false, onClose }) {
             </>
           ) : activeTab === "subscription" ? (
             <>
-              <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm flex-1 min-h-0">
+              <div className="h-[360px] flex-shrink-0 overflow-y-auto overflow-x-hidden rounded-xl border border-gray-200 shadow-sm">
                 <table className="w-full border-collapse">
-                  <thead className="bg-white">
+                  <thead className="bg-white sticky top-0 z-[1]">
                     <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 border-b border-gray-200">
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 border-b border-gray-200 bg-white">
                         Budget Name
                       </th>
-                      <th className="px-4 py-3 text-right text-sm font-semibold text-gray-800 border-b border-gray-200">
+                      <th className="px-4 py-3 text-right text-sm font-semibold text-gray-800 border-b border-gray-200 bg-white">
                         Budget Amount
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 border-b border-gray-200">
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 border-b border-gray-200 bg-white">
                         Subscription Name
                       </th>
-                      <th className="px-4 py-3 text-right text-sm font-semibold text-gray-800 border-b border-gray-200">
+                      <th className="px-4 py-3 text-right text-sm font-semibold text-gray-800 border-b border-gray-200 bg-white">
                         Subscription Amount
                       </th>
                     </tr>
@@ -305,17 +305,17 @@ export default function BudgetManagementModal({ open = false, onClose }) {
             </>
           ) : (
             <>
-              <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm flex-1 min-h-0">
+              <div className="h-[360px] flex-shrink-0 overflow-y-auto overflow-x-hidden rounded-xl border border-gray-200 shadow-sm">
                 <table className="w-full border-collapse">
-                  <thead className="bg-white">
+                  <thead className="bg-white sticky top-0 z-[1]">
                     <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 border-b border-gray-200">
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 border-b border-gray-200 bg-white">
                         Budget Name
                       </th>
-                      <th className="px-4 py-3 text-right text-sm font-semibold text-gray-800 border-b border-gray-200">
+                      <th className="px-4 py-3 text-right text-sm font-semibold text-gray-800 border-b border-gray-200 bg-white">
                         Budget Amount
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 border-b border-gray-200">
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 border-b border-gray-200 bg-white">
                         Department Name
                       </th>
                     </tr>

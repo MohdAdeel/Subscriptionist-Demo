@@ -94,7 +94,7 @@ export default function AddNewVendor({ open = false, onBack, onClose, onAddVendo
       }}
     >
       <div
-        className="bg-white rounded-2xl w-full max-w-[520px] shadow-xl"
+        className="bg-white rounded-3xl w-full max-w-[660px] shadow-2xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER */}
@@ -106,11 +106,11 @@ export default function AddNewVendor({ open = false, onBack, onClose, onAddVendo
           >
             <FiChevronLeft className="w-5 h-5" />
           </button>
-          <h2 className="text-2xl font-bold text-gray-800 px-8 pt-5 pb-4">Add New Vendor</h2>
+          <h2 className="text-2xl font-bold text-gray-800 px-8 pt-4 pb-4">Add New Vendor</h2>
 
           <button
             onClick={handleClose}
-            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="group p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:rotate-90"
             aria-label="Close"
           >
             <FiX className="w-5 h-5" />
@@ -118,7 +118,7 @@ export default function AddNewVendor({ open = false, onBack, onClose, onAddVendo
         </div>
 
         {/* BODY - Form */}
-        <form onSubmit={handleSubmit} className="px-8 py-4">
+        <form onSubmit={handleSubmit} className="px-8 py-6">
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-base font-semibold text-gray-800 mb-2">
@@ -175,7 +175,7 @@ export default function AddNewVendor({ open = false, onBack, onClose, onAddVendo
           </div>
 
           {/* FOOTER */}
-          <div className="flex gap-4 pt-8 pb-4">
+          <div className="flex gap-4 pt-6 pb-4">
             <button
               type="button"
               onClick={handleCancel}
