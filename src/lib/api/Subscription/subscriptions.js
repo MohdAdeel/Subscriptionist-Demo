@@ -1,28 +1,9 @@
-// --- API configuration (shared across all functions) ---
-const API_BASE_URL =
-  "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api";
-const AZURE_FUNCTION_KEY = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
+import API from "../api.js";
 
 export async function getRelationshipSubsLines(body) {
   try {
-    const azureFunctionUrl = `${API_BASE_URL}/GetSubscriptionData`;
-
-    // Call the Azure Function
-    const response = await fetch(azureFunctionUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": AZURE_FUNCTION_KEY,
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    return result;
+    const { data } = await API.post("/GetSubscriptionData", body);
+    return data;
   } catch (error) {
     console.error("Azure Function call failed, falling back to error handler:", error);
   }
@@ -30,22 +11,10 @@ export async function getRelationshipSubsLines(body) {
 
 export async function populateEditForm(activityId) {
   try {
-    const azureFunctionUrl = `${API_BASE_URL}/Getsubscriptionactivityline?activityId=${encodeURIComponent(activityId)}`;
-
-    const response = await fetch(azureFunctionUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": AZURE_FUNCTION_KEY,
-      },
+    const { data } = await API.post("/Getsubscriptionactivityline", null, {
+      params: { activityId },
     });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    return result;
+    return data;
   } catch (error) {
     console.error("Azure Function call failed, populate edit form:", error);
   }
@@ -53,15 +22,8 @@ export async function populateEditForm(activityId) {
 
 export async function getDeparments() {
   try {
-    const response = await fetch(`${API_BASE_URL}/getDepartments`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": AZURE_FUNCTION_KEY,
-      },
-    });
-    const result = await response.json();
-    return result;
+    const { data } = await API.get("/getDepartments");
+    return data;
   } catch (error) {
     console.error("Azure Function call failed, get departments:", error);
   }
@@ -69,15 +31,8 @@ export async function getDeparments() {
 
 export async function getCategories() {
   try {
-    const response = await fetch(`${API_BASE_URL}/getCategories`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": AZURE_FUNCTION_KEY,
-      },
-    });
-    const result = await response.json();
-    return result;
+    const { data } = await API.get("/getCategories");
+    return data;
   } catch (error) {
     console.error("Azure Function call failed, get categories:", error);
     throw error;
@@ -86,19 +41,10 @@ export async function getCategories() {
 
 export async function checkSubscriptionExistance(subscriptionName, subscriptionActivityId) {
   try {
-    const url =
-      `${API_BASE_URL}/checkDuplicateSubscription` +
-      `?subscriptionName=${encodeURIComponent(subscriptionName)}` +
-      `&subscriptionActivityId=${subscriptionActivityId}`;
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": AZURE_FUNCTION_KEY,
-      },
+    const { data } = await API.get("/checkDuplicateSubscription", {
+      params: { subscriptionName, subscriptionActivityId },
     });
-    const result = await response.json();
-    return result;
+    return data;
   } catch (error) {
     console.error("Azure Function call failed, check subscription existence:", error);
   }
@@ -106,16 +52,8 @@ export async function checkSubscriptionExistance(subscriptionName, subscriptionA
 
 export async function updateSubscription(formData) {
   try {
-    const response = await fetch(`${API_BASE_URL}/UpdateSubscriptionActivityLine`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": AZURE_FUNCTION_KEY,
-      },
-      body: JSON.stringify(formData),
-    });
-    const result = await response.json();
-    return result;
+    const { data } = await API.post("/UpdateSubscriptionActivityLine", formData);
+    return data;
   } catch (error) {
     console.error("Azure Function call failed, update subscription:", error);
   }
@@ -127,28 +65,17 @@ export async function deleteSubscriptionActivityLine(activityLineId) {
     return;
   }
   try {
-    const url = `${API_BASE_URL}/deleteSubscriptionActivityLine/${encodeURIComponent(activityLineId)}`;
-    const response = await fetch(url, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": AZURE_FUNCTION_KEY,
-      },
-    });
-
-    if (!response.ok) {
-      const message =
-        response.status === 404
-          ? "Record not found or already deleted."
-          : `HTTP ${response.status}: ${response.statusText}`;
-      throw new Error(message);
-    }
-
-    const result = await response.json().catch(() => ({}));
-    return result;
+    const { data } = await API.delete(`/deleteSubscriptionActivityLine/${activityLineId}`);
+    return data ?? {};
   } catch (error) {
+    const message =
+      error.response?.status === 404
+        ? "Record not found or already deleted."
+        : error.response?.data != null
+          ? String(error.response.data)
+          : error.message;
     console.error("Azure Function call failed, delete subscription activity line:", error);
-    throw error;
+    throw new Error(message);
   }
 }
 // Budget Related Functions
@@ -156,22 +83,11 @@ export async function deleteSubscriptionActivityLine(activityLineId) {
 export async function fetchBudgetData(options = {}) {
   const { pageNumber = 1, contactId } = options;
   try {
-    const url = `${API_BASE_URL}/GetbudgetData?code=${AZURE_FUNCTION_KEY}`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contactId,
-        pagenumber: pageNumber,
-      }),
+    const { data } = await API.post("/GetbudgetData", {
+      contactId,
+      pagenumber: pageNumber,
     });
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error(err);
-    }
-    return await response.json();
+    return data;
   } catch (error) {
     console.error("Fetch budget data failed:", error);
     throw error;
@@ -180,15 +96,8 @@ export async function fetchBudgetData(options = {}) {
 
 export async function getFinancialYear() {
   try {
-    const response = await fetch(`${API_BASE_URL}/Getfinancialyeardata`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": AZURE_FUNCTION_KEY,
-      },
-    });
-    const result = await response.json();
-    return result;
+    const { data } = await API.post("/Getfinancialyeardata", {});
+    return data;
   } catch (error) {
     console.error("Azure Function call failed, get financial year:", error);
   }
@@ -197,16 +106,10 @@ export async function getFinancialYear() {
 /** Get subscription activity lines by account. */
 export async function getActivityLines(accountId) {
   try {
-    const url = `${API_BASE_URL}/getSubscriptionActivityLinesByAccount?accountId=${encodeURIComponent(accountId)}`;
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": AZURE_FUNCTION_KEY,
-      },
+    const { data } = await API.get("/getSubscriptionActivityLinesByAccount", {
+      params: { accountId },
     });
-    const result = await response.json();
-    return result;
+    return data;
   } catch (error) {
     console.error("Azure Function call failed, get activity lines:", error);
     throw error;
@@ -216,20 +119,10 @@ export async function getActivityLines(accountId) {
 /** Check budget by financial year and department. Returns API result (e.g. array). */
 export async function checkBudget(financialYearId, departmentId) {
   try {
-    const params = new URLSearchParams({
-      financialYearId: financialYearId,
-      departmentId: departmentId,
+    const { data } = await API.get("/getBudget/check", {
+      params: { financialYearId, departmentId },
     });
-    const url = `${API_BASE_URL}/getBudget/check?${params.toString()}`;
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": AZURE_FUNCTION_KEY,
-      },
-    });
-    const result = await response.json();
-    return result;
+    return data;
   } catch (error) {
     console.error("Azure Function call failed, check budget:", error);
     throw error;
@@ -239,16 +132,8 @@ export async function checkBudget(financialYearId, departmentId) {
 /** POST budget payload to addBudget API (department or subscription budget). */
 export async function addBudget(payload) {
   try {
-    const response = await fetch(`${API_BASE_URL}/addBudget`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": AZURE_FUNCTION_KEY,
-      },
-      body: JSON.stringify(payload),
-    });
-    const result = await response.json();
-    return result;
+    const { data } = await API.post("/addBudget", payload);
+    return data;
   } catch (error) {
     console.error("Azure Function call failed, add budget:", error);
     throw error;
@@ -262,18 +147,9 @@ export async function updateBudget(budgetId, payload) {
     return;
   }
   try {
-    const url = `${API_BASE_URL}/updateBudget/${encodeURIComponent(budgetId)}`;
-    const { ...body } = payload || {};
-    const response = await fetch(url, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": AZURE_FUNCTION_KEY,
-      },
-      body: JSON.stringify(body),
-    });
-    const result = await response.json();
-    return result;
+    const body = payload ? { ...payload } : {};
+    const { data } = await API.patch(`/updateBudget/${budgetId}`, body);
+    return data;
   } catch (error) {
     console.error("Azure Function call failed, update budget:", error);
     throw error;
@@ -283,19 +159,8 @@ export async function updateBudget(budgetId, payload) {
 /** Fetch vendor list from getSubscriptionActivities API. Call when opening Add Subscription Manually. */
 export async function fetchVendorList(activityId) {
   try {
-    const url = `${API_BASE_URL}/getSubscriptionActivities/${encodeURIComponent(activityId)}`;
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": AZURE_FUNCTION_KEY,
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    const result = await response.json();
-    return result;
+    const { data } = await API.get(`/getSubscriptionActivities/${activityId}`);
+    return data;
   } catch (error) {
     console.error("Azure Function call failed, fetch vendor list:", error);
     throw error;
@@ -305,16 +170,8 @@ export async function fetchVendorList(activityId) {
 /** Add subscription  */
 export async function addSubscription(formData) {
   try {
-    const response = await fetch(`${API_BASE_URL}/createSubscriptionActivityLine`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": AZURE_FUNCTION_KEY,
-      },
-      body: JSON.stringify(formData),
-    });
-    const result = await response.json();
-    return result;
+    const { data } = await API.post("/createSubscriptionActivityLine", formData);
+    return data;
   } catch (error) {
     console.error("Azure Function call failed, add subscription:", error);
     throw error;
@@ -323,23 +180,10 @@ export async function addSubscription(formData) {
 /** Check if vendor exists for account. GET .../api/checkVendorExists?vendorName=...&accountId=... */
 export async function checkVendorExistance(accountId, vendorName) {
   try {
-    const params = new URLSearchParams({
-      vendorName: vendorName,
-      accountId: accountId,
+    const { data } = await API.get("/checkVendorExists", {
+      params: { vendorName, accountId },
     });
-    const url = `${API_BASE_URL}/checkVendorExists?${params.toString()}`;
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": AZURE_FUNCTION_KEY,
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    const result = await response.json();
-    return result;
+    return data;
   } catch (error) {
     console.error("Azure Function call failed, check vendor existence:", error);
     throw error;
@@ -349,19 +193,8 @@ export async function checkVendorExistance(accountId, vendorName) {
 /** Fetch subscription activity by ID. GET from getSubscriptionActivityById/{id}. */
 export async function getSubscriptionActivityById(activityId) {
   try {
-    const url = `${API_BASE_URL}/getSubscriptionActivityById/${activityId}`;
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": AZURE_FUNCTION_KEY,
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    const result = await response.json();
-    return result;
+    const { data } = await API.get(`/getSubscriptionActivityById/${activityId}`);
+    return data;
   } catch (error) {
     console.error("Azure Function call failed, get subscription activity by ID:", error);
     throw error;
@@ -371,18 +204,7 @@ export async function getSubscriptionActivityById(activityId) {
 /** Create vendor record. POST to createVendor with body (vendorName, accountManagerEmail, accountManagerName, accountManagerPhone). */
 export async function createVendorRecord(body) {
   try {
-    const response = await fetch(`${API_BASE_URL}/createVendor`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": AZURE_FUNCTION_KEY,
-      },
-      body: JSON.stringify(body),
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    const result = await response.json();
+    const { data: result } = await API.post("/createVendor", body);
 
     // If we have a subscription activity ID, fetch the full activity details
     if (result?.yiic_subscriptionsactivityid) {

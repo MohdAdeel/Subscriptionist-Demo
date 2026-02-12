@@ -183,22 +183,17 @@ Layout styles come from `App.css` (`.app-layout`, `.app-content`).
 
 1. **Auth**: `ProtectedRoutes` uses `useIsAuthenticated()` from `@azure/msal-react` (real auth). No change needed.
 
-2. **API keys, base URLs (rechecked)** – Move to `.env` / build-time variables. Hardcoded locations as of recheck:
+2. **Recheck (full project scan for hardcoded keys, URLs, IDs)** – As of latest recheck:
 
-   | File                                        | Line(s)          | What is hardcoded                                                                                                                                                                            |
-   | ------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-   | `src/lib/api/api.js`                        | 4–9              | `baseURL` (Azure API), `x-functions-key`                                                                                                                                                     |
-   | `src/lib/api/vendor/vendor.js`              | 6–8              | `API_BASE_URL`, `API_KEY`; key used at 20, 55, 77, 99, 121, 157, 180                                                                                                                         |
-   | `src/lib/api/profile/profile.js`            | 6–10             | `API_BASE_URL`, `API_KEY`, `AZURE_B2C_API_URL` (Power Automate URL + sig); key at 22, 40, 65, 93, 119, 145, 169, 194, 219                                                                    |
-   | `src/lib/api/getAccount/getAccount.js`      | 2–3              | `GET_CONTACT_BY_B2C_OBJECT_ID_URL`, `API_KEY`                                                                                                                                                |
-   | `src/lib/utils/home.js`                     | 27–29            | `API_KEY`, `BUDGETS_API_URL`; key at 637                                                                                                                                                     |
-   | `src/lib/api/Subscription/subscriptions.js` | 2–4              | `API_BASE_URL`, `AZURE_FUNCTION_KEY` (no `DEFAULT_ACCOUNT_ID`/`DEFAULT_CONTACT_ID` in this file; key at 15, 39, 60, 76, 97, 113, 135, 159, 187, 205, 228, 246, 271, 291, 312, 335, 357, 378) |
-   | `src/lib/msalConfig/authConfig.js`          | 7, 11–12, 15, 19 | `clientId`, `authority` (B2C), `redirectUri`, `postLogoutRedirectUri` (env vars exist in comments but are overridden by hardcoded values)                                                    |
+   **Still hardcoded (only remaining place):**
+
+   | File                               | Line(s)          | What is hardcoded                                                                                                                 |
+   | ---------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+   | `src/lib/msalConfig/authConfig.js` | 7, 11–13, 15, 20 | `clientId` (UUID), `authority` (B2C URL), `knownAuthorities`, `redirectUri`, `postLogoutRedirectUri`. Env usage is commented out. |
 
 3. **Summary – still to do**:
-   - Move all API base URLs and keys to `.env` (e.g. `VITE_API_BASE_URL`, `VITE_API_KEY`, `VITE_AZURE_B2C_API_URL`).
-   - Move MSAL config (clientId, authority, redirectUri, postLogoutRedirectUri) to `.env` and uncomment env usage in `authConfig.js`.
-   - In `src/hooks/useVendors.js`: remove `DEFAULT_CONTACT_ID` and use `userAuth?.contactid` from `useAuthStore` when no filter is provided.
+   - In `src/lib/msalConfig/authConfig.js`: use env for `clientId`, `authority`/`knownAuthorities`, `redirectUri`, `postLogoutRedirectUri` (uncomment and wire existing `VITE_LOGIN_*` vars from `.env.development` / `.env.production`).
+   - No other hardcoded API keys, base URLs, or default contact/account IDs found in the project.
 
 ---
 

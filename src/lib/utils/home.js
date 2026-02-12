@@ -1,3 +1,4 @@
+import API from "../api/api.js";
 import { useHomeStore } from "../../stores/HomeStore";
 
 var SubscriptionJSonBackup = [];
@@ -24,9 +25,6 @@ startDateforRenwal.setDate(1);
 var endDateforRenewal = new Date(new Date().setMonth(new Date().getMonth() + 6));
 endDateforRenewal.setDate(0);
 
-const API_KEY = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-const BUDGETS_API_URL =
-  "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api/getBudgets";
 const currentYear = currentDate.getFullYear();
 let startDateForBudget = new Date(currentYear, 0, 1);
 let endDateForBudget = new Date(currentYear, 11, 31);
@@ -630,28 +628,16 @@ async function retrieveBudget(mergedArray) {
     0;
 
   try {
-    const response = await fetch(BUDGETS_API_URL, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": API_KEY,
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Budget fetch failed: ${response.status} - ${errorText}`);
-    }
-
-    const data = await response.json().catch(() => ({}));
-    const records = Array.isArray(data?.value)
-      ? data.value
-      : Array.isArray(data?.DepartmentBudget)
-        ? data.DepartmentBudget
-        : Array.isArray(data?.data)
-          ? data.data
-          : Array.isArray(data)
-            ? data
+    const { data } = await API.get("/getBudgets");
+    const rawData = data ?? {};
+    const records = Array.isArray(rawData?.value)
+      ? rawData.value
+      : Array.isArray(rawData?.DepartmentBudget)
+        ? rawData.DepartmentBudget
+        : Array.isArray(rawData?.data)
+          ? rawData.data
+          : Array.isArray(rawData)
+            ? rawData
             : [];
 
     const targetYear = startDateForBudget.getFullYear();

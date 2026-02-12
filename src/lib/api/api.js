@@ -1,13 +1,14 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL:
-    "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
-    "x-functions-key":
-      "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==",
+    [import.meta.env.VITE_SUBSCRIPTION_KEY_HEADER]: [
+      import.meta.env.VITE_ENV_NAME === "production"
+        ? import.meta.env.VITE_SUBSCRIPTION_KEY_VALUE_PROD
+        : import.meta.env.VITE_SUBSCRIPTION_KEY_VALUE,
+    ],
   },
 });
-
 export default API;

@@ -1,13 +1,4 @@
-/**
- * Profile API functions
- * All API calls related to profile / contact operations
- */
-
-const API_BASE_URL =
-  "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api";
-const API_KEY = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-const AZURE_B2C_API_URL =
-  "https://9664b34e42b9e4b690b17571f761b8.02.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/6d6e14b48e154728bd4df8dcefb097e0/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=2j88myHpOqnUwREPLPKgy-XuN4O2HXK9-JgLWpHdeag";
+import API from "../api.js";
 
 /**
  * Get contact/profile by contact ID
@@ -15,65 +6,41 @@ const AZURE_B2C_API_URL =
  * @returns {Promise<Object>} Contact/profile data
  */
 export async function getProfile(contactId) {
-  const response = await fetch(`${API_BASE_URL}/getContact/${contactId}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      "x-functions-key": API_KEY,
-    },
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to get profile: ${response.status} - ${errorText}`);
+  try {
+    const response = await API.get(`/getContact/${contactId}`);
+    if (response.status === 204) return null;
+    return response.data;
+  } catch (err) {
+    const message = err.response?.data != null ? String(err.response.data) : err.message;
+    throw new Error(`Failed to get profile: ${err.response?.status ?? ""} - ${message}`);
   }
-
-  if (response.status === 204) return null;
-  return response.json();
 }
 
 export async function getProfileImage(contactId) {
-  const response = await fetch(`${API_BASE_URL}/getContactProfile?contactId=${contactId}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      "x-functions-key": API_KEY,
-    },
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to get profile: ${response.status} - ${errorText}`);
+  try {
+    const response = await API.get("/getContactProfile", { params: { contactId } });
+    if (response.status === 204) return null;
+    return response.data;
+  } catch (err) {
+    const message = err.response?.data != null ? String(err.response.data) : err.message;
+    throw new Error(`Failed to get profile: ${err.response?.status ?? ""} - ${message}`);
   }
-
-  if (response.status === 204) return null;
-  return response.json();
 }
 
 /**
  * Get notification data by contact ID
- * @param {string} contactId - Contact ID (e.g. "030ef119-c1c1-ee11-9079-00224827e8f9")
+ * @param {string} contactId - Contact ID
  * @returns {Promise<Object>} Notification data from backend
  */
 export async function getNotificationData(contactId) {
-  const response = await fetch(
-    `${API_BASE_URL}/getNotificationData?contactId=${encodeURIComponent(contactId)}`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": API_KEY,
-      },
-    }
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to get notification data: ${response.status} - ${errorText}`);
+  try {
+    const response = await API.get("/getNotificationData", { params: { contactId } });
+    if (response.status === 204) return null;
+    return response.data;
+  } catch (err) {
+    const message = err.response?.data != null ? String(err.response.data) : err.message;
+    throw new Error(`Failed to get notification data: ${err.response?.status ?? ""} - ${message}`);
   }
-
-  if (response.status === 204) return null;
-  return response.json();
 }
 
 /**
@@ -86,24 +53,16 @@ export async function getNotificationData(contactId) {
  * @returns {Promise<Object>} Response data
  */
 export async function addAssociatedUser(payload) {
-  const response = await fetch(`${API_BASE_URL}/addAssociateUser`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-functions-key": API_KEY,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to add associated user: ${response.status} - ${errorText}`);
+  try {
+    const response = await API.post("/addAssociateUser", payload);
+    if (response.status === 204) return {};
+    const data = response.data ?? {};
+    await createUserInB2C({ email: data.email });
+    return data;
+  } catch (err) {
+    const message = err.response?.data != null ? String(err.response.data) : err.message;
+    throw new Error(`Failed to add associated user: ${err.response?.status ?? ""} - ${message}`);
   }
-  if (response.status === 204) return {};
-  const data = await response.json();
-
-  await createUserInB2C({ email: data?.email });
-  return data;
 }
 
 /**
@@ -112,22 +71,13 @@ export async function addAssociatedUser(payload) {
  * @returns {Promise<Object>} Response data
  */
 export async function deleteAssociatedUser(userId) {
-  const response = await fetch(`${API_BASE_URL}/deleteUser(${encodeURIComponent(userId)})`, {
-    method: "DELETE",
-    headers: {
-      "Content-Type": "application/json",
-      "x-functions-key": API_KEY,
-    },
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to delete associated user: ${response.status} - ${errorText}`);
+  try {
+    const { data } = await API.delete(`/deleteUser(${encodeURIComponent(userId)})`);
+    return data ?? {};
+  } catch (err) {
+    const message = err.response?.data != null ? String(err.response.data) : err.message;
+    throw new Error(`Failed to delete associated user: ${err.response?.status ?? ""} - ${message}`);
   }
-
-  if (response.status === 204) return {};
-  const text = await response.text();
-  return text ? JSON.parse(text) : {};
 }
 
 /**
@@ -136,24 +86,13 @@ export async function deleteAssociatedUser(userId) {
  * @returns {Promise<Array>} Associated users list
  */
 export async function getAssociatedUsers(contactId) {
-  const response = await fetch(
-    `${API_BASE_URL}/getAssociatedUsers?contactId=${encodeURIComponent(contactId)}`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-functions-key": API_KEY,
-      },
-    }
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to get associated users: ${response.status} - ${errorText}`);
+  try {
+    const { data } = await API.get("/getAssociatedUsers", { params: { contactId } });
+    return data ?? [];
+  } catch (err) {
+    const message = err.response?.data != null ? String(err.response.data) : err.message;
+    throw new Error(`Failed to get associated users: ${err.response?.status ?? ""} - ${message}`);
   }
-
-  if (response.status === 204) return [];
-  return response.json();
 }
 
 /**
@@ -162,22 +101,13 @@ export async function getAssociatedUsers(contactId) {
  * @returns {Promise<Object>} Response data
  */
 export async function updateNotificationData(payload) {
-  const response = await fetch(`${API_BASE_URL}/saveNotificationData`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-functions-key": API_KEY,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to save notification data: ${response.status} - ${errorText}`);
+  try {
+    const { data } = await API.post("/saveNotificationData", payload);
+    return data ?? {};
+  } catch (err) {
+    const message = err.response?.data != null ? String(err.response.data) : err.message;
+    throw new Error(`Failed to save notification data: ${err.response?.status ?? ""} - ${message}`);
   }
-
-  if (response.status === 204) return {};
-  return response.json();
 }
 
 /**
@@ -187,22 +117,13 @@ export async function updateNotificationData(payload) {
  * @returns {Promise<Object>} Response data
  */
 export async function updateContact(contactId, updateData) {
-  const response = await fetch(`${API_BASE_URL}/updateContact/${contactId}`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      "x-functions-key": API_KEY,
-    },
-    body: JSON.stringify(updateData),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to update profile: ${response.status} - ${errorText}`);
+  try {
+    const { data } = await API.patch(`/updateContact/${contactId}`, updateData);
+    return data ?? {};
+  } catch (err) {
+    const message = err.response?.data != null ? String(err.response.data) : err.message;
+    throw new Error(`Failed to update profile: ${err.response?.status ?? ""} - ${message}`);
   }
-
-  if (response.status === 204) return {};
-  return response.json();
 }
 
 /**
@@ -212,44 +133,39 @@ export async function updateContact(contactId, updateData) {
  * @returns {Promise<Object>} Response data
  */
 export async function updateProfilePicture(contactId, entityimage) {
-  const response = await fetch(`${API_BASE_URL}/updateProfilePic(${contactId})`, {
-    method: "PATCH",
-    headers: {
-      "Content-Type": "application/json",
-      "x-functions-key": API_KEY,
-    },
-    body: JSON.stringify({ entityimage }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to update profile picture: ${response.status} - ${errorText}`);
+  try {
+    const { data } = await API.patch(`/updateProfilePic(${contactId})`, { entityimage });
+    return data ?? {};
+  } catch (err) {
+    const message = err.response?.data != null ? String(err.response.data) : err.message;
+    throw new Error(`Failed to update profile picture: ${err.response?.status ?? ""} - ${message}`);
   }
-
-  if (response.status === 204) return {};
-  return response.json();
 }
 
 export async function createUserInB2C(payload) {
-  const response = await fetch(`${AZURE_B2C_API_URL}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  try {
+    const url = import.meta.env.VITE_AZURE_B2C_API_URL;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-  const text = await response.text();
-  let data = {};
-  if (text) {
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = { raw: text };
+    const text = await response.text();
+    let data = {};
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { raw: text };
+      }
     }
+    if (!response.ok) {
+      throw new Error(`B2C create failed: ${response.status} - ${text || JSON.stringify(data)}`);
+    }
+    return data;
+  } catch (err) {
+    if (err instanceof Error) throw err;
+    throw new Error(`B2C create failed: ${String(err)}`);
   }
-  if (!response.ok) {
-    throw new Error(`B2C create failed: ${response.status} - ${text || JSON.stringify(data)}`);
-  }
-  return data;
 }
