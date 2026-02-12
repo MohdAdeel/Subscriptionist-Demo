@@ -22,16 +22,6 @@ Subscription management dashboard for tracking renewals, costs, vendors, and rep
 3. Start dev server:
    - `npm run dev`
 
-## Environment
-
-Create `.env` in the project root (do not commit secrets):
-
-```
-VITE_API_BASE_URL=https://your-api-domain/api
-VITE_API_KEY=your-functions-key
-VITE_AZURE_B2C_API_URL=https://your-b2c-endpoint
-```
-
 ## Scripts
 
 - `npm run dev` start local dev server

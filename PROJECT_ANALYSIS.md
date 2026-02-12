@@ -192,7 +192,7 @@ Layout styles come from `App.css` (`.app-layout`, `.app-content`).
    | `src/lib/msalConfig/authConfig.js` | 7, 11–13, 15, 20 | `clientId` (UUID), `authority` (B2C URL), `knownAuthorities`, `redirectUri`, `postLogoutRedirectUri`. Env usage is commented out. |
 
 3. **Summary – still to do**:
-   - In `src/lib/msalConfig/authConfig.js`: use env for `clientId`, `authority`/`knownAuthorities`, `redirectUri`, `postLogoutRedirectUri` (uncomment and wire existing `VITE_LOGIN_*` vars from `.env.development` / `.env.production`).
+   - In `src/lib/msalConfig/authConfig.js`: use env for `clientId`, `authority`/`knownAuthorities`, `redirectUri`, `postLogoutRedirectUri`
    - No other hardcoded API keys, base URLs, or default contact/account IDs found in the project.
 
 ---
