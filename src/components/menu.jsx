@@ -79,7 +79,7 @@ const Menu = () => {
                   />
                   {!isCollapsed && <span>{item.name}</span>}
                   {isCollapsed && hoveredItem === item.name && (
-                    <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg bg-white px-3 py-2 text-xs font-semibold text-[#000435] shadow-xl border border-[#E4E7EC] animate-fadeIn">
+                    <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 z-[9999] whitespace-nowrap rounded-lg bg-white px-3 py-2 text-xs font-semibold text-[#000435] shadow-xl border border-[#E4E7EC] animate-fadeIn pointer-events-none">
                       {item.name}
                     </div>
                   )}
