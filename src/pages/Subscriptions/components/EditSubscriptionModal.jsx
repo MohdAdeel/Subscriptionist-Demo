@@ -226,8 +226,10 @@ export default function EditSubscriptionModal({
   departments,
   onSave,
   isSaving = false,
+  isLoadingForm = false,
 }) {
   const [form, setForm] = useState(defaultFormState());
+  const [localSubmitting, setLocalSubmitting] = useState(false);
   const startDatePickerRef = useRef(null);
   const endDatePickerRef = useRef(null);
   const lastDueDatePickerRef = useRef(null);
@@ -299,12 +301,21 @@ export default function EditSubscriptionModal({
   }, []);
 
   const handleSave = useCallback(() => {
+    setLocalSubmitting(true);
     onSave?.(buildSavePayload(form, editFormData));
   }, [form, editFormData, onSave]);
 
+  // Clear local submitting when parent reports save finished (e.g. isSaving went false) or modal closed
+  useEffect(() => {
+    if (!isSaving) setLocalSubmitting(false);
+  }, [isSaving]);
+  useEffect(() => {
+    if (!open) setLocalSubmitting(false);
+  }, [open]);
+
   if (!open) return null;
 
-  const isLoading = open && editFormData == null;
+  const isLoading = (open && editFormData == null) || isLoadingForm;
   const descriptionCount = form.description.length;
 
   const inputCls =
@@ -739,9 +750,9 @@ export default function EditSubscriptionModal({
                   type="button"
                   className="w-full sm:w-auto px-7 h-10 sm:h-[42px] rounded-lg bg-[#1b1f6a] text-white text-sm sm:text-base font-semibold whitespace-nowrap hover:bg-[#15195a] disabled:opacity-60 disabled:cursor-not-allowed"
                   onClick={handleSave}
-                  disabled={isSaving}
+                  disabled={isSaving || localSubmitting}
                 >
-                  {isSaving ? "Saving..." : "Save changes"}
+                  {isSaving || localSubmitting ? "Saving..." : "Save changes"}
                 </button>
               </>
             )}

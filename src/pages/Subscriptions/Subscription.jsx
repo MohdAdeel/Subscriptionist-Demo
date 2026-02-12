@@ -5,13 +5,13 @@ import {
 } from "../../components/SkeletonLoader";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  useDepartments,
   useSubscriptionData,
   usePopulateEditForm,
-  useDepartments,
+  checkSubscriptionExistance,
+  SUBSCRIPTION_DATA_QUERY_KEY,
   useUpdateSubscriptionMutation,
   useDeleteSubscriptionActivityLineMutation,
-  SUBSCRIPTION_DATA_QUERY_KEY,
-  checkSubscriptionExistance,
 } from "../../hooks/useSubscriptions";
 import { usePopup } from "../../components/Popup";
 import AddSubscriptionModal from "./components/AddSubscriptionModal";
@@ -137,10 +137,14 @@ const Subscription = () => {
   const { data: departmentsData = [] } = useDepartments();
   const departments = Array.isArray(departmentsData) ? departmentsData : [];
 
-  const { data: editFormData, isLoading: isLoadingEditForm } = usePopulateEditForm(
-    showEditModal && selectedRowId ? selectedRowId : null,
-    { enabled: showEditModal && !!selectedRowId }
-  );
+  const {
+    data: editFormData,
+    isLoading: isLoadingEditForm,
+    isFetching: isFetchingEditForm,
+    refetch: refetchEditForm,
+  } = usePopulateEditForm(showEditModal && selectedRowId ? selectedRowId : null, {
+    enabled: showEditModal && !!selectedRowId,
+  });
 
   const queryClient = useQueryClient();
   const updateMutation = useUpdateSubscriptionMutation();
@@ -200,6 +204,13 @@ const Subscription = () => {
   const openEditModal = useCallback(() => {
     if (selectedRowId) setShowEditModal(true);
   }, [selectedRowId]);
+
+  // Refetch edit form data when modal opens so modal shows latest data, not cached
+  useEffect(() => {
+    if (showEditModal && selectedRowId) {
+      refetchEditForm();
+    }
+  }, [showEditModal, selectedRowId, refetchEditForm]);
 
   const handleRowClick = useCallback((id) => {
     setSelectedRowId(id);
@@ -930,6 +941,7 @@ const Subscription = () => {
         departments={departments}
         onSave={handleUpdateSubscription}
         isSaving={isSavingEdit}
+        isLoadingForm={isLoadingEditForm || isFetchingEditForm}
       />
       <BudgetManagementModal open={showBudgetModal} onClose={() => setShowBudgetModal(false)} />
 
