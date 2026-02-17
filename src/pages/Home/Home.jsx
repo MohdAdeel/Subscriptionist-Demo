@@ -1,18 +1,23 @@
-import { useHomeStore } from "../../stores";
 import { useActivityLines } from "../../hooks";
+import { useAuthStore, useHomeStore } from "../../stores";
 import React, { useEffect, useMemo, useState } from "react";
-import MonthlySpendChart from "./components/MonthlySpendChart";
-import VendorProfileChart from "./components/VendorProfileChart";
-import VendorDoughnutChart from "./components/VendorDoughnutChart";
+import AddAccountModal from "./components/Models/AddAccountModal";
+import AddAccount from "./components/pages/AddAccount";
+import AddSubscription from "./components/pages/AddSubscription";
 import TotalActiveCostIcon from "../../assets/TotalActiveCost.svg";
 import RenewalTimelineIcon from "../../assets/RenewalTimeline.svg";
-import ActualVsBudgetChart from "./components/ActualVsBudgetChart";
 import { RectangleSkeleton } from "../../components/SkeletonLoader";
 import UpcomingRenewalsIcon from "../../assets/UpcomingRenewals.svg";
-import DepartmentSpendChart from "./components/DepartmentSpendChart";
-import UpcomingRenewalChart from "./components/UpcomingRenewalChart";
+import { populateAccountModal } from "../../lib/api/Account/Account";
+import MonthlySpendChart from "./components/Graphs/MonthlySpendChart";
 import RecentlyConcludedIcon from "../../assets/RecentlyConcluded.svg";
+import VendorProfileChart from "./components/Graphs/VendorProfileChart";
+import ActualVsBudgetChart from "./components/Graphs/ActualVsBudgetChart";
+import VendorDoughnutChart from "./components/Graphs/VendorDoughnutChart";
 import ActiveSubscriptionsIcon from "../../assets/ActiveSubscriptions.svg";
+import DepartmentSpendChart from "./components/Graphs/DepartmentSpendChart";
+import UpcomingRenewalChart from "./components/Graphs/UpcomingRenewalChart";
+import DashboardSkeletonLoader from "./components/HomeLoader/DashboardSkeletonLoader";
 import { calculateSubscriptionAmount, handleDataProcessing } from "../../lib/utils/home";
 
 const BarSkeleton = ({ bars = 6, heights }) => {
@@ -122,6 +127,8 @@ const Home = () => {
   const [departmentLabelLength, setDepartmentLabelLength] = useState(() =>
     getDepartmentLabelLength()
   );
+  const userAuth = useAuthStore((state) => state.userAuth);
+  const userAuthLoading = useAuthStore((state) => state.userAuthLoading);
 
   const [monthlyStartMonthIndex, setMonthlyStartMonthIndex] = useState(() => {
     const currentMonth = new Date().getMonth();
@@ -134,6 +141,9 @@ const Home = () => {
   );
   const [selectedUpcomingRenewalKey, setSelectedUpcomingRenewalKey] = useState(null);
   const [selectedVendorProfileKey, setSelectedVendorProfileKey] = useState(null);
+  const [addAccountModalOpen, setAddAccountModalOpen] = useState(false);
+  const [accountModalInitialData, setAccountModalInitialData] = useState(null);
+  const [isAddAccountButtonDisabled, setIsAddAccountButtonDisabled] = useState(false);
 
   // Run home data processing when we're on Home and activity lines data is available
   useEffect(() => {
@@ -473,6 +483,17 @@ const Home = () => {
     }
   };
 
+  const handleOpenAddAccountModal = async () => {
+    setIsAddAccountButtonDisabled(true);
+    try {
+      const data = await populateAccountModal();
+      setAccountModalInitialData(data ?? null);
+    } catch (e) {
+      setAccountModalInitialData(null);
+    }
+    setAddAccountModalOpen(true);
+  };
+
   const selectedUpcomingRenewalLabel = useMemo(() => {
     if (!selectedUpcomingRenewalKey) return "";
     const [year, month] = selectedUpcomingRenewalKey.split("-").map(Number);
@@ -531,6 +552,25 @@ const Home = () => {
     departmentYearIndex !== -1 && departmentYearIndex < departmentYears.length - 1;
   const departmentYearLabel =
     departmentYears.length > 0 ? `FY${String(departmentYear).slice(-2)}` : "FY--";
+
+  const hasAccount = !!userAuth?.accountid;
+  const isDraftAccount = userAuth?.bpfstage === "draft";
+  const isDataLoading = userAuthLoading || isLoading;
+
+  // Extract activity lines array - backend may return [], { activityLinesData: [] }, { ActivityLines: [] }, etc.
+  const activityLinesArray = (() => {
+    if (activityLinesData == null) return [];
+    if (Array.isArray(activityLinesData)) return activityLinesData;
+    const arr =
+      activityLinesData.activityLinesData ??
+      activityLinesData.lines ??
+      activityLinesData.ActivityLines ??
+      activityLinesData.value;
+    return Array.isArray(arr) ? arr : [];
+  })();
+
+  const isEmptyActivity =
+    hasAccount && !isDataLoading && activityLinesData != null && activityLinesArray.length === 0;
 
   const renderStatusPill = (status) => {
     const palette = {
@@ -616,172 +656,197 @@ const Home = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <VendorDoughnutChart
-          vendorBreakdown={vendorBreakdown}
-          isLoading={isLoading}
-          hoveredInfo={hoveredInfo}
-          onHoverInfoChange={setHoveredInfo}
-          vendorTooltipText={tooltipCopy.Vendors}
+      {isDataLoading ? (
+        <DashboardSkeletonLoader />
+      ) : !hasAccount || isDraftAccount ? (
+        <AddAccount
+          onAddClick={handleOpenAddAccountModal}
+          isDisabled={isAddAccountButtonDisabled}
         />
-        <MonthlySpendChart
-          monthlySpendSeries={monthlySpendSeries}
-          isLoading={isLoading}
-          hasMonthlySpend={hasMonthlySpend}
-          canMonthlyPrev={canMonthlyPrev}
-          canMonthlyNext={canMonthlyNext}
-          onMonthlyPrev={() => setMonthlyStartMonthIndex((prev) => Math.max(0, prev - 1))}
-          onMonthlyNext={() =>
-            setMonthlyStartMonthIndex((prev) => Math.min(maxMonthlyStartMonthIndex, prev + 1))
-          }
-          skeleton={<LineSkeleton />}
-        />
-        <DepartmentSpendChart
-          departmentChartSeries={departmentChartSeries}
-          isLoading={isLoading}
-          hasDepartmentSpend={hasDepartmentSpend}
-          departmentYearLabel={departmentYearLabel}
-          canDepartmentPrev={canDepartmentPrev}
-          canDepartmentNext={canDepartmentNext}
-          onDepartmentPrev={() => {
-            if (departmentYearIndex > 0) {
-              setDepartmentYear(departmentYears[departmentYearIndex - 1]);
-            }
-          }}
-          onDepartmentNext={() => {
-            if (departmentYearIndex !== -1 && departmentYearIndex < departmentYears.length - 1) {
-              setDepartmentYear(departmentYears[departmentYearIndex + 1]);
-            }
-          }}
-          skeleton={<BarSkeleton bars={4} />}
-        />
-      </div>
+      ) : isEmptyActivity ? (
+        <AddSubscription />
+      ) : (
+        <>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <VendorDoughnutChart
+              vendorBreakdown={vendorBreakdown}
+              isLoading={userAuthLoading || isLoading}
+              hoveredInfo={hoveredInfo}
+              onHoverInfoChange={setHoveredInfo}
+              vendorTooltipText={tooltipCopy.Vendors}
+            />
+            <MonthlySpendChart
+              monthlySpendSeries={monthlySpendSeries}
+              isLoading={userAuthLoading || isLoading}
+              hasMonthlySpend={hasMonthlySpend}
+              canMonthlyPrev={canMonthlyPrev}
+              canMonthlyNext={canMonthlyNext}
+              onMonthlyPrev={() => setMonthlyStartMonthIndex((prev) => Math.max(0, prev - 1))}
+              onMonthlyNext={() =>
+                setMonthlyStartMonthIndex((prev) => Math.min(maxMonthlyStartMonthIndex, prev + 1))
+              }
+              skeleton={<LineSkeleton />}
+            />
+            <DepartmentSpendChart
+              departmentChartSeries={departmentChartSeries}
+              isLoading={userAuthLoading || isLoading}
+              hasDepartmentSpend={hasDepartmentSpend}
+              departmentYearLabel={departmentYearLabel}
+              canDepartmentPrev={canDepartmentPrev}
+              canDepartmentNext={canDepartmentNext}
+              onDepartmentPrev={() => {
+                if (departmentYearIndex > 0) {
+                  setDepartmentYear(departmentYears[departmentYearIndex - 1]);
+                }
+              }}
+              onDepartmentNext={() => {
+                if (
+                  departmentYearIndex !== -1 &&
+                  departmentYearIndex < departmentYears.length - 1
+                ) {
+                  setDepartmentYear(departmentYears[departmentYearIndex + 1]);
+                }
+              }}
+              skeleton={<BarSkeleton bars={4} />}
+            />
+          </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <ActualVsBudgetChart
-          actualVsBudgetSeries={actualVsBudgetSeries}
-          isLoading={isLoading}
-          hasActualVsBudget={hasActualVsBudget}
-          skeleton={<BarSkeleton bars={2} />}
-        />
-        <VendorProfileChart
-          vendorProfileSeries={vendorProfileSeries}
-          isLoading={isLoading}
-          selectedVendorProfileKey={selectedVendorProfileKey}
-          selectedVendorProfileRows={selectedVendorProfileRows}
-          onSelectVendorProfileKey={setSelectedVendorProfileKey}
-          formatShortDate={formatShortDate}
-          skeleton={<BarSkeleton bars={3} />}
-        />
-        <UpcomingRenewalChart
-          upcomingRenewalSeries={upcomingRenewalSeries}
-          isLoading={isLoading}
-          selectedUpcomingRenewalKey={selectedUpcomingRenewalKey}
-          selectedUpcomingRenewalLabel={selectedUpcomingRenewalLabel}
-          selectedUpcomingRenewalRows={selectedUpcomingRenewalRows}
-          onSelectUpcomingRenewalKey={setSelectedUpcomingRenewalKey}
-          onUpcomingRenewalPrev={handleUpcomingRenewalPrev}
-          onUpcomingRenewalNext={handleUpcomingRenewalNext}
-          upcomingRenewalPeriodLabel={upcomingRenewalPeriodLabel}
-          formatShortDate={formatShortDate}
-          skeleton={<BarSkeleton bars={6} />}
-        />
-      </div>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <ActualVsBudgetChart
+              actualVsBudgetSeries={actualVsBudgetSeries}
+              isLoading={userAuthLoading || isLoading}
+              hasActualVsBudget={hasActualVsBudget}
+              skeleton={<BarSkeleton bars={2} />}
+            />
+            <VendorProfileChart
+              vendorProfileSeries={vendorProfileSeries}
+              isLoading={userAuthLoading || isLoading}
+              selectedVendorProfileKey={selectedVendorProfileKey}
+              selectedVendorProfileRows={selectedVendorProfileRows}
+              onSelectVendorProfileKey={setSelectedVendorProfileKey}
+              formatShortDate={formatShortDate}
+              skeleton={<BarSkeleton bars={3} />}
+            />
+            <UpcomingRenewalChart
+              upcomingRenewalSeries={upcomingRenewalSeries}
+              isLoading={userAuthLoading || isLoading}
+              selectedUpcomingRenewalKey={selectedUpcomingRenewalKey}
+              selectedUpcomingRenewalLabel={selectedUpcomingRenewalLabel}
+              selectedUpcomingRenewalRows={selectedUpcomingRenewalRows}
+              onSelectUpcomingRenewalKey={setSelectedUpcomingRenewalKey}
+              onUpcomingRenewalPrev={handleUpcomingRenewalPrev}
+              onUpcomingRenewalNext={handleUpcomingRenewalNext}
+              upcomingRenewalPeriodLabel={upcomingRenewalPeriodLabel}
+              formatShortDate={formatShortDate}
+              skeleton={<BarSkeleton bars={6} />}
+            />
+          </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div className="rounded-2xl bg-white p-5 shadow-sm border border-[#EEF2F6]">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#DFFFC1] text-[#0F172A]">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              >
-                <circle cx="12" cy="12" r="8" />
-                <path d="M12 8v4l2.5 1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
-            <h3 className="text-lg font-semibold text-[#111827]">My Upcoming Tasks</h3>
-          </div>
-          <div className="mt-4 divide-y divide-[#EEF2F6]">
-            {hasUpcomingTasks
-              ? upcomingTasks.map((task, idx) => (
-                  <div
-                    key={task.title}
-                    className={`flex items-center justify-between py-3 ${idx === 0 ? "pt-0" : ""}`}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div className="rounded-2xl bg-white p-5 shadow-sm border border-[#EEF2F6]">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#DFFFC1] text-[#0F172A]">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
                   >
-                    <div className="text-sm font-medium text-[#111827]">{task.title}</div>
-                    <div className="flex items-center gap-4">
-                      {renderStatusPill(task.status)}
-                      <span className="text-sm text-[#6B7280]">{task.due}</span>
-                    </div>
-                  </div>
-                ))
-              : Array.from({ length: 4 }).map((_, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex items-center justify-between py-3 ${idx === 0 ? "pt-0" : ""}`}
-                  >
-                    <RectangleSkeleton className="h-4 w-56" />
-                    <div className="flex items-center gap-4">
-                      <RectangleSkeleton className="h-6 w-20 rounded-full" />
-                      <RectangleSkeleton className="h-4 w-32" />
-                    </div>
-                  </div>
-                ))}
-          </div>
-        </div>
+                    <circle cx="12" cy="12" r="8" />
+                    <path d="M12 8v4l2.5 1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <h3 className="text-lg font-semibold text-[#111827]">My Upcoming Tasks</h3>
+              </div>
+              <div className="mt-4 divide-y divide-[#EEF2F6]">
+                {hasUpcomingTasks && !userAuthLoading
+                  ? upcomingTasks.map((task, idx) => (
+                      <div
+                        key={task.title}
+                        className={`flex items-center justify-between py-3 ${idx === 0 ? "pt-0" : ""}`}
+                      >
+                        <div className="text-sm font-medium text-[#111827]">{task.title}</div>
+                        <div className="flex items-center gap-4">
+                          {renderStatusPill(task.status)}
+                          <span className="text-sm text-[#6B7280]">{task.due}</span>
+                        </div>
+                      </div>
+                    ))
+                  : Array.from({ length: 4 }).map((_, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex items-center justify-between py-3 ${idx === 0 ? "pt-0" : ""}`}
+                      >
+                        <RectangleSkeleton className="h-4 w-56" />
+                        <div className="flex items-center gap-4">
+                          <RectangleSkeleton className="h-6 w-20 rounded-full" />
+                          <RectangleSkeleton className="h-4 w-32" />
+                        </div>
+                      </div>
+                    ))}
+              </div>
+            </div>
 
-        <div className="rounded-2xl bg-white p-5 shadow-sm border border-[#EEF2F6]">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#E0E4F3] text-[#0F172A]">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              >
-                <path d="M12 4 3 9l9 5 9-5-9-5Z" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M3 15l9 5 9-5" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M12 13v6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
-            <h3 className="text-lg font-semibold text-[#111827]">Overdue Tasks</h3>
-          </div>
-          <div className="mt-4 divide-y divide-[#EEF2F6]">
-            {hasOverdueTasks
-              ? overdueTasks.map((task, idx) => (
-                  <div
-                    key={task.title}
-                    className={`flex items-center justify-between py-3 ${idx === 0 ? "pt-0" : ""}`}
+            <div className="rounded-2xl bg-white p-5 shadow-sm border border-[#EEF2F6]">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#E0E4F3] text-[#0F172A]">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
                   >
-                    <div className="text-sm font-medium text-[#111827]">{task.title}</div>
-                    <div className="flex items-center gap-4">
-                      {renderStatusPill(task.status)}
-                      <span className="text-sm text-[#6B7280]">{task.due}</span>
-                    </div>
-                  </div>
-                ))
-              : Array.from({ length: 4 }).map((_, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex items-center justify-between py-3 ${idx === 0 ? "pt-0" : ""}`}
-                  >
-                    <RectangleSkeleton className="h-4 w-56" />
-                    <div className="flex items-center gap-4">
-                      <RectangleSkeleton className="h-6 w-20 rounded-full" />
-                      <RectangleSkeleton className="h-4 w-32" />
-                    </div>
-                  </div>
-                ))}
+                    <path d="M12 4 3 9l9 5 9-5-9-5Z" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M3 15l9 5 9-5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M12 13v6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <h3 className="text-lg font-semibold text-[#111827]">Overdue Tasks</h3>
+              </div>
+              <div className="mt-4 divide-y divide-[#EEF2F6]">
+                {hasOverdueTasks && !userAuthLoading
+                  ? overdueTasks.map((task, idx) => (
+                      <div
+                        key={task.title}
+                        className={`flex items-center justify-between py-3 ${idx === 0 ? "pt-0" : ""}`}
+                      >
+                        <div className="text-sm font-medium text-[#111827]">{task.title}</div>
+                        <div className="flex items-center gap-4">
+                          {renderStatusPill(task.status)}
+                          <span className="text-sm text-[#6B7280]">{task.due}</span>
+                        </div>
+                      </div>
+                    ))
+                  : Array.from({ length: 4 }).map((_, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex items-center justify-between py-3 ${idx === 0 ? "pt-0" : ""}`}
+                      >
+                        <RectangleSkeleton className="h-4 w-56" />
+                        <div className="flex items-center gap-4">
+                          <RectangleSkeleton className="h-6 w-20 rounded-full" />
+                          <RectangleSkeleton className="h-4 w-32" />
+                        </div>
+                      </div>
+                    ))}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
+      <AddAccountModal
+        open={addAccountModalOpen}
+        onClose={() => {
+          setAddAccountModalOpen(false);
+          setAccountModalInitialData(null);
+          setIsAddAccountButtonDisabled(false);
+        }}
+        initialData={accountModalInitialData}
+      />
     </div>
   );
 };

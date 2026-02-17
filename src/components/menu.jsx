@@ -43,9 +43,9 @@ const Menu = () => {
           stroke="currentColor"
           strokeWidth="2"
           strokeLinecap="round"
-          className="absolute w-7 h-7 opacity-100 transition-opacity duration-300 ease-in-out group-hover:opacity-0"
+          className="absolute w-12 h-15 opacity-100 transition-opacity duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] group-hover:opacity-0"
         >
-          <path d="M12 5v14" />
+          <path d="M12 1v22" />
         </svg>
         {/* Hover: chevron — open = point left (close), closed = point right (open) */}
         <svg
@@ -56,7 +56,7 @@ const Menu = () => {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className={`absolute w-7 h-7 opacity-0 transition-all duration-300 ease-in-out group-hover:opacity-100 ${isCollapsed ? "rotate-180" : ""}`}
+          className={`absolute w-12 h-15 opacity-0 transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] group-hover:opacity-100 ${isCollapsed ? "rotate-180" : ""}`}
         >
           <path d="M15 18l-6-6 6-6" />
         </svg>

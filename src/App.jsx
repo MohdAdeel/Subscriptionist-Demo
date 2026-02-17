@@ -3,7 +3,7 @@ import AppRoutes from "./routes/AppRoutes";
 import { useMsal } from "@azure/msal-react";
 import React, { useEffect, useRef } from "react";
 import { useAuthStore } from "./stores/authStore";
-import { getContactByB2CObjectId } from "./lib/api/getAccount/getAccount";
+import { getContactByB2CObjectId } from "./lib/api/getContactByB2CObject/getContactByB2CObject.js";
 
 function AuthSync() {
   const { instance, accounts } = useMsal();

@@ -1,6 +1,6 @@
 import Chart from "chart.js/auto";
 import React, { useEffect, useRef } from "react";
-import { CircleSkeleton, TextSkeleton } from "../../../components/SkeletonLoader";
+import { CircleSkeleton, TextSkeleton } from "../../../../components/SkeletonLoader";
 
 const VENDOR_CHART_COLORS = [
   "#CCD6EB",
