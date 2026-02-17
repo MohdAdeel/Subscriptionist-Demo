@@ -32,7 +32,7 @@ const Menu = () => {
       <button
         type="button"
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="group absolute right-5 top-[54%] -translate-y-1/2 translate-x-1/2 z-10 flex items-center justify-center min-w-11 min-h-11 text-white"
+        className="group absolute right-5 top-[54%] -translate-y-1/2 translate-x-1/2 z-10 flex items-center justify-center min-w-14 min-h-20 py-20 text-white"
         aria-label={isCollapsed ? "Expand menu" : "Collapse menu"}
       >
         {/* Default: straight vertical line */}

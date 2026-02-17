@@ -308,8 +308,8 @@ export default function Vendor() {
   }, [vendorError, showError]);
 
   return (
-    <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-screen">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+    <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-[calc(100vh-100px)]">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:items-stretch">
         {/* Left: Table card (~2/3) */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-lg sm:rounded-xl overflow-hidden border border-[#e9ecef] shadow-sm">
@@ -500,10 +500,10 @@ export default function Vendor() {
           </div>
         </div>
 
-        {/* Right: Sidebar charts (~1/3) */}
-        <div className="flex flex-col gap-4 sm:gap-5">
+        {/* Right: Sidebar charts (~1/3) - stretch to match left column height */}
+        <div className="flex flex-col gap-4 sm:gap-5 lg:h-full lg:min-h-0">
           {/* Activity Count */}
-          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-[#e9ecef]">
+          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-[#e9ecef] min-h-[200px] flex-1 flex flex-col overflow-hidden">
             <h3 className="text-base font-semibold text-[#343A40] mb-3 sm:mb-4">Activity Count</h3>
             <div className="flex items-start gap-3">
               {isLoadingVendors || !activityLineCountForVendor?.length ? (
@@ -553,7 +553,7 @@ export default function Vendor() {
           </div>
 
           {/* Amount by Vendor */}
-          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-[#e9ecef]">
+          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-[#e9ecef] min-h-[200px] flex-1 flex flex-col overflow-hidden">
             <h3 className="text-base font-semibold text-[#343A40] mb-3 sm:mb-4">
               Amount by Vendor
             </h3>
@@ -603,7 +603,7 @@ export default function Vendor() {
           </div>
 
           {/* Departmental Spend Trend */}
-          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-[#e9ecef]">
+          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-[#e9ecef] min-h-[220px] flex-1 flex flex-col overflow-hidden">
             <h3 className="text-base font-semibold text-[#343A40] mb-3 sm:mb-4">
               Departmental Spend Trend
             </h3>
@@ -614,7 +614,7 @@ export default function Vendor() {
               }}
             >
               {isLoadingVendors ? (
-                <div className="flex items-end justify-between gap-2 h-full pt-8 pb-6 min-h-[260px]">
+                <div className="flex items-end justify-between gap-2 h-full pt-8 pb-6">
                   {[40, 65, 45, 55].map((h, i) => (
                     <div
                       key={i}

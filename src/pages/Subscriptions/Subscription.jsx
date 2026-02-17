@@ -481,7 +481,7 @@ const Subscription = () => {
   }, [deleteConfirm?.rowId, deleteMutation, closeDeleteConfirm, showSuccess, showError]);
 
   return (
-    <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-screen">
+    <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-[calc(100vh-100px)]">
       {/* Filters and Actions */}
       <div className="flex flex-col lg:flex-row justify-between items-start gap-4 sm:gap-5 px-3 sm:px-4 md:px-5 mb-4 sm:mb-6 w-full">
         <div className="flex flex-col md:flex-row md:flex-wrap gap-3 sm:gap-4 flex-1 w-full min-w-0 mb-0">
