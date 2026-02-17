@@ -748,8 +748,8 @@ const Subscription = () => {
       {/* Table */}
       <div className="mt-4 sm:mt-6 px-3 sm:px-4 md:px-5">
         <div className="bg-white rounded-lg sm:rounded-xl overflow-hidden border border-[#e9ecef] shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse h-[400px] min-w-[900px]">
+          <div className="overflow-x-auto min-h-[400px]">
+            <table className="w-full border-collapse min-w-[900px]">
               {isLoading ? (
                 <TableHeaderSkeleton columns={10} />
               ) : (
@@ -791,9 +791,9 @@ const Subscription = () => {
               <tbody>
                 {isLoading ? (
                   Array.from({ length: 8 }).map((_, idx) => (
-                    <tr key={idx} className="border-b border-[#eee]">
+                    <tr key={idx} className="border-b border-[#eee] h-[40px]">
                       {Array.from({ length: 10 }).map((_, colIdx) => (
-                        <td key={colIdx} className="p-3">
+                        <td key={colIdx} className="p-3 align-middle">
                           <span className="inline-block h-3.5 w-4/5 max-w-[100px] rounded bg-gray-200 animate-pulse" />
                         </td>
                       ))}
@@ -818,21 +818,25 @@ const Subscription = () => {
                       data-row-id={row.id}
                       onClick={() => handleRowClick(row.id)}
                       onDoubleClick={() => handleRowDoubleClick(row.id)}
-                      className={`cursor-pointer transition-colors border-b border-[#eee] hover:bg-[#f9f9ff] ${
+                      className={`h-[40px] cursor-pointer transition-colors border-b border-[#eee] hover:bg-[#f9f9ff] ${
                         selectedRowId === row.id ? "bg-[#e8ebff] border-l-4 border-l-[#172B4D]" : ""
                       }`}
                     >
-                      <td className="p-3 text-sm text-[#343A40]">{row.subscriptionName}</td>
-                      <td className="p-3 text-sm text-[#343A40]">{row.vendorName}</td>
-                      <td className="p-3 text-sm text-[#5B6B9E]">
+                      <td className="p-3 text-sm text-[#343A40] align-middle">
+                        {row.subscriptionName}
+                      </td>
+                      <td className="p-3 text-sm text-[#343A40] align-middle">{row.vendorName}</td>
+                      <td className="p-3 text-sm text-[#5B6B9E] align-middle">
                         {row.amount != null ? `$${row.amount.toLocaleString()}` : ""}
                       </td>
-                      <td className="p-3 text-sm text-[#343A40]">{row.department}</td>
-                      <td className="p-3 text-sm text-[#007BFF]">{row.startDate}</td>
-                      <td className="p-3 text-sm text-[#007BFF]">{row.endDate}</td>
-                      <td className="p-3 text-sm text-[#343A40]">{row.paymentFrequency}</td>
+                      <td className="p-3 text-sm text-[#343A40] align-middle">{row.department}</td>
+                      <td className="p-3 text-sm text-[#007BFF] align-middle">{row.startDate}</td>
+                      <td className="p-3 text-sm text-[#007BFF] align-middle">{row.endDate}</td>
+                      <td className="p-3 text-sm text-[#343A40] align-middle">
+                        {row.paymentFrequency}
+                      </td>
                       <td
-                        className="p-3 text-sm"
+                        className="p-3 text-sm align-middle"
                         style={{
                           color: isDateCritical(row.lastDueDate) ? "#DC3545" : "#007BFF",
                         }}
@@ -840,14 +844,14 @@ const Subscription = () => {
                         {row.lastDueDate}
                       </td>
                       <td
-                        className="p-3 text-sm"
+                        className="p-3 text-sm align-middle"
                         style={{
                           color: isDateCritical(row.nextDueDate) ? "#DC3545" : "#007BFF",
                         }}
                       >
                         {row.nextDueDate}
                       </td>
-                      <td className="p-3 text-sm text-[#343A40]">
+                      <td className="p-3 text-sm text-[#343A40] align-middle">
                         <span className="inline-flex items-center gap-6">
                           {row.activityStatus}
                           {selectedRowId === row.id && (
