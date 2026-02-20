@@ -3,10 +3,14 @@ import ExcelJS from "exceljs";
 import autoTable from "jspdf-autotable";
 import Financial from "./components/Financial";
 import { useActivityLines } from "../../hooks";
-import { useReportsPageStore } from "../../stores";
 import { useState, useEffect, useRef } from "react";
 import StandardReports from "./components/StandardReports";
+import { useReportsPageStore, useAuthStore } from "../../stores";
+import { populateAccountModal } from "../../lib/api/Account/Account";
 import RenewalAndExpiration from "./components/RenewalAndExpiration";
+import AddOrganization from "../Home/components/pages/AddOrgnaization";
+import AddSubscription from "../Home/components/pages/AddSubscription";
+import AddAccountModal from "../Home/components/Models/AddAccountModal";
 import { applyFilters, clearFilters } from "../../lib/utils/reportsPage";
 import { FiX, FiUpload, FiFilter, FiDownload, FiCalendar } from "react-icons/fi";
 import { TableSkeleton, ChartSkeleton, KPICardSkeleton } from "../../components/SkeletonLoader";
@@ -30,7 +34,44 @@ const getVendorLabel = (entry) =>
 
 const Report = () => {
   // React Query handles caching, deduplication, and loading state
-  const { isLoading, error } = useActivityLines();
+  const { data: activityLinesData, isLoading, error } = useActivityLines();
+  const userAuth = useAuthStore((state) => state.userAuth);
+  const userAuthLoading = useAuthStore((state) => state.userAuthLoading);
+
+  const [addAccountModalOpen, setAddAccountModalOpen] = useState(false);
+  const [accountModalInitialData, setAccountModalInitialData] = useState(null);
+  const [isAddAccountButtonDisabled, setIsAddAccountButtonDisabled] = useState(false);
+
+  const hasAccount = !!userAuth?.accountid;
+  const isDraftAccount = userAuth?.bpfstage === "draft";
+  const isDataLoading = userAuthLoading || isLoading;
+  const activityLinesArray = (() => {
+    if (activityLinesData == null) return [];
+    if (Array.isArray(activityLinesData)) return activityLinesData;
+    const arr =
+      activityLinesData.activityLinesData ??
+      activityLinesData.lines ??
+      activityLinesData.ActivityLines ??
+      activityLinesData.value;
+    return Array.isArray(arr) ? arr : [];
+  })();
+  const isEmptyActivity =
+    hasAccount &&
+    !isDraftAccount &&
+    !isDataLoading &&
+    activityLinesData != null &&
+    activityLinesArray.length === 0;
+
+  const handleOpenAddAccountModal = async () => {
+    setIsAddAccountButtonDisabled(true);
+    try {
+      const data = await populateAccountModal();
+      setAccountModalInitialData(data ?? null);
+    } catch (e) {
+      setAccountModalInitialData(null);
+    }
+    setAddAccountModalOpen(true);
+  };
 
   // Get store data for PDF export
   const TopCards = useReportsPageStore((state) => state.TopCards);
@@ -743,6 +784,34 @@ const Report = () => {
           <h2 className="text-xl font-semibold text-gray-800 mb-2">Failed to load reports</h2>
           <p className="text-gray-600">{error.message}</p>
         </div>
+      </div>
+    );
+  }
+
+  // Same empty states as Home: no account or draft → AddOrganization; has account but no activity → AddSubscription
+  if (!isDataLoading && (!hasAccount || isDraftAccount)) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+        <AddOrganization
+          onAddClick={handleOpenAddAccountModal}
+          isDisabled={isAddAccountButtonDisabled}
+        />
+        <AddAccountModal
+          open={addAccountModalOpen}
+          onClose={() => {
+            setAddAccountModalOpen(false);
+            setAccountModalInitialData(null);
+            setIsAddAccountButtonDisabled(false);
+          }}
+          initialData={accountModalInitialData}
+        />
+      </div>
+    );
+  }
+  if (!isDataLoading && isEmptyActivity) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+        <AddSubscription />
       </div>
     );
   }

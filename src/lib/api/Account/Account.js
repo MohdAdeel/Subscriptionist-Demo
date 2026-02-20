@@ -2,7 +2,6 @@ const baseURL =
   "https://prod-cus-backendapi-fap-development-bug8ecemf4c7fgfz.centralus-01.azurewebsites.net/api";
 const contactId = "be842fc7-3b07-f111-8407-6045bdd7553a";
 const functionsKey = "vNPW_oi9emga3XHNrWI7UylbhBCumFuXrSC4wewl2HNaAzFuQ6TsKA==";
-const accountid = "9df7c78b-0e0c-f111-8406-7ced8dd77286";
 
 export async function populateAccountModal() {
   const response = await fetch(`${baseURL}/GetContactDetailsToPopulateOnAccount/${contactId}`, {
@@ -31,7 +30,8 @@ export async function addAccount(accountData) {
     },
     body: JSON.stringify(accountData),
   });
-  return response.json();
+  const data = await response.json();
+  return data;
 }
 
 export async function updateAccount(accountData) {
@@ -46,7 +46,8 @@ export async function updateAccount(accountData) {
   return response.json();
 }
 
-export async function activateAccount(body) {
+export async function activateAccount(body, accountid) {
+  console.log("here is the accountid", accountid);
   const response = await fetch(`${baseURL}/updateToActivateAccount/${accountid}`, {
     method: "PATCH",
     headers: {

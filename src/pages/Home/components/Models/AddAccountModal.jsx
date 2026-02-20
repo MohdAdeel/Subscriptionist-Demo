@@ -1,13 +1,17 @@
 import { createPortal } from "react-dom";
 import {
   addAccount,
-  updateAccount,
   activateAccount,
   getAccountFieldChoices,
 } from "../../../../lib/api/Account/Account";
+import { useMsal } from "@azure/msal-react";
+import { useAuthStore } from "../../../../stores";
 import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { usePopup } from "../../../../components/Popup";
-import { FiX, FiCheck, FiChevronDown, FiSearch } from "react-icons/fi";
+import { FiX, FiChevronDown, FiSearch } from "react-icons/fi";
+import { ACTIVITY_LINES_QUERY_KEY } from "../../../../hooks/useActivityLines";
+import { getContactByB2CObjectId } from "../../../../lib/api/getContactByB2CObject/getContactByB2CObject.js";
 
 /** Searchable dropdown for options with { attributevalue, value }. Displays value, stores attributevalue. Menu renders in a portal so it is not clipped by modal overflow. */
 function SearchableDropdown({
@@ -176,7 +180,7 @@ const FIELD = (name, label, placeholder, required = false) => ({
 });
 
 const LEFT_FIELDS = [
-  FIELD("accountName", "Account Name", "Enter Account Name", true),
+  FIELD("accountName", "Organization Name", "Enter Organization Name", true),
   FIELD("phone", "Phone", "Enter Phone Number"),
   FIELD("fax", "Fax", "Enter Fax Number"),
   FIELD("organizationEmail", "Organization Email", "Enter Email"),
@@ -236,10 +240,10 @@ const buildDraftBodyFromForm = (formData, contactId) => ({
   yiic_accountstatusreason: 664160000,
 });
 
-const isDraftBodyEqual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-
 export default function AddAccountModal({ open = false, onClose, initialData }) {
   const { showSuccess, showError } = usePopup();
+  const queryClient = useQueryClient();
+  const { instance } = useMsal();
   const [errors, setErrors] = useState({});
   const [stageIndex, setStageIndex] = useState(0);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -247,6 +251,7 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
   const [isActivating, setIsActivating] = useState(false);
   const [fieldChoices, setFieldChoices] = useState(EMPTY_FIELD_CHOICES);
   const [form, setForm] = useState(EMPTY_DRAFT_FORM);
+  const [accountId, setAccountId] = useState(null);
   const [activeForm, setActiveForm] = useState({
     website: "",
     employeeSize: "",
@@ -300,8 +305,8 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
 
   const buildDraftBody = () => buildDraftBodyFromForm(form, initialData?.contactId);
 
-  const getInitialFormForComparison = () =>
-    initialData ? (mapInitialDataToForm(initialData) ?? EMPTY_DRAFT_FORM) : EMPTY_DRAFT_FORM;
+  // const getInitialFormForComparison = () =>
+  //   initialData ? (mapInitialDataToForm(initialData) ?? EMPTY_DRAFT_FORM) : EMPTY_DRAFT_FORM;
 
   const handleNextStage = async () => {
     if (stageIndex === 0) {
@@ -310,20 +315,17 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
       setIsMovingToNextStage(true);
       try {
         const body = buildDraftBody();
-        const initialBody = buildDraftBodyFromForm(
-          getInitialFormForComparison(),
-          initialData?.contactId
-        );
-        const hasChanges = !isDraftBodyEqual(body, initialBody);
+        // const initialBody = buildDraftBodyFromForm(
+        //   getInitialFormForComparison(),
+        //   initialData?.contactId
+        // );
+        const response = await addAccount(body);
+        setAccountId(response?.accountId);
+        // if (initialData) {
+        //   await updateAccount(body); // Send Account Id here
+        // } else {
 
-        if (hasChanges) {
-          if (initialData) {
-            await updateAccount(body); // Send Account Id here
-          } else {
-            await addAccount(body);
-          }
-        }
-
+        // }
         const data = await getAccountFieldChoices();
         setFieldChoices({
           employeeSize: Array.isArray(data?.employeeSize) ? data.employeeSize : [],
@@ -380,12 +382,20 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
     setIsActivating(true);
     try {
       const body = buildActivateBody();
-      await activateAccount(body);
-      showSuccess("Account activated successfully.");
+      await activateAccount(body, accountId);
+      showSuccess("Organization profile activated successfully.");
+      // Refetch activity lines so Home gets fresh data
+      await queryClient.refetchQueries({ queryKey: ACTIVITY_LINES_QUERY_KEY });
+      // Refetch contact/auth (same as App.jsx) so userAuth has updated accountid/bpfstage and Home moves from AddOrganization to AddSubscription
+      const account = instance.getAllAccounts()[0];
+      if (account?.localAccountId) {
+        const userData = await getContactByB2CObjectId(account.localAccountId);
+        useAuthStore.getState().setUserAuth(userData);
+      }
       handleClose();
     } catch (e) {
       console.error("activateAccount failed", e);
-      showError(e?.message ?? "Failed to activate account. Please try again.");
+      showError(e?.message ?? "Failed to activate organization profile. Please try again.");
     } finally {
       setIsActivating(false);
     }
@@ -497,7 +507,7 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
       >
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 flex-shrink-0">
           <h2 className="text-xl font-bold text-gray-900">
-            {isActiveStage ? "Account Activation" : "Add Account"}
+            {isActiveStage ? "Activate Organization" : "Add Organization"}
           </h2>
           <button
             type="button"
@@ -509,7 +519,7 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
           </button>
         </div>
 
-        <div className="flex items-center gap-4 px-6 pt-4 flex-shrink-0">
+        {/* <div className="flex items-center gap-4 px-6 pt-4 flex-shrink-0">
           {STAGES.map((stage, i) => (
             <div key={stage} className="flex items-center gap-2">
               {i < stageIndex ? (
@@ -537,7 +547,7 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
               )}
             </div>
           ))}
-        </div>
+        </div> */}
 
         <div
           className={`flex-1 min-h-[22rem] flex flex-col px-6 py-6 ${isDropdownOpen ? "overflow-hidden" : "overflow-auto"}`}
@@ -557,10 +567,10 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
             <>
               <button
                 type="button"
-                onClick={handleClose}
+                onClick={handleCancelActive}
                 className="rounded-lg border border-[#3730A3] bg-white px-4 py-2.5 text-sm font-medium text-[#3730A3] shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#3730A3] focus:ring-offset-2"
               >
-                Close
+                Previous
               </button>
               <button
                 type="button"
@@ -568,7 +578,7 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
                 disabled={isActivating}
                 className="rounded-lg bg-[#3730A3] px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-[#2d2880] focus:outline-none focus:ring-2 focus:ring-[#3730A3] focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                {isActivating ? "Activating..." : "Activate Account"}
+                {isActivating ? "Activating..." : "Activate Organization"}
               </button>
             </>
           ) : (

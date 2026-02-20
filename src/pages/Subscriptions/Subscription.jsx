@@ -3,7 +3,6 @@ import {
   ButtonSkeleton,
   TableHeaderSkeleton,
 } from "../../components/SkeletonLoader";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   useDepartments,
   useSubscriptionData,
@@ -13,10 +12,17 @@ import {
   useUpdateSubscriptionMutation,
   useDeleteSubscriptionActivityLineMutation,
 } from "../../hooks/useSubscriptions";
+import { useActivityLines } from "../../hooks";
+import { useAuthStore } from "../../stores";
 import { usePopup } from "../../components/Popup";
+import { useQueryClient } from "@tanstack/react-query";
 import AddSubscriptionModal from "./components/AddSubscriptionModal";
 import EditSubscriptionModal from "./components/EditSubscriptionModal";
 import BudgetManagementModal from "./components/BudgetManagementModal";
+import AddOrganization from "../Home/components/pages/AddOrgnaization";
+import AddSubscription from "../Home/components/pages/AddSubscription";
+import AddAccountModal from "../Home/components/Models/AddAccountModal";
+import { populateAccountModal } from "../../lib/api/Account/Account";
 import React, { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import { FiSearch, FiBell, FiCalendar, FiUser, FiChevronDown, FiTrash2 } from "react-icons/fi";
 
@@ -119,6 +125,43 @@ const Subscription = () => {
   const [isVendorDropdownOpen, setIsVendorDropdownOpen] = useState(false);
   const [subscriptionNameFilter, setSubscriptionNameFilter] = useState("");
   const [debouncedSubscriptionName, setDebouncedSubscriptionName] = useState("");
+  const [addAccountModalOpen, setAddAccountModalOpen] = useState(false);
+  const [accountModalInitialData, setAccountModalInitialData] = useState(null);
+  const [isAddAccountButtonDisabled, setIsAddAccountButtonDisabled] = useState(false);
+
+  const { data: activityLinesData, isLoading: activityLinesLoading } = useActivityLines();
+  const userAuth = useAuthStore((state) => state.userAuth);
+  const userAuthLoading = useAuthStore((state) => state.userAuthLoading);
+  const hasAccount = !!userAuth?.accountid;
+  const isDraftAccount = userAuth?.bpfstage === "draft";
+  const isDataLoading = userAuthLoading || activityLinesLoading;
+  const activityLinesArray = (() => {
+    if (activityLinesData == null) return [];
+    if (Array.isArray(activityLinesData)) return activityLinesData;
+    const arr =
+      activityLinesData.activityLinesData ??
+      activityLinesData.lines ??
+      activityLinesData.ActivityLines ??
+      activityLinesData.value;
+    return Array.isArray(arr) ? arr : [];
+  })();
+  const isEmptyActivity =
+    hasAccount &&
+    !isDraftAccount &&
+    !isDataLoading &&
+    activityLinesData != null &&
+    activityLinesArray.length === 0;
+
+  const handleOpenAddAccountModal = async () => {
+    setIsAddAccountButtonDisabled(true);
+    try {
+      const data = await populateAccountModal();
+      setAccountModalInitialData(data ?? null);
+    } catch (e) {
+      setAccountModalInitialData(null);
+    }
+    setAddAccountModalOpen(true);
+  };
 
   const hasAppliedDateRange = appliedStartDate && appliedEndDate;
   const {
@@ -479,6 +522,34 @@ const Subscription = () => {
       showError(err?.message || "Unable to delete subscription. Please try again.");
     }
   }, [deleteConfirm?.rowId, deleteMutation, closeDeleteConfirm, showSuccess, showError]);
+
+  // Same empty states as Home: no account or draft → AddOrganization; has account but no activity → AddSubscription
+  if (!isDataLoading && (!hasAccount || isDraftAccount)) {
+    return (
+      <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-[calc(100vh-100px)]">
+        <AddOrganization
+          onAddClick={handleOpenAddAccountModal}
+          isDisabled={isAddAccountButtonDisabled}
+        />
+        <AddAccountModal
+          open={addAccountModalOpen}
+          onClose={() => {
+            setAddAccountModalOpen(false);
+            setAccountModalInitialData(null);
+            setIsAddAccountButtonDisabled(false);
+          }}
+          initialData={accountModalInitialData}
+        />
+      </div>
+    );
+  }
+  if (!isDataLoading && isEmptyActivity) {
+    return (
+      <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-[calc(100vh-100px)]">
+        <AddSubscription />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-[calc(100vh-100px)]">

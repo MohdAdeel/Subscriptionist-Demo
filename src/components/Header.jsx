@@ -186,7 +186,11 @@ const Header = () => {
                 {/* User Photo */}
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#172B4D] to-[#000435] flex items-center justify-center overflow-hidden border-2 border-[#e9ecef] group-hover:border-[#172B4D] transition-all shadow-sm">
                   {userPhoto ? (
-                    <img src={userPhoto} alt={userName} className="w-full h-full object-cover" />
+                    <img
+                      src={"https://subscriptionistportal.powerappsportals.com" + userPhoto}
+                      alt={userName}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <span className="text-white font-semibold text-sm sm:text-base">
                       {userName

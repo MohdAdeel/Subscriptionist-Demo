@@ -54,9 +54,9 @@ export default function AddAccount({ onAddClick, isDisabled = false }) {
           </svg>
         </div>
         <div className="space-y-2">
-          <h2 className="text-xl font-bold text-[#1F2937]">Add an Account First</h2>
+          <h2 className="text-xl font-bold text-[#1F2937]">Set up your organization profile</h2>
           <p className="text-sm font-normal text-[#4B5563] max-w-sm">
-            You need to add an account to start managing subscriptions and activities.
+            You need to complete your setup to start managing your subscriptions and activities.
           </p>
         </div>
         <button
@@ -65,8 +65,8 @@ export default function AddAccount({ onAddClick, isDisabled = false }) {
           disabled={isDisabled}
           className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#3730A3] px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-[#2d2880] focus:outline-none focus:ring-2 focus:ring-[#3730A3] focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#3730A3]"
         >
-          <span className="text-lg leading-none">+</span>
-          {isDisabled ? "Adding Account..." : "Add Account"}
+          {isDisabled ? "Getting Started..." : "Get Started"}
+          <span className="text-lg leading-none">&gt;</span>
         </button>
       </div>
     </div>

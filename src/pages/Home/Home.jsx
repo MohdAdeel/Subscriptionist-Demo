@@ -1,9 +1,9 @@
 import { useActivityLines } from "../../hooks";
 import { useAuthStore, useHomeStore } from "../../stores";
 import React, { useEffect, useMemo, useState } from "react";
-import AddAccountModal from "./components/Models/AddAccountModal";
-import AddAccount from "./components/pages/AddAccount";
 import AddSubscription from "./components/pages/AddSubscription";
+import AddOrganization from "./components/pages/AddOrgnaization";
+import AddAccountModal from "./components/Models/AddAccountModal";
 import TotalActiveCostIcon from "../../assets/TotalActiveCost.svg";
 import RenewalTimelineIcon from "../../assets/RenewalTimeline.svg";
 import { RectangleSkeleton } from "../../components/SkeletonLoader";
@@ -659,7 +659,7 @@ const Home = () => {
       {isDataLoading ? (
         <DashboardSkeletonLoader />
       ) : !hasAccount || isDraftAccount ? (
-        <AddAccount
+        <AddOrganization
           onAddClick={handleOpenAddAccountModal}
           isDisabled={isAddAccountButtonDisabled}
         />

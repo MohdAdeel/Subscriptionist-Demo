@@ -163,7 +163,7 @@ function Profile() {
         showError("Unable to load your profile photo. Please refresh the page.");
       });
   }, [showError]);
-
+  // https://subscriptionistportal.powerappsportals.com
   return (
     <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-screen">
       {/* Tabs */}
@@ -273,7 +273,9 @@ function Profile() {
                     <div className="w-[72px] h-[72px] rounded-full bg-[#6C757D] flex items-center justify-center text-white text-2xl font-semibold flex-shrink-0 overflow-hidden">
                       {profileImageUrl ? (
                         <img
-                          src={profileImageUrl}
+                          src={
+                            "https://subscriptionistportal.powerappsportals.com" + profileImageUrl
+                          }
                           alt="Profile"
                           className="w-full h-full object-cover"
                         />
