@@ -776,20 +776,8 @@ const Report = () => {
     return next;
   };
 
-  // Show error state if fetch failed
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Failed to load reports</h2>
-          <p className="text-gray-600">{error.message}</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Same empty states as Home: no account or draft → AddOrganization; has account but no activity → AddSubscription
-  if (!isDataLoading && (!hasAccount || isDraftAccount)) {
+  // Empty states first (same as Home) — show as soon as auth is ready, don't wait for activity lines
+  if (!userAuthLoading && userAuth != null && (!hasAccount || isDraftAccount)) {
     return (
       <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
         <AddOrganization
@@ -808,10 +796,22 @@ const Report = () => {
       </div>
     );
   }
-  if (!isDataLoading && isEmptyActivity) {
+  if (!isDataLoading && !error && isEmptyActivity) {
     return (
       <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
         <AddSubscription />
+      </div>
+    );
+  }
+
+  // Show error only when we have an account but activity lines fetch failed
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Failed to load reports</h2>
+          <p className="text-gray-600">{error.message}</p>
+        </div>
       </div>
     );
   }

@@ -523,8 +523,8 @@ const Subscription = () => {
     }
   }, [deleteConfirm?.rowId, deleteMutation, closeDeleteConfirm, showSuccess, showError]);
 
-  // Same empty states as Home: no account or draft → AddOrganization; has account but no activity → AddSubscription
-  if (!isDataLoading && (!hasAccount || isDraftAccount)) {
+  // Empty states first (same as Home) — show as soon as auth is ready, don't wait for activity lines
+  if (!userAuthLoading && userAuth != null && (!hasAccount || isDraftAccount)) {
     return (
       <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-[calc(100vh-100px)]">
         <AddOrganization
