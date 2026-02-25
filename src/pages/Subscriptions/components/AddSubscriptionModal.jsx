@@ -357,12 +357,8 @@ export default function AddSubscriptionModal({
           >
             {/* HEADER with gradient accent */}
             <div className="relative px-8 py-4 border-b border-gray-100/80 bg-gradient-to-r from-purple-50/50 via-white to-indigo-50/50">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600"></div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-                    <FiPlus className="w-5 h-5 text-white" strokeWidth={2.5} />
-                  </div>
                   <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                     Add Subscription
                   </h2>
@@ -402,7 +398,7 @@ export default function AddSubscriptionModal({
                 type="button"
                 onClick={handleAddManually}
                 disabled={vendorsLoading}
-                className="group relative w-full flex items-center justify-center gap-3 rounded-2xl py-4 text-lg font-semibold text-white bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 hover:from-purple-700 hover:via-violet-700 hover:to-indigo-700 shadow-lg shadow-purple-500/25 hover:shadow-xl hover:shadow-purple-500/40 hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg overflow-hidden"
+                className="w-full flex items-center justify-center gap-2.5 rounded-2xl py-4 text-lg font-semibold text-gray-800 border-2 border-gray-200 bg-white hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                 {vendorsLoading ? (

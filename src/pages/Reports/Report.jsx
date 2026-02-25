@@ -779,7 +779,7 @@ const Report = () => {
   // Empty states first (same as Home) — show as soon as auth is ready, don't wait for activity lines
   if (!userAuthLoading && userAuth != null && (!hasAccount || isDraftAccount)) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+      <div className="bg-gray-50 p-4 sm:p-6">
         <AddOrganization
           onAddClick={handleOpenAddAccountModal}
           isDisabled={isAddAccountButtonDisabled}
@@ -798,7 +798,7 @@ const Report = () => {
   }
   if (!isDataLoading && !error && isEmptyActivity) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
+      <div className="bg-gray-50 p-4 sm:p-6 ">
         <AddSubscription />
       </div>
     );

@@ -101,7 +101,7 @@ export default function AddNewVendor({ open = false, onBack, onClose, onAddVendo
         <div className="flex items-center justify-between px-8 py-4 border-b border-gray-100">
           <button
             onClick={handleBack}
-            className="p-2 bg-[#1d225d] text-white rounded-lg hover:opacity-90 transition-opacity"
+            className="p-2  rounded-lg border border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all duration-200"
             aria-label="Back"
           >
             <FiChevronLeft className="w-5 h-5" />
@@ -186,7 +186,7 @@ export default function AddNewVendor({ open = false, onBack, onClose, onAddVendo
             <button
               type="submit"
               disabled={!formData.vendorName.trim() || isSubmitting}
-              className="flex-1 bg-[#1d225d] text-white rounded-2xl py-3 text-base font-semibold hover:opacity-95 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1  text-white rounded-2xl py-3 text-base font-semibold bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? "Adding..." : "Add Vendor"}
             </button>

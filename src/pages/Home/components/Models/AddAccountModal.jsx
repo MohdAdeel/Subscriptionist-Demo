@@ -1,6 +1,7 @@
 import { createPortal } from "react-dom";
 import {
   addAccount,
+  updateAccount,
   activateAccount,
   getAccountFieldChoices,
 } from "../../../../lib/api/Account/Account";
@@ -156,17 +157,18 @@ function SearchableDropdown({
 function mapInitialDataToForm(data) {
   if (!data || typeof data !== "object") return null;
   return {
-    accountName: data.companyname ?? data.yiic_companyname ?? data.company ?? "",
-    phone: data.companyphonenumber ?? "",
-    fax: data.companyFaxNumber ?? "",
-    organizationEmail: data.companyEmail ?? "",
-    street1: data.address2_line1 ?? "",
-    street2: data.address2_line2 ?? "",
-    street3: data.address2_line3 ?? "",
-    city: data.address2_city ?? "",
-    stateProvince: data.address2_stateorprovince ?? "",
-    zipPostalCode: data.address2_postalcode ?? "",
-    countryRegion: data.address2_country ?? "",
+    accountName: data.companyname ?? data.yiic_companyname ?? data.company ?? data.name ?? "",
+    phone: data.companyphonenumber ?? data.telephone1 ?? "",
+    fax: data.companyFaxNumber ?? data.fax ?? "",
+    organizationEmail: data.companyEmail ?? data.emailaddress1 ?? "",
+    street1: data.address2_line1 ?? data.address1_line1 ?? "",
+    street2: data.address2_line2 ?? data.address1_line2 ?? "",
+    street3: data.address2_line3 ?? data.address1_line3 ?? "",
+    city: data.address2_city ?? data.address1_city ?? "",
+    stateProvince: data.address2_stateorprovince ?? data.address1_stateorprovince ?? "",
+    zipPostalCode: data.address2_postalcode ?? data.address1_postalcode ?? "",
+    countryRegion: data.address2_country ?? data.address1_country ?? "",
+    website: data.companywebsite ?? data.websiteurl ?? "",
   };
 }
 
@@ -194,6 +196,7 @@ const RIGHT_FIELDS = [
   FIELD("stateProvince", "Address 1: State/Province", "Enter State/Province", true),
   FIELD("zipPostalCode", "Address 1: ZIP/Postal Code", "Enter ZIP/Postal Code", true),
   FIELD("countryRegion", "Address 1: Country/Region", "Enter Country/Region", true),
+  FIELD("website", "Website", "Enter Website", true),
 ];
 
 const DRAFT_REQUIRED_FIELDS = [
@@ -202,7 +205,6 @@ const DRAFT_REQUIRED_FIELDS = [
 ].map((f) => f.name);
 
 const ACTIVE_FIELDS = [
-  FIELD("website", "Website", "Enter Website", true),
   FIELD("employeeSize", "Employee Size", "Select employee size", true),
   FIELD("countryOfCorporation", "Country of Corporation", "Select country", true),
   FIELD("industry", "Industry", "Select industry", true),
@@ -222,6 +224,7 @@ const EMPTY_DRAFT_FORM = {
   stateProvince: "",
   zipPostalCode: "",
   countryRegion: "",
+  website: "",
 };
 
 const buildDraftBodyFromForm = (formData, contactId) => ({
@@ -237,11 +240,15 @@ const buildDraftBodyFromForm = (formData, contactId) => ({
   address1_stateorprovince: (formData.stateProvince ?? "").trim(),
   address1_postalcode: (formData.zipPostalCode ?? "").trim(),
   address1_country: (formData.countryRegion ?? "").trim(),
+  websiteurl: (formData.website ?? "").trim(),
   yiic_accountstatusreason: 664160000,
 });
 
 export default function AddAccountModal({ open = false, onClose, initialData }) {
+  const userAuth = useAuthStore((state) => state.userAuth);
+  const bpfStage = userAuth?.bpfstage;
   const { showSuccess, showError } = usePopup();
+
   const queryClient = useQueryClient();
   const { instance } = useMsal();
   const [errors, setErrors] = useState({});
@@ -291,7 +298,6 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
     setErrors({});
     setForm(EMPTY_DRAFT_FORM);
     setActiveForm({
-      website: "",
       employeeSize: "",
       countryOfCorporation: "",
       industry: "",
@@ -305,9 +311,6 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
 
   const buildDraftBody = () => buildDraftBodyFromForm(form, initialData?.contactId);
 
-  // const getInitialFormForComparison = () =>
-  //   initialData ? (mapInitialDataToForm(initialData) ?? EMPTY_DRAFT_FORM) : EMPTY_DRAFT_FORM;
-
   const handleNextStage = async () => {
     if (stageIndex === 0) {
       if (!validateDraft()) return;
@@ -315,17 +318,16 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
       setIsMovingToNextStage(true);
       try {
         const body = buildDraftBody();
-        // const initialBody = buildDraftBodyFromForm(
-        //   getInitialFormForComparison(),
-        //   initialData?.contactId
-        // );
-        const response = await addAccount(body);
-        setAccountId(response?.accountId);
-        // if (initialData) {
-        //   await updateAccount(body); // Send Account Id here
-        // } else {
 
-        // }
+        if (bpfStage === "draft") {
+          const { contactId: _c, yiic_accountstatusreason: _y, ...updateBody } = body;
+          await updateAccount(updateBody);
+          setAccountId(userAuth?.accountid);
+        } else {
+          const response = await addAccount(body);
+          setAccountId(response?.accountId);
+        }
+
         const data = await getAccountFieldChoices();
         setFieldChoices({
           employeeSize: Array.isArray(data?.employeeSize) ? data.employeeSize : [],
@@ -334,7 +336,7 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
         });
         setStageIndex(1);
       } catch (e) {
-        console.error("addAccount or getAccountFieldChoices failed", e);
+        console.error("addAccount/updateAccount or getAccountFieldChoices failed", e);
         setFieldChoices(EMPTY_FIELD_CHOICES);
       } finally {
         setIsMovingToNextStage(false);
@@ -351,7 +353,6 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
 
   const validateActive = () => {
     const next = {};
-    if (!(activeForm.website ?? "").toString().trim()) next.website = "This field is required.";
     if (!(activeForm.employeeSize ?? "").toString().trim())
       next.employeeSize = "This field is required.";
     if (!(activeForm.countryOfCorporation ?? "").toString().trim())
@@ -362,7 +363,6 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
   };
 
   const buildActivateBody = () => ({
-    websiteurl: (activeForm.website ?? "").trim(),
     yiic_employeesize:
       activeForm.employeeSize != null && activeForm.employeeSize !== ""
         ? Number(activeForm.employeeSize)

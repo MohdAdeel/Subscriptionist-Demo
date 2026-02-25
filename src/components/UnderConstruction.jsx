@@ -1,10 +1,54 @@
+import { useState } from "react";
+import { useAuthStore } from "../stores";
 import { FiClock, FiTool } from "react-icons/fi";
+import { populateAccountModal } from "../lib/api/Account/Account";
+import AddOrganization from "../pages/Home/components/pages/AddOrgnaization";
+import AddAccountModal from "../pages/Home/components/Models/AddAccountModal";
 
 const UnderConstruction = ({
   title = "This page",
   description = "We are designing this experience to match the rest of Subscriptionist. Check back soon.",
 }) => {
   const headline = `${title} is on the way`;
+
+  const userAuth = useAuthStore((state) => state.userAuth);
+  const userAuthLoading = useAuthStore((state) => state.userAuthLoading);
+  const [addAccountModalOpen, setAddAccountModalOpen] = useState(false);
+  const [accountModalInitialData, setAccountModalInitialData] = useState(null);
+  const [isAddAccountButtonDisabled, setIsAddAccountButtonDisabled] = useState(false);
+  const hasAccount = !!userAuth?.accountid;
+  const isDraftAccount = userAuth?.bpfstage === "draft";
+
+  const handleOpenAddAccountModal = async () => {
+    setIsAddAccountButtonDisabled(true);
+    try {
+      const data = await populateAccountModal();
+      setAccountModalInitialData(data ?? null);
+    } catch (e) {
+      setAccountModalInitialData(null);
+    }
+    setAddAccountModalOpen(true);
+  };
+
+  if (!userAuthLoading && userAuth != null && (!hasAccount || isDraftAccount)) {
+    return (
+      <div className="bg-gray-50 p-4 sm:p-6">
+        <AddOrganization
+          onAddClick={handleOpenAddAccountModal}
+          isDisabled={isAddAccountButtonDisabled}
+        />
+        <AddAccountModal
+          open={addAccountModalOpen}
+          onClose={() => {
+            setAddAccountModalOpen(false);
+            setAccountModalInitialData(null);
+            setIsAddAccountButtonDisabled(false);
+          }}
+          initialData={accountModalInitialData}
+        />
+      </div>
+    );
+  }
 
   return (
     <section className="flex min-h-full items-center justify-center px-6 py-10">

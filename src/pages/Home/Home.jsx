@@ -8,7 +8,7 @@ import TotalActiveCostIcon from "../../assets/TotalActiveCost.svg";
 import RenewalTimelineIcon from "../../assets/RenewalTimeline.svg";
 import { RectangleSkeleton } from "../../components/SkeletonLoader";
 import UpcomingRenewalsIcon from "../../assets/UpcomingRenewals.svg";
-import { populateAccountModal } from "../../lib/api/Account/Account";
+import { populateAccountModal, getAccountDetails } from "../../lib/api/Account/Account";
 import MonthlySpendChart from "./components/Graphs/MonthlySpendChart";
 import RecentlyConcludedIcon from "../../assets/RecentlyConcluded.svg";
 import VendorProfileChart from "./components/Graphs/VendorProfileChart";
@@ -486,7 +486,7 @@ const Home = () => {
   const handleOpenAddAccountModal = async () => {
     setIsAddAccountButtonDisabled(true);
     try {
-      const data = await populateAccountModal();
+      const data = await (isDraftAccount ? getAccountDetails() : populateAccountModal());
       setAccountModalInitialData(data ?? null);
     } catch (e) {
       setAccountModalInitialData(null);

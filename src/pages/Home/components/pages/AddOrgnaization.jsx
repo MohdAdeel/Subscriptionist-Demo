@@ -1,4 +1,10 @@
+import { useAuthStore } from "../../../../stores";
+
 export default function AddAccount({ onAddClick, isDisabled = false }) {
+  const userAuth = useAuthStore((state) => state.userAuth);
+  const bpfStage = userAuth?.bpfstage;
+  const isHalfDone = bpfStage === "draft";
+
   return (
     <div className="w-full min-h-[calc(90vh-12rem)] flex flex-col items-center justify-center rounded-2xl bg-white border border-[#EEF2F6] shadow-sm">
       <div className="flex flex-col items-center justify-center gap-6 text-center">
@@ -54,9 +60,13 @@ export default function AddAccount({ onAddClick, isDisabled = false }) {
           </svg>
         </div>
         <div className="space-y-2">
-          <h2 className="text-xl font-bold text-[#1F2937]">Set up your organization profile</h2>
+          <h2 className="text-xl font-bold text-[#1F2937]">
+            {isHalfDone ? "Complete your organization profile" : "Set up your organization profile"}
+          </h2>
           <p className="text-sm font-normal text-[#4B5563] max-w-sm">
-            You need to complete your setup to start managing your subscriptions and activities.
+            {isHalfDone
+              ? "You are halfway there to set-up your organization profile. Please complete the remaining steps to start managing your subscriptions and activities."
+              : "You need to complete your setup to start managing your subscriptions and activities."}
           </p>
         </div>
         <button

@@ -276,7 +276,7 @@ export default function AddVendorManually({
           <button
             onClick={handleNextStage}
             disabled={!selectedVendor}
-            className="flex-1 bg-gradient-to-r from-[#7c3aed] to-[#1d225d] text-white rounded-2xl py-3 text-base font-semibold hover:opacity-95 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 bg-indigo-600 hover:bg-indigo-700 transition-colors duration-200 text-white rounded-2xl py-3 text-base font-semibold hover:opacity-95 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Next Stage
           </button>

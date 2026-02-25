@@ -1,9 +1,13 @@
 import Chart from "chart.js/auto";
+import { FiSearch } from "react-icons/fi";
+import { useAuthStore } from "../../stores";
 import { usePopup } from "../../components/Popup";
 import { useVendorData } from "../../hooks/useVendors";
 import { useEffect, useRef, useState, useMemo } from "react";
 import AddEditVendorModal from "./component/AddEditVendorModal";
-import { FiSearch } from "react-icons/fi";
+import { populateAccountModal } from "../../lib/api/Account/Account";
+import AddOrganization from "../Home/components/pages/AddOrgnaization";
+import AddAccountModal from "../Home/components/Models/AddAccountModal";
 
 // Reuse same palette as Reports/Financial for consistency
 const VENDOR_CHART_COLORS = [
@@ -75,6 +79,14 @@ const DUMMY_DEPARTMENT_SPEND = [
 
 export default function Vendor() {
   const { showError } = usePopup();
+  const userAuth = useAuthStore((state) => state.userAuth);
+  const userAuthLoading = useAuthStore((state) => state.userAuthLoading);
+  const [addAccountModalOpen, setAddAccountModalOpen] = useState(false);
+  const [accountModalInitialData, setAccountModalInitialData] = useState(null);
+  const [isAddAccountButtonDisabled, setIsAddAccountButtonDisabled] = useState(false);
+  const hasAccount = !!userAuth?.accountid;
+  const isDraftAccount = userAuth?.bpfstage === "draft";
+
   const [currentPage, setCurrentPage] = useState(1);
   const [editVendor, setEditVendor] = useState(null);
   const [statusFilter, setStatusFilter] = useState("3");
@@ -306,6 +318,37 @@ export default function Vendor() {
       showError("Unable to load vendors. Please refresh the page.");
     }
   }, [vendorError, showError]);
+
+  const handleOpenAddAccountModal = async () => {
+    setIsAddAccountButtonDisabled(true);
+    try {
+      const data = await populateAccountModal();
+      setAccountModalInitialData(data ?? null);
+    } catch (e) {
+      setAccountModalInitialData(null);
+    }
+    setAddAccountModalOpen(true);
+  };
+
+  if (!userAuthLoading && userAuth != null && (!hasAccount || isDraftAccount)) {
+    return (
+      <div className="bg-gray-50 p-4 sm:p-6">
+        <AddOrganization
+          onAddClick={handleOpenAddAccountModal}
+          isDisabled={isAddAccountButtonDisabled}
+        />
+        <AddAccountModal
+          open={addAccountModalOpen}
+          onClose={() => {
+            setAddAccountModalOpen(false);
+            setAccountModalInitialData(null);
+            setIsAddAccountButtonDisabled(false);
+          }}
+          initialData={accountModalInitialData}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#f6f7fb] p-3 sm:p-4 md:p-6 font-sans min-h-[calc(100vh-100px)]">
