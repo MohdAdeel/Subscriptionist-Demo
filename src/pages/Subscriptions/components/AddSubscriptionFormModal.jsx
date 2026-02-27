@@ -296,9 +296,9 @@ export default function AddSubscriptionFormModal({
   );
 
   return (
-    <div className="fixed top-0 left-0 w-screen h-screen bg-black/50 flex justify-center items-center z-[80] p-3 sm:p-4 md:p-6">
-      <div className="bg-white rounded-lg sm:rounded-[14px] w-full max-w-[1200px] flex flex-col overflow-hidden">
-        <div className="flex flex-col h-full">
+    <div className="fixed top-0 right-0 bottom-0 left-[245px] z-[80] bg-black/50 flex items-center justify-center overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6">
+      <div className="bg-white rounded-lg sm:rounded-[14px] w-full max-w-[1200px] flex flex-col overflow-hidden my-auto max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-2rem)] min-h-0 shadow-xl">
+        <div className="flex flex-col h-full min-h-0">
           {/* HEADER */}
           <div className="p-3 sm:p-4 md:p-[18px_28px] border-b border-gray-200 flex justify-between items-center gap-3 sm:gap-4">
             <h5 className="text-base sm:text-lg font-semibold text-slate-900 m-0 flex-1">

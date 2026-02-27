@@ -1,11 +1,11 @@
 import { useAuthStore } from "../stores";
 import { useMsal } from "@azure/msal-react";
 import SkeletonLoader from "./SkeletonLoader";
-import { useState, useEffect, useRef, useMemo } from "react";
-import { FiBell, FiChevronDown, FiCheckCircle, FiCalendar, FiX } from "react-icons/fi";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNotifications } from "../hooks/useNotifications";
 import { dismissNotification } from "../lib/api/Notifications/Notification";
+import { FiBell, FiChevronDown, FiCheckCircle, FiCalendar, FiX } from "react-icons/fi";
 
 /** Format ISO date string to "X seconds/minutes/hours ago" or "Just now" */
 function formatTimeAgo(isoString) {
@@ -80,7 +80,7 @@ const Header = () => {
   const userName = userAuth
     ? `${userAuth.firstname || ""} ${userAuth.lastname || ""}`.trim() || "User"
     : "User";
-  const userPhoto = userAuth?.entityimage_url || null;
+  const userPhoto = userAuth?.entityimage || null;
   const lastUpdateTime = userAuth?.yiic_subscriptionlastupdate
     ? new Date(userAuth.yiic_subscriptionlastupdate)
     : null;
@@ -256,32 +256,34 @@ const Header = () => {
 
         {/* Right Side - Last Update, Bell, Profile */}
         <div className="flex items-center gap-4 sm:gap-6">
-          {/* Last Update */}
-          <div className="hidden sm:flex items-center gap-2">
-            {isUserLoading ? (
-              <>
-                <SkeletonLoader
-                  variant="text"
-                  count={1}
-                  width="4rem"
-                  height="0.875rem"
-                  className="skeleton-smooth rounded bg-[#e9ecef]"
-                />
-                <SkeletonLoader
-                  variant="text"
-                  count={1}
-                  width="3.5rem"
-                  height="0.875rem"
-                  className="skeleton-smooth rounded bg-[#e9ecef]"
-                />
-              </>
-            ) : (
-              <>
-                <span className="text-xs sm:text-sm text-[#6C757D] font-medium">Last Update</span>
-                <span className="text-xs sm:text-sm text-[#343A40] font-semibold">{timeAgo}</span>
-              </>
-            )}
-          </div>
+          {/* Last Update - hidden on profile page */}
+          {location.pathname !== "/profile" && (
+            <div className="hidden sm:flex items-center gap-2">
+              {isUserLoading ? (
+                <>
+                  <SkeletonLoader
+                    variant="text"
+                    count={1}
+                    width="4rem"
+                    height="0.875rem"
+                    className="skeleton-smooth rounded bg-[#e9ecef]"
+                  />
+                  <SkeletonLoader
+                    variant="text"
+                    count={1}
+                    width="3.5rem"
+                    height="0.875rem"
+                    className="skeleton-smooth rounded bg-[#e9ecef]"
+                  />
+                </>
+              ) : (
+                <>
+                  <span className="text-xs sm:text-sm text-[#6C757D] font-medium">Last Update</span>
+                  <span className="text-xs sm:text-sm text-[#343A40] font-semibold">{timeAgo}</span>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Bell Icon */}
           <div
@@ -414,7 +416,11 @@ const Header = () => {
                 <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#172B4D] to-[#000435] flex items-center justify-center overflow-hidden border-2 border-[#e9ecef] group-hover:border-[#172B4D] transition-all shadow-sm">
                   {userPhoto ? (
                     <img
-                      src={"https://subscriptionistportal.powerappsportals.com" + userPhoto}
+                      src={
+                        userPhoto.startsWith("data:")
+                          ? userPhoto
+                          : `data:image/png;base64,${userPhoto}`
+                      }
                       alt={userName}
                       className="w-full h-full object-cover"
                     />

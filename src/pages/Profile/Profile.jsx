@@ -155,7 +155,8 @@ function Profile() {
   useEffect(() => {
     getProfileImage(contactId)
       .then((data) => {
-        setProfileImageUrl(data?.value[0]?.entityimage_url);
+        const raw = data?.value?.[0];
+        setProfileImageUrl(raw?.entityimage || raw?.entityimage_url || null);
       })
       .catch((err) => {
         console.error("Failed to load profile image:", err);
@@ -272,7 +273,9 @@ function Profile() {
                       {profileImageUrl ? (
                         <img
                           src={
-                            "https://subscriptionistportal.powerappsportals.com" + profileImageUrl
+                            profileImageUrl.startsWith("data:")
+                              ? profileImageUrl
+                              : `data:image/png;base64,${profileImageUrl}`
                           }
                           alt="Profile"
                           className="w-full h-full object-cover"
