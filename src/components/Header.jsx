@@ -81,9 +81,7 @@ const Header = () => {
     ? `${userAuth.firstname || ""} ${userAuth.lastname || ""}`.trim() || "User"
     : "User";
   const userPhoto = userAuth?.entityimage || null;
-  const lastUpdateTime = userAuth?.yiic_subscriptionlastupdate
-    ? new Date(userAuth.yiic_subscriptionlastupdate)
-    : null;
+  const lastUpdateTime = userAuth?.subscriptionlastupdate;
   // Map routes to page names
   const getPageName = () => {
     const pathMap = {
