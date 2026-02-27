@@ -8,7 +8,6 @@ import TotalActiveCostIcon from "../../assets/TotalActiveCost.svg";
 import RenewalTimelineIcon from "../../assets/RenewalTimeline.svg";
 import { RectangleSkeleton } from "../../components/SkeletonLoader";
 import UpcomingRenewalsIcon from "../../assets/UpcomingRenewals.svg";
-import { populateAccountModal, getAccountDetails } from "../../lib/api/Account/Account";
 import MonthlySpendChart from "./components/Graphs/MonthlySpendChart";
 import RecentlyConcludedIcon from "../../assets/RecentlyConcluded.svg";
 import VendorProfileChart from "./components/Graphs/VendorProfileChart";
@@ -18,6 +17,7 @@ import ActiveSubscriptionsIcon from "../../assets/ActiveSubscriptions.svg";
 import DepartmentSpendChart from "./components/Graphs/DepartmentSpendChart";
 import UpcomingRenewalChart from "./components/Graphs/UpcomingRenewalChart";
 import DashboardSkeletonLoader from "./components/HomeLoader/DashboardSkeletonLoader";
+import { populateAccountModal, getAccountDetails } from "../../lib/api/Account/Account";
 import { calculateSubscriptionAmount, handleDataProcessing } from "../../lib/utils/home";
 
 const BarSkeleton = ({ bars = 6, heights }) => {

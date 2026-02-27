@@ -76,7 +76,6 @@ function Profile() {
       })
       .catch((err) => {
         console.error("Failed to load profile:", err);
-        showError("Unable to load your profile. Please refresh the page.");
       })
       .finally(() => {
         setIsLoadingProfile(false);
@@ -160,7 +159,6 @@ function Profile() {
       })
       .catch((err) => {
         console.error("Failed to load profile image:", err);
-        showError("Unable to load your profile photo. Please refresh the page.");
       });
   }, [showError]);
   // https://subscriptionistportal.powerappsportals.com

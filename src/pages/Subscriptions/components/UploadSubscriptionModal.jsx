@@ -1,9 +1,9 @@
-import { addSubscription } from "../../../lib/api/Subscription/subscriptions";
-import { useVendorList, checkSubscriptionExistance } from "../../../hooks/useSubscriptions";
 import AddNewVendor from "./AddNewVendor";
-import { useState, useMemo, useEffect, useRef } from "react";
 import { usePopup } from "../../../components/Popup";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { addSubscription } from "../../../lib/api/Subscription/subscriptions";
 import { FiX, FiCheck, FiTrash2, FiPlus, FiSearch, FiChevronDown } from "react-icons/fi";
+import { useVendorList, checkSubscriptionExistance } from "../../../hooks/useSubscriptions";
 
 const STEP_LABELS = ["Upload CSV/Excel", "Field Mapping", "Vendor Associations"];
 

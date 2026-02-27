@@ -1,12 +1,12 @@
 import {
   useDepartments,
   useFinancialYear,
-  useSubscriptionActivityLines,
   useAddBudgetMutation,
+  useSubscriptionActivityLines,
 } from "../../../hooks/useSubscriptions";
-import { checkBudget } from "../../../lib/api/Subscription/subscriptions";
+import { useState, useCallback } from "react";
 import { usePopup } from "../../../components/Popup";
-import { useState, useCallback, useEffect } from "react";
+import { checkBudget } from "../../../lib/api/Subscription/subscriptions";
 
 const BUDGET_TYPE = {
   DEPARTMENT: "department",

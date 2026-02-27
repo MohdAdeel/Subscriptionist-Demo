@@ -5,6 +5,7 @@ import {
   useAddSubscriptionMutation,
   checkSubscriptionExistance,
 } from "../../../hooks/useSubscriptions";
+import { useNotifications } from "../../../hooks/useNotifications";
 
 const DESC_MAX = 2000;
 
@@ -156,6 +157,7 @@ export default function AddSubscriptionFormModal({
   selectedVendor,
 }) {
   const addMutation = useAddSubscriptionMutation();
+  const { invalidate: invalidateNotifications } = useNotifications();
   const endDatePickerRef = useRef(null);
   const startDatePickerRef = useRef(null);
   const lastDueDatePickerRef = useRef(null);
@@ -270,6 +272,7 @@ export default function AddSubscriptionFormModal({
         return;
       }
       await addMutation.mutateAsync(payload);
+      invalidateNotifications();
       onClose?.();
       onSuccess?.();
     } catch (err) {
@@ -278,7 +281,7 @@ export default function AddSubscriptionFormModal({
     } finally {
       setIsSaving(false);
     }
-  }, [form, onClose, onSuccess, addMutation]);
+  }, [form, onClose, onSuccess, addMutation, invalidateNotifications]);
 
   if (!open) return null;
 
