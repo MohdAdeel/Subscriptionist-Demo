@@ -252,7 +252,7 @@ function Notifications({ contactId, isActive }) {
                       }`}
                     >
                       <span
-                        className={`pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform duration-200 ease-out ${
+                        className={`pointer-events-none absolute h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform duration-200 ease-out ${
                           emailToggles[opt.id] ? "translate-x-5" : "translate-x-0"
                         }`}
                       />
@@ -311,7 +311,7 @@ function Notifications({ contactId, isActive }) {
                       }`}
                     >
                       <span
-                        className={`pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform duration-200 ease-out ${
+                        className={`pointer-events-none absolute h-5 w-5 rounded-full bg-white shadow ring-0 transition-transform duration-200 ease-out ${
                           pushToggles[opt.id] ? "translate-x-5" : "translate-x-0"
                         }`}
                       />
