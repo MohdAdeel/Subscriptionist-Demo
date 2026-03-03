@@ -1,7 +1,7 @@
 import { FiInfo } from "react-icons/fi";
 import React, { useState, useEffect } from "react";
-import { getNotificationData, updateNotificationData } from "../../../lib/api/profile/profile";
 import { usePopup } from "../../../components/Popup";
+import { getNotificationData, updateNotificationData } from "../../../lib/api/profile/profile";
 
 const NOTIFICATION_OPTIONS = [
   {

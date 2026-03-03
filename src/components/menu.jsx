@@ -64,14 +64,18 @@ const Menu = () => {
 
       <div className="flex flex-col gap-14">
         {/* Logo */}
-        <div className={`flex items-center ${isCollapsed ? "justify-center" : "justify-start"}`}>
-          <div className="flex items-center gap-2">
-            <img src={Logo} alt="Logo" className="h-8 w-8" />
-            {!isCollapsed && (
-              <span className="text-sm font-semibold text-white">Subscriptionist</span>
-            )}
+        <Link to="/" className="no-underline">
+          <div
+            className={`flex items-center ${isCollapsed ? "justify-center" : "justify-start"} cursor-pointer`}
+          >
+            <div className="flex items-center gap-2">
+              <img src={Logo} alt="Logo" className="h-8 w-8" />
+              {!isCollapsed && (
+                <span className="text-sm font-semibold text-white">Subscriptionist</span>
+              )}
+            </div>
           </div>
-        </div>
+        </Link>
 
         {/* Menu */}
         <nav className="flex flex-col gap-5">
