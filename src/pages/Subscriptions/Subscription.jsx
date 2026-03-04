@@ -57,6 +57,17 @@ function formatApiDateToDisplay(isoString) {
   }
 }
 
+/** Format Date object to YYYY-MM-DD for API/display */
+function formatDateForDisplay(date) {
+  if (!date) return "";
+  const d = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(d.getTime())) return "";
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 /** Map API ActivityLines + Subscriptions to table row shape (camelCase, formatted dates) */
 function mapActivityLinesToTableRows(result) {
   const activityLines = result?.ActivityLines ?? [];
@@ -377,14 +388,6 @@ const Subscription = () => {
 
   const getFirstDayOfMonth = (date) => {
     return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-  };
-
-  const formatDateForDisplay = (date) => {
-    if (!date) return "";
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
   };
 
   const isDateInRange = (date, start, end) => {
