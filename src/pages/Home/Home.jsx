@@ -18,7 +18,12 @@ import DepartmentSpendChart from "./components/Graphs/DepartmentSpendChart";
 import UpcomingRenewalChart from "./components/Graphs/UpcomingRenewalChart";
 import DashboardSkeletonLoader from "./components/HomeLoader/DashboardSkeletonLoader";
 import { populateAccountModal, getAccountDetails } from "../../lib/api/Account/Account";
-import { calculateSubscriptionAmount, handleDataProcessing } from "../../lib/utils/home";
+import {
+  GetBudgetTrend,
+  calculateSubscriptionAmount,
+  handleDataProcessing,
+  updateDepartmentBudgetChart,
+} from "../../lib/utils/home";
 
 const BarSkeleton = ({ bars = 6, heights }) => {
   const presetHeights = heights ?? [35, 60, 55, 72, 50, 66];
@@ -139,6 +144,12 @@ const Home = () => {
   const [upcomingRenewalHalf, setUpcomingRenewalHalf] = useState(() =>
     new Date().getMonth() < 6 ? UPCOMING_HALF_FIRST : UPCOMING_HALF_LAST
   );
+  const [budgetYearLabel, setBudgetYearLabel] = useState(
+    () => `FY${String(new Date().getFullYear()).slice(-2)}`
+  );
+  const [canBudgetPrev, setCanBudgetPrev] = useState(false);
+  const [canBudgetNext, setCanBudgetNext] = useState(true);
+  const [isBudgetNavigating, setIsBudgetNavigating] = useState(false);
   const [selectedUpcomingRenewalKey, setSelectedUpcomingRenewalKey] = useState(null);
   const [selectedVendorProfileKey, setSelectedVendorProfileKey] = useState(null);
   const [addAccountModalOpen, setAddAccountModalOpen] = useState(false);
@@ -339,41 +350,21 @@ const Home = () => {
       chartLabel: hasValidData ? "Subscription Contract Amount" : "",
     };
   }, [departmentYearRecords, departmentLabelLength]);
-  const actualVsBudgetRecords = useMemo(
+  const actualVsBudgetSeries = useMemo(
     () =>
-      (ActualVsBudgetData ?? []).flatMap((entry) => {
-        if (Array.isArray(entry)) {
-          return entry[0] ? [entry[0]] : [];
-        }
-        return entry ? [entry] : [];
+      updateDepartmentBudgetChart(ActualVsBudgetData, {
+        maxLabelLength: departmentLabelLength,
       }),
-    [ActualVsBudgetData]
+    [ActualVsBudgetData, departmentLabelLength]
   );
 
-  const actualVsBudgetSeries = useMemo(() => {
-    const hasValidData = actualVsBudgetRecords.length > 0;
-    const labels = hasValidData
-      ? actualVsBudgetRecords.map((dept) =>
-          breakLongMonthNames(dept?.DepartmentNames?.Name || "Unknown", departmentLabelLength)
-        )
-      : ["No Data Available"];
-    const actualAmounts = hasValidData
-      ? actualVsBudgetRecords.map((dept) => dept?.SubscriptionContractAmount?.Value || 0)
-      : [0];
-    const budgetAmounts = hasValidData
-      ? actualVsBudgetRecords.map((dept) => dept?.BudgetAmount?.Value || 0)
-      : [0];
-    const maxAmount = hasValidData ? Math.max(...actualAmounts, ...budgetAmounts) : 0;
-    const stepSize = Math.max(1, Math.ceil(maxAmount / 5));
-
-    return {
-      labels,
-      actualAmounts,
-      budgetAmounts,
-      stepSize,
-      hasValidData,
-    };
-  }, [actualVsBudgetRecords, departmentLabelLength]);
+  useEffect(() => {
+    const currentYear = new Date().getFullYear();
+    const derivedYear = actualVsBudgetSeries?.selectedYear ?? currentYear;
+    setBudgetYearLabel(`FY${String(derivedYear).slice(-2)}`);
+    setCanBudgetPrev(derivedYear > currentYear);
+    setCanBudgetNext(true);
+  }, [actualVsBudgetSeries.selectedYear]);
 
   const upcomingRenewalSeries = useMemo(() => {
     const byMonth = new Map();
@@ -457,13 +448,33 @@ const Home = () => {
 
   const hasMonthlySpend = !isLoading && monthlySpendChartData.length > 0;
   const hasDepartmentSpend = !isLoading;
-  const hasActualVsBudget = !isLoading;
+  const hasActualVsBudget = !isLoading && !isBudgetNavigating && actualVsBudgetSeries.hasValidData;
   const hasUpcomingTasks = !isLoading && upcomingTasks.length > 0;
   const hasOverdueTasks = !isLoading && overdueTasks.length > 0;
   const upcomingRenewalYearLabel = `FY${String(upcomingRenewalYear).slice(-2)}`;
   const upcomingRenewalHalfLabel =
     upcomingRenewalHalf === UPCOMING_HALF_FIRST ? "Jan-Jun" : "Jul-Dec";
   const upcomingRenewalPeriodLabel = `${upcomingRenewalYearLabel} · ${upcomingRenewalHalfLabel}`;
+
+  const handleBudgetTrendChange = async (action) => {
+    if (action === "last-x-months" && !canBudgetPrev) return;
+    setIsBudgetNavigating(true);
+    try {
+      const navState = await GetBudgetTrend(action);
+      if (navState) {
+        setBudgetYearLabel(navState.financialYearLabel);
+        setCanBudgetPrev(navState.canGoBack ?? false);
+        setCanBudgetNext(navState.canGoForward ?? true);
+      }
+    } catch (error) {
+      console.error("Budget navigation failed:", error);
+    } finally {
+      setIsBudgetNavigating(false);
+    }
+  };
+
+  const handleBudgetPrev = () => handleBudgetTrendChange("last-x-months");
+  const handleBudgetNext = () => handleBudgetTrendChange("next-x-months");
 
   const handleUpcomingRenewalPrev = () => {
     if (upcomingRenewalHalf === UPCOMING_HALF_LAST) {
@@ -715,7 +726,13 @@ const Home = () => {
             <ActualVsBudgetChart
               actualVsBudgetSeries={actualVsBudgetSeries}
               isLoading={userAuthLoading || isLoading}
+              isNavigating={isBudgetNavigating}
               hasActualVsBudget={hasActualVsBudget}
+              yearLabel={budgetYearLabel}
+              canPrev={canBudgetPrev}
+              canNext={canBudgetNext}
+              onPrev={handleBudgetPrev}
+              onNext={handleBudgetNext}
               skeleton={<BarSkeleton bars={2} />}
             />
             <VendorProfileChart

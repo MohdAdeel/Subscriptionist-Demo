@@ -5,13 +5,19 @@ const ActualVsBudgetChart = ({
   actualVsBudgetSeries = { labels: [], budgetAmounts: [], actualAmounts: [], stepSize: 1 },
   isLoading,
   hasActualVsBudget,
+  yearLabel,
+  onPrev,
+  onNext,
+  canPrev = true,
+  canNext = true,
+  isNavigating = false,
   skeleton,
 }) => {
   const chartRef = useRef(null);
   const chartInstanceRef = useRef(null);
 
   useEffect(() => {
-    if (isLoading || !chartRef.current) return;
+    if (isLoading || isNavigating || !chartRef.current) return;
     const ctx = chartRef.current.getContext("2d");
     if (chartInstanceRef.current) {
       chartInstanceRef.current.destroy();
@@ -119,16 +125,34 @@ const ActualVsBudgetChart = ({
         chartInstanceRef.current = null;
       }
     };
-  }, [actualVsBudgetSeries, isLoading]);
+  }, [actualVsBudgetSeries, isLoading, isNavigating]);
 
   return (
     <div className="rounded-2xl bg-white p-5 shadow-sm border border-[#EEF2F6]">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[#111827]">Actual vs Budget</h3>
         <div className="flex items-center gap-2 text-xs text-[#98A2B3]">
-          <button className="h-6 w-6 rounded-full border border-[#E4E7EC] text-xs">&lt;</button>
-          <span>FY26</span>
-          <button className="h-6 w-6 rounded-full border border-[#E4E7EC] text-xs">&gt;</button>
+          <button
+            className={`h-6 w-6 rounded-full border border-[#E4E7EC] text-xs ${
+              canPrev ? "" : "opacity-50 cursor-not-allowed"
+            }`}
+            onClick={onPrev}
+            disabled={!canPrev}
+            aria-label="Previous financial year"
+          >
+            &lt;
+          </button>
+          <span>{yearLabel || "FY--"}</span>
+          <button
+            className={`h-6 w-6 rounded-full border border-[#E4E7EC] text-xs ${
+              canNext ? "" : "opacity-50 cursor-not-allowed"
+            }`}
+            onClick={onNext}
+            disabled={!canNext}
+            aria-label="Next financial year"
+          >
+            &gt;
+          </button>
         </div>
       </div>
       <div className="mt-4 h-56">{hasActualVsBudget ? <canvas ref={chartRef} /> : skeleton}</div>

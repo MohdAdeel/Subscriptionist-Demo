@@ -19,6 +19,7 @@ var vendorProfileMap = {
   2: "Operational",
 };
 var monthlyrenewal = [];
+var mergedArray = [];
 
 var startDateforRenwal = new Date();
 startDateforRenwal.setDate(1);
@@ -452,7 +453,7 @@ function ModifyBudgetChartLimit() {
     });
   });
 
-  mergeRecordsForBudget();
+  return mergeRecordsForBudget();
 }
 
 function generateSimilarRecordsbyMonthforDepartmentforBudget(record) {
@@ -585,79 +586,162 @@ function mergeRecordsForBudget() {
     }
   });
   const mergedArray = Object.values(mergedRecords).map((record) => [record]);
-  retrieveBudget(mergedArray);
+  return retrieveBudget(mergedArray);
 
   //updateDepartmentChart(mergedArray);
 }
 
 async function retrieveBudget(mergedArray) {
-  const toYearNumber = (value) => {
-    if (value == null) return null;
-    if (typeof value === "number") return value;
-    const parsed = parseInt(value, 10);
-    return Number.isNaN(parsed) ? null : parsed;
-  };
-
-  const getBudgetYear = (record) =>
-    toYearNumber(
-      record?.financialYear ??
-        record?.FinancialYear ??
-        record?.financialYearName ??
-        record?.FinancialYearName ??
-        record?.year ??
-        record?.Year ??
-        record?.["_yiic_financialyear_value@OData.Community.Display.V1.FormattedValue"]
-    );
-
-  const getDepartmentName = (record) =>
-    record?.departmentName ??
-    record?.DepartmentName ??
-    record?.department ??
-    record?.Department ??
-    record?.DepartmentNames?.Name ??
-    record?.["_yiic_department_value@OData.Community.Display.V1.FormattedValue"];
-
-  const getBudgetAmount = (record) =>
-    record?.budgetAmount ??
-    record?.BudgetAmount ??
-    record?.amount ??
-    record?.Amount ??
-    record?.yiic_amount ??
-    record?.BudgetAmount?.Value ??
-    record?.budgetAmount?.Value ??
-    0;
-
   try {
     const { data } = await API.get("/getBudgets");
     const rawData = data ?? {};
-    const records = Array.isArray(rawData?.value)
-      ? rawData.value
-      : Array.isArray(rawData?.DepartmentBudget)
-        ? rawData.DepartmentBudget
-        : Array.isArray(rawData?.data)
-          ? rawData.data
-          : Array.isArray(rawData)
-            ? rawData
-            : [];
 
     const targetYear = startDateForBudget.getFullYear();
-    const filteredRecords = records.filter((record) => getBudgetYear(record) === targetYear);
+    const filteredRecords = rawData.value.filter((record) => {
+      return (
+        parseInt(record["_yiic_financialyear_value_OData_Community_Display_V1_FormattedValue"]) ===
+        targetYear
+      );
+    });
 
     const updatedMergedArray = mergedArray.map((entry) => {
       const item = entry[0];
       const deptName = item.DepartmentNames?.Name;
       const matchingBudget = filteredRecords.find(
-        (record) => getDepartmentName(record) === deptName
+        (b) => b["_yiic_department_value_OData_Community_Display_V1_FormattedValue"] === deptName
       );
 
-      item.BudgetAmount = { Value: Number(getBudgetAmount(matchingBudget)) || 0 };
+      if (matchingBudget) {
+        item.BudgetAmount = { Value: matchingBudget.yiic_amount };
+      } else {
+        item.BudgetAmount = { Value: 0 }; // Default if no budget found
+      }
       return [item];
     });
+
     const { setActualVsBudgetData } = useHomeStore.getState();
     setActualVsBudgetData(updatedMergedArray);
+    updateDepartmentBudgetChart(updatedMergedArray);
   } catch (error) {
     console.error("Budget fetch failed:", error);
   }
+}
+
+export async function GetBudgetTrend(action) {
+  const currentYear = new Date().getFullYear();
+
+  if (action === "next-x-months") {
+    startDateForBudget = new Date(startDateForBudget.getFullYear() + 1, 0, 1);
+    endDateForBudget = new Date(endDateForBudget.getFullYear() + 1, 11, 31);
+  } else if (action === "last-x-months") {
+    const atCurrentYear = startDateForBudget.getFullYear() === currentYear;
+    if (atCurrentYear) {
+      return {
+        canGoBack: false,
+        canGoForward: true,
+        financialYearLabel: `FY${String(startDateForBudget.getFullYear()).slice(-2)}`,
+        selectedYear: startDateForBudget.getFullYear(),
+      };
+    }
+    startDateForBudget = new Date(startDateForBudget.getFullYear() - 1, 0, 1);
+    endDateForBudget = new Date(endDateForBudget.getFullYear() - 1, 11, 31);
+  }
+
+  // Rebuild the budget data for the selected window
+  BugetDeprartment = [];
+  const result = await ModifyBudgetChartLimit();
+
+  const selectedYear = startDateForBudget.getFullYear();
+  const canGoBack = selectedYear > currentYear;
+
+  return {
+    canGoBack,
+    canGoForward: true,
+    financialYearLabel: `FY${String(selectedYear).slice(-2)}`,
+    selectedYear,
+    result,
+  };
+}
+
+export function updateDepartmentBudgetChart(DepartmentData, options = {}) {
+  console.log("here is data", DepartmentData);
+  const { maxLabelLength } = options;
+
+  const resolveLabelLength = () => {
+    if (typeof maxLabelLength === "number") return maxLabelLength;
+    if (typeof window === "undefined") return 15;
+    const width = window.innerWidth;
+    if (width > 1200) return 15;
+    if (width > 768) return 10;
+    return 6;
+  };
+
+  const breakLongDepartmentNames = (name, limit) => {
+    if (!name || name.length <= limit) return name || "Unknown";
+    const words = name.split(" ");
+    let currentLine = "";
+    const result = [];
+
+    words.forEach((word) => {
+      if ((currentLine + word).length <= limit) {
+        currentLine += `${word} `;
+      } else {
+        result.push(currentLine.trim());
+        currentLine = `${word} `;
+      }
+    });
+
+    result.push(currentLine.trim());
+    return result.join("\n");
+  };
+
+  const toSafeDate = (value) => {
+    if (!value) return null;
+    const date = value instanceof Date ? value : new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+
+  const normalizedRecords = Array.isArray(DepartmentData)
+    ? DepartmentData.flatMap((entry) => {
+        if (Array.isArray(entry)) {
+          return entry[0] ? [entry[0]] : [];
+        }
+        return entry ? [entry] : [];
+      })
+    : [];
+
+  const hasValidData = normalizedRecords.length > 0;
+  const labelLimit = resolveLabelLength();
+
+  const labels = hasValidData
+    ? normalizedRecords.map((dept) =>
+        breakLongDepartmentNames(dept?.DepartmentNames?.Name || "Unknown", labelLimit)
+      )
+    : ["No Data Available"];
+
+  const actualAmounts = hasValidData
+    ? normalizedRecords.map((dept) => Number(dept?.SubscriptionContractAmount?.Value || 0))
+    : [0];
+
+  const budgetAmounts = hasValidData
+    ? normalizedRecords.map((dept) => Number(dept?.BudgetAmount?.Value || 0))
+    : [0];
+
+  const maxAmount = hasValidData ? Math.max(...actualAmounts, ...budgetAmounts) : 0;
+  const stepSize = Math.max(1, Math.ceil(maxAmount / 5));
+
+  const firstDatedRecord = normalizedRecords.find((dept) => dept?.SubscriptionStartDate);
+  const selectedYear =
+    toSafeDate(firstDatedRecord?.SubscriptionStartDate)?.getFullYear() ?? new Date().getFullYear();
+
+  return {
+    labels,
+    actualAmounts,
+    budgetAmounts,
+    stepSize,
+    hasValidData,
+    selectedYear,
+  };
 }
 
 function filterForBudgetDepartment() {
