@@ -1,6 +1,6 @@
 import { FiInfo } from "react-icons/fi";
-import React, { useState, useEffect } from "react";
 import { usePopup } from "../../../components/Popup";
+import React, { useState, useEffect, useRef } from "react";
 import { useNotifications } from "../../../hooks/useNotifications";
 import { getNotificationsFromProfilePage } from "../../../lib/api/Notifications/Notification";
 import { getNotificationData, updateNotificationData } from "../../../lib/api/profile/profile";
@@ -33,21 +33,28 @@ const NOTIFICATION_OPTIONS = [
   },
 ];
 
-const EXPIRATION_DAYS_OPTIONS = ["7 days", "14 days", "30 days", "60 days", "90 days"];
+const EXPIRATION_DAYS_VALUES = ["7", "15", "30", "60"];
+const EXPIRATION_DAYS_OPTIONS = [
+  { label: "Select All", value: "all" },
+  ...EXPIRATION_DAYS_VALUES.map((d) => ({ label: `${d} days`, value: d })),
+];
 
 function apiDaysToOption(val) {
-  if (val == null || val === "") return "30 days";
+  if (val == null || val === "") return ["30"];
   const s = String(val).trim();
-  if (EXPIRATION_DAYS_OPTIONS.includes(s)) return s;
-  const num = parseInt(s, 10);
-  if (!Number.isNaN(num)) return `${num} days`;
-  return "30 days";
+  const parts = s
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const valid = parts.filter((n) => EXPIRATION_DAYS_VALUES.includes(n));
+  if (valid.length === 0) return ["30"];
+  return valid;
 }
 
-function optionToApiDays(option) {
-  if (option == null || typeof option !== "string") return "30";
-  const num = parseInt(option.replace(/\s*days?$/i, ""), 10);
-  return Number.isNaN(num) ? "30" : String(num);
+function optionToApiDays(selectedDays) {
+  if (!Array.isArray(selectedDays) || selectedDays.length === 0) return "30";
+  const valid = selectedDays.filter((d) => EXPIRATION_DAYS_VALUES.includes(String(d)));
+  return valid.length > 0 ? valid.join(",") : "30";
 }
 
 function notificationStateToPayload(
@@ -84,9 +91,13 @@ function Notifications({ contactId, isActive }) {
   const [pushToggles, setPushToggles] = useState(
     Object.fromEntries(NOTIFICATION_OPTIONS.map((o) => [o.id, false]))
   );
-  const [emailExpirationDays, setEmailExpirationDays] = useState("30 days");
-  const [pushExpirationDays, setPushExpirationDays] = useState("30 days");
+  const [emailExpirationDays, setEmailExpirationDays] = useState(["30"]);
+  const [pushExpirationDays, setPushExpirationDays] = useState(["30"]);
   const [savedNotificationState, setSavedNotificationState] = useState(null);
+  const emailDaysDropdownRef = useRef(null);
+  const pushDaysDropdownRef = useRef(null);
+  const [emailDaysDropdownOpen, setEmailDaysDropdownOpen] = useState(false);
+  const [pushDaysDropdownOpen, setPushDaysDropdownOpen] = useState(false);
 
   const setEmailToggle = (id, value) => {
     setEmailToggles((prev) => ({ ...prev, [id]: value }));
@@ -144,15 +155,17 @@ function Notifications({ contactId, isActive }) {
     savedNotificationState != null &&
     (JSON.stringify(emailToggles) !== JSON.stringify(savedNotificationState.emailToggles) ||
       JSON.stringify(pushToggles) !== JSON.stringify(savedNotificationState.pushToggles) ||
-      emailExpirationDays !== savedNotificationState.emailExpirationDays ||
-      pushExpirationDays !== savedNotificationState.pushExpirationDays);
+      JSON.stringify(emailExpirationDays) !==
+        JSON.stringify(savedNotificationState.emailExpirationDays) ||
+      JSON.stringify(pushExpirationDays) !==
+        JSON.stringify(savedNotificationState.pushExpirationDays));
 
   const handleCancel = () => {
     if (savedNotificationState) {
       setEmailToggles(savedNotificationState.emailToggles);
       setPushToggles(savedNotificationState.pushToggles);
-      setEmailExpirationDays(savedNotificationState.emailExpirationDays);
-      setPushExpirationDays(savedNotificationState.pushExpirationDays);
+      setEmailExpirationDays([...savedNotificationState.emailExpirationDays]);
+      setPushExpirationDays([...savedNotificationState.pushExpirationDays]);
     }
   };
 
@@ -172,8 +185,8 @@ function Notifications({ contactId, isActive }) {
         setSavedNotificationState({
           emailToggles: { ...emailToggles },
           pushToggles: { ...pushToggles },
-          emailExpirationDays,
-          pushExpirationDays,
+          emailExpirationDays: [...emailExpirationDays],
+          pushExpirationDays: [...pushExpirationDays],
         });
         setNotificationData((prev) => (prev ? { ...prev, ...payload } : null));
         showSuccess("Your notification preferences have been saved successfully.");
@@ -186,6 +199,31 @@ function Notifications({ contactId, isActive }) {
         setIsSavingNotification(false);
       });
   };
+
+  const isAllSelected = (arr) =>
+    EXPIRATION_DAYS_VALUES.length > 0 && EXPIRATION_DAYS_VALUES.every((d) => arr.includes(d));
+  const formatExpirationDisplay = (selected) =>
+    isAllSelected(selected) ? "All" : selected.map((d) => `${d} days`).join(", ") || "None";
+  const toggleExpirationDay = (current, setter, value) => {
+    if (value === "all") {
+      setter(isAllSelected(current) ? [] : [...EXPIRATION_DAYS_VALUES]);
+      return;
+    }
+    setter(current.includes(value) ? current.filter((d) => d !== value) : [...current, value]);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (emailDaysDropdownRef.current && !emailDaysDropdownRef.current.contains(e.target)) {
+        setEmailDaysDropdownOpen(false);
+      }
+      if (pushDaysDropdownRef.current && !pushDaysDropdownRef.current.contains(e.target)) {
+        setPushDaysDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <div className="bg-white rounded-lg sm:rounded-xl border border-[#e9ecef] shadow-sm p-4 sm:p-6">
@@ -272,18 +310,52 @@ function Notifications({ contactId, isActive }) {
                     </div>
                   </div>
                   {opt.hasDropdown && (
-                    <select
-                      value={emailExpirationDays}
-                      onChange={(e) => setEmailExpirationDays(e.target.value)}
-                      disabled={!emailToggles[opt.id]}
-                      className="flex-shrink-0 rounded-lg border border-[#e9ecef] px-3 py-2 text-sm text-[#343A40] bg-white outline-none focus:border-[#172B4D] min-w-[100px] disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {EXPIRATION_DAYS_OPTIONS.map((d) => (
-                        <option key={d} value={d}>
-                          {d}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex-shrink-0 relative" ref={emailDaysDropdownRef}>
+                      <button
+                        type="button"
+                        onClick={() => setEmailDaysDropdownOpen((o) => !o)}
+                        disabled={!emailToggles[opt.id]}
+                        className="rounded-lg border border-[#e9ecef] px-3 py-2 text-sm text-[#343A40] bg-white outline-none focus:border-[#172B4D] min-w-[120px] disabled:opacity-60 disabled:cursor-not-allowed text-left flex items-center justify-between gap-2"
+                      >
+                        <span className="truncate">
+                          {formatExpirationDisplay(emailExpirationDays)}
+                        </span>
+                        <span
+                          className={`transition-transform ${emailDaysDropdownOpen ? "rotate-180" : ""}`}
+                          aria-hidden
+                        >
+                          ▼
+                        </span>
+                      </button>
+                      {emailDaysDropdownOpen && (
+                        <div className="absolute top-full left-0 mt-1 z-10 bg-white border border-[#e9ecef] rounded-lg shadow-lg py-1 min-w-[140px]">
+                          {EXPIRATION_DAYS_OPTIONS.map((item) => (
+                            <label
+                              key={item.value}
+                              className="flex items-center gap-2 px-3 py-2 hover:bg-[#F8F9FA] cursor-pointer text-sm text-[#343A40]"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={
+                                  item.value === "all"
+                                    ? isAllSelected(emailExpirationDays)
+                                    : emailExpirationDays.includes(item.value)
+                                }
+                                onChange={() =>
+                                  toggleExpirationDay(
+                                    emailExpirationDays,
+                                    setEmailExpirationDays,
+                                    item.value
+                                  )
+                                }
+                                className="rounded border-[#e9ecef] text-[#172B4D] focus:ring-[#172B4D]"
+                              />
+                              {item.label}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}
@@ -331,18 +403,52 @@ function Notifications({ contactId, isActive }) {
                     </div>
                   </div>
                   {opt.hasDropdown && (
-                    <select
-                      value={pushExpirationDays}
-                      onChange={(e) => setPushExpirationDays(e.target.value)}
-                      disabled={!pushToggles[opt.id]}
-                      className="flex-shrink-0 rounded-lg border border-[#e9ecef] px-3 py-2 text-sm text-[#343A40] bg-white outline-none focus:border-[#172B4D] min-w-[100px] disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      {EXPIRATION_DAYS_OPTIONS.map((d) => (
-                        <option key={d} value={d}>
-                          {d}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex-shrink-0 relative" ref={pushDaysDropdownRef}>
+                      <button
+                        type="button"
+                        onClick={() => setPushDaysDropdownOpen((o) => !o)}
+                        disabled={!pushToggles[opt.id]}
+                        className="rounded-lg border border-[#e9ecef] px-3 py-2 text-sm text-[#343A40] bg-white outline-none focus:border-[#172B4D] min-w-[120px] disabled:opacity-60 disabled:cursor-not-allowed text-left flex items-center justify-between gap-2"
+                      >
+                        <span className="truncate">
+                          {formatExpirationDisplay(pushExpirationDays)}
+                        </span>
+                        <span
+                          className={`transition-transform ${pushDaysDropdownOpen ? "rotate-180" : ""}`}
+                          aria-hidden
+                        >
+                          ▼
+                        </span>
+                      </button>
+                      {pushDaysDropdownOpen && (
+                        <div className="absolute top-full left-0 mt-1 z-10 bg-white border border-[#e9ecef] rounded-lg shadow-lg py-1 min-w-[140px]">
+                          {EXPIRATION_DAYS_OPTIONS.map((item) => (
+                            <label
+                              key={item.value}
+                              className="flex items-center gap-2 px-3 py-2 hover:bg-[#F8F9FA] cursor-pointer text-sm text-[#343A40]"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={
+                                  item.value === "all"
+                                    ? isAllSelected(pushExpirationDays)
+                                    : pushExpirationDays.includes(item.value)
+                                }
+                                onChange={() =>
+                                  toggleExpirationDay(
+                                    pushExpirationDays,
+                                    setPushExpirationDays,
+                                    item.value
+                                  )
+                                }
+                                className="rounded border-[#e9ecef] text-[#172B4D] focus:ring-[#172B4D]"
+                              />
+                              {item.label}
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}
