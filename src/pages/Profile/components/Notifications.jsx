@@ -1,6 +1,8 @@
 import { FiInfo } from "react-icons/fi";
 import React, { useState, useEffect } from "react";
 import { usePopup } from "../../../components/Popup";
+import { useNotifications } from "../../../hooks/useNotifications";
+import { getNotificationsFromProfilePage } from "../../../lib/api/Notifications/Notification";
 import { getNotificationData, updateNotificationData } from "../../../lib/api/profile/profile";
 
 const NOTIFICATION_OPTIONS = [
@@ -72,6 +74,7 @@ function notificationStateToPayload(
 
 function Notifications({ contactId, isActive }) {
   const { showSuccess, showError } = usePopup();
+  const { invalidate: invalidateNotifications } = useNotifications();
   const [notificationData, setNotificationData] = useState(null);
   const [isLoadingNotificationData, setIsLoadingNotificationData] = useState(false);
   const [isSavingNotification, setIsSavingNotification] = useState(false);
@@ -165,6 +168,7 @@ function Notifications({ contactId, isActive }) {
     setIsSavingNotification(true);
     updateNotificationData(payload)
       .then(() => {
+        getNotificationsFromProfilePage();
         setSavedNotificationState({
           emailToggles: { ...emailToggles },
           pushToggles: { ...pushToggles },

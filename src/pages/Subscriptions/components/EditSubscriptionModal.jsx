@@ -99,13 +99,19 @@ function buildSavePayload(form, editFormData) {
     description: form.description ?? "",
     subsstartdate: toISODateString(form.subsstartdate) ?? "",
     subsenddate: toISODateString(form.subsenddate) ?? "",
-    subsfrequencynumber: form.subsfrequencynumber ?? "",
+    subsfrequencynumber:
+      form.subsfrequencynumber !== "" && form.subsfrequencynumber != null
+        ? String(Math.max(0, Number(form.subsfrequencynumber)))
+        : "",
     subsfrequencyunit: subsfrequencyunit ?? null,
     autorenewcontract: form.autorenewcontract ?? null,
     licenses: form.licenses === "" || form.licenses == null ? null : form.licenses,
     currentusers: form.currentusers === "" || form.currentusers == null ? null : form.currentusers,
     doyourequireapart: form.doyourequireapart ?? null,
-    subscontractamount: form.subscontractamount ?? "",
+    subscontractamount:
+      form.subscontractamount !== "" && form.subscontractamount != null
+        ? String(Math.max(0, Number(form.subscontractamount)))
+        : "",
     subsfrequency: form.subsfrequency ?? "",
     lastduedate: toISODateString(form.lastduedate) ?? "",
     nextduedate: toISODateString(form.nextduedate) ?? "",
@@ -279,10 +285,14 @@ export default function EditSubscriptionModal({
   }, []);
 
   const handleContractAmountBlur = useCallback(() => {
-    setForm((prev) => ({
-      ...prev,
-      subscontractamount: formatContractAmount(prev.subscontractamount),
-    }));
+    setForm((prev) => {
+      const n = parseFloat(prev.subscontractamount);
+      const clamped =
+        prev.subscontractamount !== "" && !Number.isNaN(n) && n < 0
+          ? "0.00"
+          : formatContractAmount(prev.subscontractamount);
+      return { ...prev, subscontractamount: clamped };
+    });
   }, []);
 
   const handleDescriptionChange = useCallback(
@@ -392,6 +402,7 @@ export default function EditSubscriptionModal({
                       <input
                         type="number"
                         step="0.01"
+                        min={0}
                         value={form.subscontractamount}
                         onChange={(e) => update("subscontractamount", e.target.value)}
                         onBlur={handleContractAmountBlur}
@@ -479,8 +490,16 @@ export default function EditSubscriptionModal({
                       </label>
                       <input
                         type="number"
+                        min={0}
                         value={form.subsfrequencynumber}
-                        onChange={(e) => update("subsfrequencynumber", e.target.value)}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === "" || v === "-") update("subsfrequencynumber", v);
+                          else {
+                            const n = Number(v);
+                            update("subsfrequencynumber", Number.isNaN(n) ? v : n < 0 ? "0" : v);
+                          }
+                        }}
                         className={inputCls}
                       />
                     </div>

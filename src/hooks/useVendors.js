@@ -1,14 +1,14 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  getVendorData,
-  getVendorDetails,
   createVendor,
   updateVendor,
   deleteVendor,
+  getVendorData,
+  getVendorDetails,
   deleteSubscriptionActivityLine,
   getSubscriptionActivityLinesBySubscriptionActivity,
 } from "../lib/api/vendor/vendor";
 import { useAuthStore } from "../stores";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 /**
  * Query key for vendor list - used for caching and invalidation.

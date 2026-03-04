@@ -4,7 +4,7 @@ import { useState, useCallback, useRef } from "react";
 import AddVendorManually from "./AddSubscriptionManually";
 import UploadSubscriptionModal from "./UploadSubscriptionModal";
 import { FiX, FiPlus, FiUpload, FiDownload } from "react-icons/fi";
-import { useVendorList, useDepartments, useCategories } from "../../../hooks/useSubscriptions";
+import { useVendorList, useDepartments } from "../../../hooks/useSubscriptions";
 
 export default function AddSubscriptionModal({
   open = false,
@@ -23,7 +23,6 @@ export default function AddSubscriptionModal({
     error: vendorsError,
   } = useVendorList(undefined, { enabled: open });
   const { data: departmentsData = [] } = useDepartments({ enabled: open });
-  const { data: categoriesData = [] } = useCategories({ enabled: open });
 
   const rawVendors = vendorListData?.value ?? (Array.isArray(vendorListData) ? vendorListData : []);
   const vendors = Array.isArray(rawVendors)
@@ -214,8 +213,6 @@ export default function AddSubscriptionModal({
 
       setIsDownloading(true);
       try {
-        const categories =
-          categoriesData?.value ?? (Array.isArray(categoriesData) ? categoriesData : []);
         const deptData = Array.isArray(departments) ? departments : (departments?.value ?? []);
 
         // Create workbook
@@ -332,7 +329,7 @@ export default function AddSubscriptionModal({
         setIsDownloading(false);
       }
     },
-    [onDownloadTemplate, categoriesData, departments]
+    [onDownloadTemplate, departments]
   );
 
   return (

@@ -3,7 +3,6 @@ import {
   addBudget,
   checkBudget,
   updateBudget,
-  getCategories,
   getDeparments,
   fetchVendorList,
   fetchBudgetData,
@@ -82,17 +81,6 @@ export const useDepartments = (options = {}) => {
   return useQuery({
     queryKey: DEPARTMENTS_QUERY_KEY,
     queryFn: () => getDeparments().then((r) => r?.value ?? []),
-    ...options,
-  });
-};
-
-/**
- * Categories lookup
- */
-export const useCategories = (options = {}) => {
-  return useQuery({
-    queryKey: CATEGORIES_QUERY_KEY,
-    queryFn: getCategories,
     ...options,
   });
 };

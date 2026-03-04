@@ -30,6 +30,9 @@ function getAddUserErrorMessage(err) {
   if (raw.includes("404")) {
     return "The request could not be completed. Please refresh the page and try again.";
   }
+  if (raw.includes("409")) {
+    return "The user already exists. Please try again with a different email address.";
+  }
   // Network / fetch failed
   if (raw.includes("Failed to fetch") || raw.includes("NetworkError") || raw.includes("network")) {
     return "Please check your internet connection and try again.";

@@ -1,6 +1,6 @@
 import Chart from "chart.js/auto";
-import { useMemo, useState, useEffect, useRef } from "react";
 import { useReportsPageStore } from "../../../stores";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { FiInfo, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
 const getMonthStart = (date) => new Date(date.getFullYear(), date.getMonth(), 1);

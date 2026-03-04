@@ -907,6 +907,7 @@ function processVendorprofiles(filteredSubscriptions) {
     VendorProfile,
     count,
   }));
+
   mapVendorProfileNames();
   const { setVendorProfileCounts } = useHomeStore.getState();
   setVendorProfileCounts(vendorProfileCounts.map((profile) => ({ ...profile })));
@@ -914,17 +915,30 @@ function processVendorprofiles(filteredSubscriptions) {
 }
 function setVendorProfileChart() {
   const profileValue = useHomeStore.getState().vendorProfileCounts ?? [];
-  const profileName = profileValue[0]?.VendorProfile;
-  let filteredData = [];
+  const profileLabels = profileValue
+    .map((profile) => profile?.VendorProfile)
+    .filter((label) => Boolean(label));
+  const profileDataMap = {};
+
   SubscriptionJSon.forEach((subArray) => {
     subArray.forEach((subscription) => {
-      if (vendorProfileMap[subscription.VendorProfile] === profileName) {
-        filteredData.push(subscription);
+      const label =
+        vendorProfileMap[subscription.VendorProfile] ?? subscription.VendorProfile ?? "Unknown";
+      if (!profileDataMap[label]) {
+        profileDataMap[label] = [];
       }
+      profileDataMap[label].push(subscription);
     });
   });
+
+  profileLabels.forEach((label) => {
+    if (!profileDataMap[label]) {
+      profileDataMap[label] = [];
+    }
+  });
+
   const { setVendorProfileChartData } = useHomeStore.getState();
-  setVendorProfileChartData(filteredData);
+  setVendorProfileChartData(profileDataMap);
 }
 function mapVendorProfileNames() {
   vendorProfileCounts.forEach((profile) => {

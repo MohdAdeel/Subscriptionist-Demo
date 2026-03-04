@@ -9,10 +9,6 @@ import API from "../api";
  * @returns {Promise<Array>} Raw activity lines data
  */
 export const fetchActivityLines = async (contactId) => {
-  if (!contactId) {
-    console.warn("fetchActivityLines: contactId is required");
-    return;
-  }
   const { data } = await API.get("/GetActivityLinesByContactId", {
     params: { contactId },
   });

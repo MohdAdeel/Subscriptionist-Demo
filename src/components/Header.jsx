@@ -163,8 +163,8 @@ const Header = () => {
       contactId,
       activityId,
       isRead,
+      todaySubscriptionsadded: item.type === "new",
     };
-    console.log(payload);
     dismissNotification(payload)
       .then(() => {
         invalidateNotifications();

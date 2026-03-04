@@ -4,7 +4,7 @@ import { usePopup } from "../../../../components/Popup";
 import { FiX, FiPlus, FiUpload, FiDownload } from "react-icons/fi";
 import AddVendorManually from "../../../Subscriptions/components/AddSubscriptionManually";
 import UploadSubscriptionModal from "../../../Subscriptions/components/UploadSubscriptionModal";
-import { useVendorList, useDepartments, useCategories } from "../../../../hooks/useSubscriptions";
+import { useVendorList, useDepartments } from "../../../../hooks/useSubscriptions";
 
 export default function AddSubscriptionModalFromFlow({
   open = false,
@@ -24,7 +24,6 @@ export default function AddSubscriptionModalFromFlow({
     error: vendorsError,
   } = useVendorList(undefined, { enabled: open && !vendorListDataProp });
   const { data: departmentsData = [] } = useDepartments({ enabled: open });
-  const { data: categoriesData = [] } = useCategories({ enabled: open });
 
   const vendorListData = vendorListDataProp ?? vendorListDataFromHook;
   const rawVendors =
@@ -222,8 +221,6 @@ export default function AddSubscriptionModalFromFlow({
       }
       setIsDownloading(true);
       try {
-        const categories =
-          categoriesData?.value ?? (Array.isArray(categoriesData) ? categoriesData : []);
         const deptData = Array.isArray(departments) ? departments : (departments?.value ?? []);
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet("Template");
@@ -326,7 +323,7 @@ export default function AddSubscriptionModalFromFlow({
         setIsDownloading(false);
       }
     },
-    [onDownloadTemplate, categoriesData, departments]
+    [onDownloadTemplate, departments]
   );
 
   return (

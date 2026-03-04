@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from "react";
 import { useMsal } from "@azure/msal-react";
 import { useNavigate } from "react-router-dom";
+import React, { useEffect, useRef } from "react";
 import { loginRequest } from "../../lib/msalConfig/authConfig";
 
 function Login() {

@@ -57,7 +57,6 @@ export async function addAssociatedUser(payload) {
     const response = await API.post("/addAssociateUser", payload);
     if (response.status === 204) return {};
     const data = response.data ?? {};
-    await createUserInB2C({ email: data.email });
     return data;
   } catch (err) {
     const message = err.response?.data != null ? String(err.response.data) : err.message;
@@ -139,33 +138,5 @@ export async function updateProfilePicture(contactId, entityimage) {
   } catch (err) {
     const message = err.response?.data != null ? String(err.response.data) : err.message;
     throw new Error(`Failed to update profile picture: ${err.response?.status ?? ""} - ${message}`);
-  }
-}
-
-export async function createUserInB2C(payload) {
-  try {
-    const url = import.meta.env.VITE_AZURE_B2C_API_URL;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    const text = await response.text();
-    let data = {};
-    if (text) {
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = { raw: text };
-      }
-    }
-    if (!response.ok) {
-      throw new Error(`B2C create failed: ${response.status} - ${text || JSON.stringify(data)}`);
-    }
-    return data;
-  } catch (err) {
-    if (err instanceof Error) throw err;
-    throw new Error(`B2C create failed: ${String(err)}`);
   }
 }

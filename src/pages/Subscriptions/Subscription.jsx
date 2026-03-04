@@ -16,6 +16,7 @@ import { useAuthStore } from "../../stores";
 import { useActivityLines } from "../../hooks";
 import { usePopup } from "../../components/Popup";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNotifications } from "../../hooks/useNotifications";
 import AddSubscriptionModal from "./components/AddSubscriptionModal";
 import { populateAccountModal } from "../../lib/api/Account/Account";
 import EditSubscriptionModal from "./components/EditSubscriptionModal";
@@ -122,11 +123,12 @@ const Subscription = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [appliedStartDate, setAppliedStartDate] = useState(null);
+  const { invalidate: invalidateNotifications } = useNotifications();
+  const [addAccountModalOpen, setAddAccountModalOpen] = useState(false);
   const [isVendorDropdownOpen, setIsVendorDropdownOpen] = useState(false);
   const [subscriptionNameFilter, setSubscriptionNameFilter] = useState("");
-  const [debouncedSubscriptionName, setDebouncedSubscriptionName] = useState("");
-  const [addAccountModalOpen, setAddAccountModalOpen] = useState(false);
   const [accountModalInitialData, setAccountModalInitialData] = useState(null);
+  const [debouncedSubscriptionName, setDebouncedSubscriptionName] = useState("");
   const [isAddAccountButtonDisabled, setIsAddAccountButtonDisabled] = useState(false);
 
   const { data: activityLinesData, isLoading: activityLinesLoading } = useActivityLines();
@@ -483,6 +485,7 @@ const Subscription = () => {
         }
         await updateMutation.mutateAsync(formData);
         showSuccess("Subscription updated successfully.");
+        invalidateNotifications();
         setShowEditModal(false);
       } catch (err) {
         console.error("Subscription check or update failed:", err);

@@ -29,16 +29,6 @@ export async function getDeparments() {
   }
 }
 
-export async function getCategories() {
-  try {
-    const { data } = await API.get("/getCategories");
-    return data;
-  } catch (error) {
-    console.error("Azure Function call failed, get categories:", error);
-    throw error;
-  }
-}
-
 export async function checkSubscriptionExistance(subscriptionName, subscriptionActivityId) {
   try {
     const { data } = await API.get("/checkDuplicateSubscription", {
