@@ -3,11 +3,12 @@ import { useAuthStore } from "../../../stores/authStore.js";
 
 export async function getNotifications() {
   const contactId = useAuthStore.getState().userAuth?.contactid;
-  const todayDate = new Date().toLocaleDateString("en-US", {
+  const todayDate = new Date().toLocaleDateString("en-GB", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   });
+
   if (!contactId) {
     console.warn("getNotifications: contactId is required (user may not be authenticated)");
     return [];
@@ -20,7 +21,7 @@ export async function getNotifications() {
 
 export async function getNotificationsFromProfilePage() {
   const contactId = useAuthStore.getState().userAuth?.contactid;
-  const todayDate = new Date().toLocaleDateString("en-US", {
+  const todayDate = new Date().toLocaleDateString("en-GB", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
