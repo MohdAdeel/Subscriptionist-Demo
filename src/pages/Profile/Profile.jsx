@@ -66,6 +66,7 @@ function Profile() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const userAuth = useAuthStore((state) => state.userAuth);
+  const setUserAuth = useAuthStore((state) => state.setUserAuth);
   const contactId = userAuth?.contactid;
 
   useEffect(() => {
@@ -94,6 +95,13 @@ function Profile() {
 
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const syncAuthPhoto = (nextImage) => {
+    if (!nextImage) return;
+    const currentAuth = useAuthStore.getState().userAuth;
+    if (!currentAuth || currentAuth.entityimage === nextImage) return;
+    setUserAuth({ ...currentAuth, entityimage: nextImage });
   };
 
   const handleSaveProfile = () => {
@@ -133,6 +141,7 @@ function Profile() {
       updateProfilePicture(contactId, base64)
         .then(() => {
           setProfileImageUrl(dataUrl);
+          syncAuthPhoto(dataUrl);
           showSuccess("Your profile photo has been updated successfully.");
         })
         .catch((err) => {
@@ -161,7 +170,9 @@ function Profile() {
     getProfileImage(contactId)
       .then((data) => {
         const raw = data?.value?.[0];
-        setProfileImageUrl(raw?.entityimage || raw?.entityimage_url || null);
+        const nextImage = raw?.entityimage || raw?.entityimage_url || null;
+        setProfileImageUrl(nextImage);
+        syncAuthPhoto(nextImage);
       })
       .catch((err) => {
         console.error("Failed to load profile image:", err);
