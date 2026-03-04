@@ -152,6 +152,11 @@ function Profile() {
       ? ((form.firstName?.[0] ?? "") + (form.lastName?.[0] ?? "")).toUpperCase() || "?"
       : "PP";
 
+  const handleResetPassword = () => {
+    const contactId = useAuthStore.getState().userAuth?.contactid;
+    window.location.href = `https://subscriptionistportal.b2clogin.com/a7f3acb1-590c-4634-a6a1-611aa80ea65e/B2C_1_PasswordReset/oauth2/v2.0/authorize?client_id=${contactId}&redirect_uri=https%3A%2F%2Fsubscriptionistportal.powerappsportals.com%2Fsignin-aad-b2c_1&response_type=id_token&scope=openid&response_mode=form_post&nonce=defaultNonce&ui_locales=en-US`;
+  };
+
   useEffect(() => {
     getProfileImage(contactId)
       .then((data) => {
@@ -186,6 +191,7 @@ function Profile() {
         <button
           type="button"
           className="order-5 sm:order-none px-4 py-2 rounded-lg bg-[#172B4D] text-white text-sm font-semibold hover:bg-[#0f1f3d] transition-colors"
+          onClick={handleResetPassword}
         >
           Reset Password
         </button>

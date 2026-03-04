@@ -131,6 +131,7 @@ const Subscription = () => {
   const [appliedEndDate, setAppliedEndDate] = useState(null);
   const [vendorSearchTerm, setVendorSearchTerm] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [allVendorOptions, setAllVendorOptions] = useState(["All"]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [appliedStartDate, setAppliedStartDate] = useState(null);
@@ -211,14 +212,25 @@ const Subscription = () => {
   const totalCount = Number(subscriptionResult?.TotalCount) ?? 0;
   const ActivityLines = mapActivityLinesToTableRows(subscriptionResult ?? {});
 
-  const vendorOptions = useMemo(() => {
-    const unique = new Set();
-    ActivityLines.forEach((row) => {
+  // Keep a cumulative list of all vendors from every API response so the dropdown
+  // always shows all vendors even when one vendor is selected (filtered result).
+  useEffect(() => {
+    if (!subscriptionResult) return;
+    const rows = mapActivityLinesToTableRows(subscriptionResult);
+    const vendors = new Set();
+    rows.forEach((row) => {
       const name = row.vendorName ? String(row.vendorName).trim() : "";
-      if (name) unique.add(name);
+      if (name) vendors.add(name);
     });
-    return ["All", ...Array.from(unique).sort((a, b) => a.localeCompare(b))];
-  }, [ActivityLines]);
+    if (vendors.size === 0) return;
+    setAllVendorOptions((prev) => {
+      const combined = new Set(prev.filter((v) => v !== "All"));
+      vendors.forEach((v) => combined.add(v));
+      return ["All", ...Array.from(combined).sort((a, b) => a.localeCompare(b))];
+    });
+  }, [subscriptionResult]);
+
+  const vendorOptions = allVendorOptions;
 
   const filteredVendorOptions = useMemo(() => {
     const term = vendorSearchTerm.trim().toLowerCase();
@@ -345,9 +357,7 @@ const Subscription = () => {
 
             let dayClass =
               "aspect-square flex items-center justify-center text-[10px] xs:text-xs sm:text-sm font-medium text-gray-700 cursor-pointer rounded sm:rounded-lg transition-all duration-200 relative bg-white border border-transparent";
-            if (isPast)
-              dayClass +=
-                " text-gray-300 cursor-not-allowed bg-gray-100/80 opacity-60 hover:opacity-60 hover:scale-100";
+            if (isPast) dayClass += " text-gray-500 bg-gray-50/80";
             if (isToday) dayClass += " bg-blue-50 border-blue-500 text-blue-900 font-bold";
             if (isStart)
               dayClass +=
@@ -358,15 +368,11 @@ const Subscription = () => {
             if (isInRange && !isStart && !isEnd)
               dayClass +=
                 " bg-gradient-to-br from-[#e8ebff] to-[#d4d9ff] text-[#1d225d] font-semibold border-[#a5b4fc] relative z-[1]";
-            if (!isPast && !isStart && !isEnd && !isInRange && !isToday)
+            if (!isStart && !isEnd && !isInRange && !isToday)
               dayClass += " hover:bg-gray-100 hover:scale-110 hover:z-[2]";
 
             return (
-              <div
-                key={day}
-                className={dayClass}
-                onClick={() => !isPast && handleDateClick(day, month, year)}
-              >
+              <div key={day} className={dayClass} onClick={() => handleDateClick(day, month, year)}>
                 {day}
               </div>
             );
@@ -409,10 +415,6 @@ const Subscription = () => {
 
   const handleDateClick = (day, month, year) => {
     const clickedDate = new Date(year, month, day);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (clickedDate < today) return; // Don't allow past dates
 
     if (!startDate || (startDate && endDate)) {
       // Start new selection
@@ -781,7 +783,7 @@ const Subscription = () => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap justify-start sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto sm:flex-shrink-0">
+        <div className="flex flex-wrap justify-start sm:justify-end mt-5 gap-2 sm:gap-3 w-full sm:w-auto sm:flex-shrink-0">
           {isLoading ? (
             <div className="flex flex-row gap-2 sm:gap-3 flex-wrap">
               <ButtonSkeleton count={3} />
