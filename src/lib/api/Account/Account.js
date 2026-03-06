@@ -37,3 +37,20 @@ export async function getAccountDetails() {
   const { data } = await API.get(`/getAccountDetails/${accountid}`);
   return data;
 }
+
+export async function scrapeWebsiteForAccount(websiteUrl) {
+  const response = await fetch(
+    "https://prod-api-calls-backend--development-bvg7b6f5bqhgajcv.centralus-01.azurewebsites.net/v1/lookup",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ website: websiteUrl }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`scrapeWebsiteForAccount failed: ${response.status}`);
+  }
+
+  return response.json();
+}

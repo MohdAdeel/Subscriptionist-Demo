@@ -4,6 +4,7 @@ import {
   updateAccount,
   activateAccount,
   getAccountFieldChoices,
+  scrapeWebsiteForAccount,
 } from "../../../../lib/api/Account/Account";
 import { useMsal } from "@azure/msal-react";
 import { useAuthStore } from "../../../../stores";
@@ -212,6 +213,79 @@ const ACTIVE_FIELDS = [
 
 const EMPTY_FIELD_CHOICES = { employeeSize: [], country: [], industry: [] };
 
+const EMPLOYEE_COUNT_TO_RANGE_LABEL = [
+  [9, "0-9"],
+  [99, "10-99"],
+  [999, "100-999"],
+  [4999, "1000-4999"],
+  [Infinity, "5000+"],
+];
+
+const normalizeForMatch = (s) =>
+  (s ?? "")
+    .toString()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const findOptionByLabel = (options, label) => {
+  if (!label || !Array.isArray(options)) return undefined;
+  const target = normalizeForMatch(label);
+  return options.find((opt) => normalizeForMatch(opt?.value) === target);
+};
+
+const getEmployeeSizeRangeLabel = (count) => {
+  const n = Number(count);
+  if (!Number.isFinite(n) || n < 0) return undefined;
+  for (const [max, label] of EMPLOYEE_COUNT_TO_RANGE_LABEL) {
+    if (n <= max) return label;
+  }
+  return "5000+";
+};
+
+/** Map lookup API response to active form prefill (employeeSize, industry). Uses fieldChoices to resolve to attributevalues; adds synthetic options when no match. */
+function mapLookupToActiveForm(lookupData, fieldChoices) {
+  if (!lookupData || typeof lookupData !== "object") return { prefilled: {}, choices: null };
+  const prefilled = {};
+  let choicesPatch = null;
+
+  if (lookupData.employee_count != null) {
+    const rangeLabel = getEmployeeSizeRangeLabel(lookupData.employee_count);
+    const options = fieldChoices?.employeeSize ?? [];
+    const option = rangeLabel
+      ? options.find((o) => normalizeForMatch(o?.value) === normalizeForMatch(rangeLabel))
+      : undefined;
+    if (option) {
+      prefilled.employeeSize = option.attributevalue;
+    } else if (rangeLabel) {
+      prefilled.employeeSize = rangeLabel;
+      choicesPatch = {
+        ...choicesPatch,
+        employeeSize: [...options, { attributevalue: rangeLabel, value: rangeLabel }],
+      };
+    }
+  }
+
+  if (lookupData.industry) {
+    const options = fieldChoices?.industry ?? [];
+    const option = findOptionByLabel(options, lookupData.industry);
+    if (option) {
+      prefilled.industry = option.attributevalue;
+    } else {
+      const label = String(lookupData.industry).trim();
+      prefilled.industry = label;
+      choicesPatch = {
+        ...choicesPatch,
+        industry: [...options, { attributevalue: label, value: label }],
+      };
+    }
+  }
+
+  return { prefilled, choicesPatch };
+}
+
 const EMPTY_DRAFT_FORM = {
   accountName: "",
   phone: "",
@@ -319,6 +393,13 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
       try {
         const body = buildDraftBody();
 
+        let lookupData = null;
+        try {
+          lookupData = await scrapeWebsiteForAccount(body.websiteurl);
+        } catch (lookupError) {
+          console.warn("scrapeWebsiteForAccount failed", lookupError);
+        }
+
         if (bpfStage === "draft") {
           const { contactId: _c, yiic_accountstatusreason: _y, ...updateBody } = body;
           await updateAccount(updateBody);
@@ -329,11 +410,23 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
         }
 
         const data = await getAccountFieldChoices();
-        setFieldChoices({
+        const nextFieldChoices = {
           employeeSize: Array.isArray(data?.employeeSize) ? data.employeeSize : [],
           country: Array.isArray(data?.country) ? data.country : [],
           industry: Array.isArray(data?.industry) ? data.industry : [],
-        });
+        };
+
+        const { prefilled, choicesPatch } = mapLookupToActiveForm(lookupData, data);
+        if (choicesPatch) {
+          if (choicesPatch.employeeSize) nextFieldChoices.employeeSize = choicesPatch.employeeSize;
+          if (choicesPatch.industry) nextFieldChoices.industry = choicesPatch.industry;
+        }
+        setFieldChoices(nextFieldChoices);
+
+        if (Object.keys(prefilled).length > 0) {
+          setActiveForm((prev) => ({ ...prev, ...prefilled }));
+        }
+
         setStageIndex(1);
       } catch (e) {
         console.error("addAccount/updateAccount or getAccountFieldChoices failed", e);
@@ -362,20 +455,47 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
     return Object.keys(next).length === 0;
   };
 
-  const buildActivateBody = () => ({
-    yiic_employeesize:
+  const getLabelForChoice = (options, selectedAttributeValue) => {
+    if (selectedAttributeValue == null || selectedAttributeValue === "") return undefined;
+    const option = (options ?? []).find(
+      (o) => String(o.attributevalue) === String(selectedAttributeValue)
+    );
+    return option ? option.value : String(selectedAttributeValue);
+  };
+
+  const EMPLOYEE_SIZE_LABEL_TO_NUMBER = {
+    "0-9": 9,
+    "10-99": 99,
+    "100-999": 999,
+    "1000-4999": 4999,
+    "5000+": 5000,
+  };
+
+  const getEmployeeSizeNumeric = (labelOrAttributeValue) => {
+    if (labelOrAttributeValue == null || labelOrAttributeValue === "") return undefined;
+    const normalized = String(labelOrAttributeValue).trim().toLowerCase();
+    const mapped = EMPLOYEE_SIZE_LABEL_TO_NUMBER[normalized];
+    if (mapped !== undefined) return mapped;
+    const n = Number(labelOrAttributeValue);
+    return Number.isFinite(n) ? n : undefined;
+  };
+
+  const buildActivateBody = () => {
+    const employeeSizeLabel =
       activeForm.employeeSize != null && activeForm.employeeSize !== ""
-        ? Number(activeForm.employeeSize)
-        : undefined,
-    yiic_industry:
+        ? getLabelForChoice(fieldChoices.employeeSize, activeForm.employeeSize)
+        : undefined;
+    const yiic_employeesize = getEmployeeSizeNumeric(employeeSizeLabel);
+    const yiic_industry =
       activeForm.industry != null && activeForm.industry !== ""
-        ? Number(activeForm.industry)
-        : undefined,
-    yiic_countryofincorporation:
+        ? getLabelForChoice(fieldChoices.industry, activeForm.industry)
+        : undefined;
+    const yiic_countryofincorporation =
       activeForm.countryOfCorporation != null && activeForm.countryOfCorporation !== ""
-        ? String(activeForm.countryOfCorporation)
-        : undefined,
-  });
+        ? getLabelForChoice(fieldChoices.country, activeForm.countryOfCorporation)
+        : undefined;
+    return { yiic_employeesize, yiic_industry, yiic_countryofincorporation };
+  };
 
   const handleActivateAccount = async () => {
     if (!validateActive()) return;

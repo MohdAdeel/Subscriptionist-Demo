@@ -68,7 +68,6 @@ export const handleActivityLinesSuccess = (originalData) => {
     if (arrayKeys.length > 0) {
       lines = originalData[arrayKeys[0]];
     } else {
-      console.error("No array found in response. Available keys:", Object.keys(originalData));
       throw new Error("No activity lines array found in response");
     }
   }

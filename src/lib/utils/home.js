@@ -664,7 +664,6 @@ export async function GetBudgetTrend(action) {
 }
 
 export function updateDepartmentBudgetChart(DepartmentData, options = {}) {
-  console.log("here is data", DepartmentData);
   const { maxLabelLength } = options;
 
   const resolveLabelLength = () => {
