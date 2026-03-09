@@ -408,6 +408,14 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
           setAccountId(response?.accountId);
         }
 
+        // Reload Home: refetch activity lines and contact (same pattern as handleActivateAccount / App AuthSync)
+        await queryClient.refetchQueries({ queryKey: ACTIVITY_LINES_QUERY_KEY });
+        const account = instance.getAllAccounts()[0];
+        if (account?.localAccountId) {
+          const userData = await getContactByB2CObjectId(account.localAccountId);
+          useAuthStore.getState().setUserAuth(userData);
+        }
+
         const data = await getAccountFieldChoices();
         const nextFieldChoices = {
           employeeSize: Array.isArray(data?.employeeSize) ? data.employeeSize : [],
