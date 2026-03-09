@@ -401,8 +401,7 @@ export default function AddAccountModal({ open = false, onClose, initialData }) 
         }
 
         if (bpfStage === "draft") {
-          const { contactId: _c, yiic_accountstatusreason: _y, ...updateBody } = body;
-          await updateAccount(updateBody);
+          await updateAccount(body);
           setAccountId(userAuth?.accountid);
         } else {
           const response = await addAccount(body);
