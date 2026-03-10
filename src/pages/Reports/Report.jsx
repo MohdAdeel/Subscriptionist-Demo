@@ -1692,7 +1692,7 @@ const Report = () => {
         <div className="flex gap-6 sm:gap-8 overflow-x-auto">
           <button
             onClick={() => setActiveTab("standard")}
-            className={`pb-3 px-1 text-base font-medium transition-colors whitespace-nowrap border-b-2 ${
+            className={`pb-3 px-1 text-base font-medium transition-colors whitespace-nowrap border-b-2 cursor-pointer  ${
               activeTab === "standard"
                 ? "border-blue-600 text-blue-600"
                 : "border-transparent text-gray-500 hover:text-gray-700"
@@ -1702,7 +1702,7 @@ const Report = () => {
           </button>
           <button
             onClick={() => setActiveTab("financial")}
-            className={`pb-3 px-1 text-base font-medium transition-colors whitespace-nowrap border-b-2 ${
+            className={`pb-3 px-1 text-base font-medium transition-colors whitespace-nowrap border-b-2 cursor-pointer ${
               activeTab === "financial"
                 ? "border-blue-600 text-blue-600"
                 : "border-transparent text-gray-500 hover:text-gray-700"
@@ -1712,7 +1712,7 @@ const Report = () => {
           </button>
           <button
             onClick={() => setActiveTab("renewal")}
-            className={`pb-3 px-1 text-base font-medium transition-colors whitespace-nowrap border-b-2 ${
+            className={`pb-3 px-1 text-base font-medium transition-colors whitespace-nowrap border-b-2 cursor-pointer ${
               activeTab === "renewal"
                 ? "border-blue-600 text-blue-600"
                 : "border-transparent text-gray-500 hover:text-gray-700"
@@ -1727,7 +1727,7 @@ const Report = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <button
           onClick={() => setIsFilterOpen(true)}
-          className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg transition-colors text-sm font-medium ${
+          className={`flex items-center gap-2 px-4 py-2.5 border rounded-lg transition-colors text-sm font-medium cursor-pointer ${
             isFilterOpen
               ? "border-blue-300 text-blue-600 bg-white shadow-[0_0_15px_rgba(59,130,246,0.2)] ring-1 ring-blue-200"
               : "border-gray-300 hover:bg-gray-50 text-gray-700"
@@ -1738,12 +1738,12 @@ const Report = () => {
         </button>
 
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700">
+          <button className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700 cursor-pointer">
             <FiUpload className="w-4 h-4" />
             Share
           </button>
           <button
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#1D225D] text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all text-sm font-medium shadow-sm"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#1D225D] text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all text-sm font-medium shadow-sm cursor-pointer"
             onClick={() => setShowExportModal(true)}
           >
             <FiDownload className="w-4 h-4" />

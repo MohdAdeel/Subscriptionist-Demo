@@ -204,9 +204,16 @@ const RenewalAndExpiration = ({
   };
 
   const minMonth = useMemo(() => getMonthStart(new Date()), []);
+  const maxMonth = useMemo(
+    () => getMonthStart(new Date(minMonth.getFullYear(), minMonth.getMonth() + 4, 1)),
+    [minMonth]
+  );
   const isPrevDisabled =
     currentMonth.getFullYear() === minMonth.getFullYear() &&
     currentMonth.getMonth() === minMonth.getMonth();
+  const isNextDisabled =
+    currentMonth.getFullYear() === maxMonth.getFullYear() &&
+    currentMonth.getMonth() === maxMonth.getMonth();
 
   const handlePreviousMonth = () => {
     if (isPrevDisabled) return;
@@ -216,7 +223,10 @@ const RenewalAndExpiration = ({
   };
 
   const handleNextMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+    if (isNextDisabled) return;
+    setCurrentMonth(
+      getMonthStart(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
+    );
   };
 
   const getNextMonth = () => {
@@ -389,9 +399,14 @@ const RenewalAndExpiration = ({
               </button>
               <button
                 onClick={handleNextMonth}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                className={`p-2 rounded-full transition-colors ${
+                  isNextDisabled ? "cursor-not-allowed text-gray-300" : "hover:bg-gray-100"
+                }`}
+                disabled={isNextDisabled}
               >
-                <FiChevronRight className="w-5 h-5 text-gray-600" />
+                <FiChevronRight
+                  className={`w-5 h-5 ${isNextDisabled ? "text-gray-300" : "text-gray-600"}`}
+                />
               </button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

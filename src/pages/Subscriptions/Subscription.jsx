@@ -120,7 +120,7 @@ const Subscription = () => {
   const [endDate, setEndDate] = useState(null);
   const [startDate, setStartDate] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [statusFilter, setStatusFilter] = useState("3");
+  const [statusFilter, setStatusFilter] = useState("0");
   const [dateRangeText, setDateRangeText] = useState("");
   const [goToPageInput, setGoToPageInput] = useState("");
   const [vendorFilter, setVendorFilter] = useState("All");
@@ -131,10 +131,10 @@ const Subscription = () => {
   const [appliedEndDate, setAppliedEndDate] = useState(null);
   const [vendorSearchTerm, setVendorSearchTerm] = useState("");
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [allVendorOptions, setAllVendorOptions] = useState(["All"]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showBudgetModal, setShowBudgetModal] = useState(false);
   const [appliedStartDate, setAppliedStartDate] = useState(null);
+  const [allVendorOptions, setAllVendorOptions] = useState(["All"]);
   const { invalidate: invalidateNotifications } = useNotifications();
   const [addAccountModalOpen, setAddAccountModalOpen] = useState(false);
   const [isVendorDropdownOpen, setIsVendorDropdownOpen] = useState(false);
@@ -712,7 +712,7 @@ const Subscription = () => {
                   <button
                     type="button"
                     onClick={() => setIsVendorDropdownOpen((prev) => !prev)}
-                    className="flex w-full items-center justify-between bg-white rounded-lg border border-[#e9ecef] p-2 text-xs sm:text-sm text-[#343A40]"
+                    className="flex w-full items-center justify-between bg-white rounded-lg border border-[#e9ecef] p-2 text-xs sm:text-sm text-[#343A40] cursor-pointer"
                   >
                     <span className="truncate">{vendorFilter || "All"}</span>
                     <FiChevronDown
@@ -726,14 +726,14 @@ const Subscription = () => {
                     <div className="absolute z-40 mt-2 w-full rounded-lg border border-[#e9ecef] bg-white shadow-xl overflow-visible">
                       <div className="p-3 border-b border-gray-100">
                         <div className="relative">
-                          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 cursor-pointer" />
                           <input
                             ref={vendorSearchInputRef}
                             type="text"
                             placeholder="Search vendors..."
                             value={vendorSearchTerm}
                             onChange={(e) => setVendorSearchTerm(e.target.value)}
-                            className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1f2a7c]/40 focus:border-[#1f2a7c] outline-none"
+                            className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1f2a7c]/40 focus:border-[#1f2a7c] outline-none cursor-pointer"
                           />
                         </div>
                       </div>
@@ -744,7 +744,7 @@ const Subscription = () => {
                               key={vendor}
                               type="button"
                               onClick={() => handleVendorSelect(vendor)}
-                              className={`w-full text-left px-4 py-3 text-xs sm:text-sm hover:bg-gray-50 transition-colors ${
+                              className={`w-full text-left px-4 py-3 text-xs sm:text-sm hover:bg-gray-50 transition-colors cursor-pointer ${
                                 vendorFilter === vendor
                                   ? "bg-[#1f2a7c]/5 text-[#1f2a7c] font-medium"
                                   : "text-gray-700"
@@ -794,7 +794,7 @@ const Subscription = () => {
                 type="button"
                 onClick={openEditModal}
                 disabled={!selectedRowId}
-                className={`px-3 sm:px-4 md:px-[18px] py-2 sm:py-2.5 rounded-lg border-[1.5px] text-xs sm:text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
+                className={`px-3 sm:px-4 md:px-[18px] py-2 sm:py-2.5 rounded-lg border-[1.5px] text-xs sm:text-sm font-semibold transition-all duration-200 whitespace-nowrap cursor-pointer ${
                   selectedRowId
                     ? "border-[#172B4D] text-[#172B4D] bg-transparent hover:bg-[#172B4D] hover:text-white"
                     : "border-gray-300 text-gray-400 bg-gray-50 cursor-not-allowed opacity-60"
@@ -808,14 +808,14 @@ const Subscription = () => {
                   setShowBudgetModal(true);
                   setBudgetData(null);
                 }}
-                className="px-4 py-2 rounded-lg bg-[#172B4D] text-white text-sm font-semibold hover:bg-[#0f1f3d] transition-colors"
+                className="px-4 py-2 rounded-lg bg-[#172B4D] text-white text-sm font-semibold hover:bg-[#0f1f3d] transition-colors cursor-pointer"
               >
                 Budget Management
               </button>
               <button
                 type="button"
                 onClick={() => setShowAddModal(true)}
-                className="px-4 py-2 rounded-lg bg-[#172B4D] text-white text-sm font-semibold hover:bg-[#0f1f3d] transition-colors"
+                className="px-4 py-2 rounded-lg bg-[#172B4D] text-white text-sm font-semibold hover:bg-[#0f1f3d] transition-colors cursor-pointer"
               >
                 Add Subscription
               </button>

@@ -1,13 +1,13 @@
 import Chart from "chart.js/auto";
-import { FiSearch } from "react-icons/fi";
 import { useAuthStore } from "../../stores";
 import { usePopup } from "../../components/Popup";
-import { useVendorData } from "../../hooks/useVendors";
-import { useEffect, useRef, useState, useMemo } from "react";
+import { FiSearch, FiTrash2 } from "react-icons/fi";
 import AddEditVendorModal from "./component/AddEditVendorModal";
 import { populateAccountModal } from "../../lib/api/Account/Account";
 import AddOrganization from "../Home/components/pages/AddOrgnaization";
 import AddAccountModal from "../Home/components/Models/AddAccountModal";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import { useVendorData, useDeleteVendorMutation } from "../../hooks/useVendors";
 
 // Reuse same palette as Reports/Financial for consistency
 const VENDOR_CHART_COLORS = [
@@ -78,7 +78,7 @@ const DUMMY_DEPARTMENT_SPEND = [
 ];
 
 export default function Vendor() {
-  const { showError } = usePopup();
+  const { showError, showSuccess } = usePopup();
   const userAuth = useAuthStore((state) => state.userAuth);
   const userAuthLoading = useAuthStore((state) => state.userAuthLoading);
   const [addAccountModalOpen, setAddAccountModalOpen] = useState(false);
@@ -95,6 +95,10 @@ export default function Vendor() {
   const [debouncedVendorName, setDebouncedVendorName] = useState("");
   const [showAddVendorModal, setShowAddVendorModal] = useState(false);
   const [showEditVendorModal, setShowEditVendorModal] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+
+  const deleteMutation = useDeleteVendorMutation();
+  const isDeletingVendor = deleteMutation.isPending;
 
   const {
     data: vendorData,
@@ -319,6 +323,30 @@ export default function Vendor() {
     }
   }, [vendorError, showError]);
 
+  const openDeleteConfirm = useCallback((row) => {
+    setDeleteConfirm({
+      vendorId: row.vendorId,
+      displayName: row.vendorName ?? "this vendor",
+    });
+  }, []);
+
+  const closeDeleteConfirm = useCallback(() => {
+    setDeleteConfirm(null);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteConfirm?.vendorId) return;
+    try {
+      await deleteMutation.mutateAsync(deleteConfirm.vendorId);
+      closeDeleteConfirm();
+      showSuccess("Vendor deleted successfully.");
+      setSelectedRowId(null);
+    } catch (err) {
+      console.error("Delete vendor failed:", err);
+      showError(err?.message ?? "Unable to delete vendor. Please try again.");
+    }
+  }, [deleteConfirm?.vendorId, deleteMutation, closeDeleteConfirm, showSuccess, showError]);
+
   const handleOpenAddAccountModal = async () => {
     setIsAddAccountButtonDisabled(true);
     try {
@@ -497,7 +525,22 @@ export default function Vendor() {
                           ${row.amount.toLocaleString()}
                         </td>
                         <td className="p-3 text-sm text-[#343A40]">
-                          {row.status === 0 || String(row.status) === "0" ? "Active" : "InActive"}
+                          <span className="inline-flex items-center gap-6">
+                            {row.status === 0 || String(row.status) === "0" ? "Active" : "InActive"}
+                            {selectedRowId === row.activityID && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openDeleteConfirm(row);
+                                }}
+                                className="p-1 rounded text-[#DC3545] hover:bg-red-50 transition-colors"
+                                aria-label="Delete vendor"
+                              >
+                                <FiTrash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </span>
                         </td>
                       </tr>
                     ))
@@ -683,6 +726,52 @@ export default function Vendor() {
           setEditVendor(null);
         }}
       />
+
+      {/* Confirm Delete vendor modal */}
+      {deleteConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
+          onClick={(e) => e.target === e.currentTarget && closeDeleteConfirm()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-vendor-confirm-title"
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 pt-6 pb-4 border-b border-[#e9ecef]">
+              <h2 id="delete-vendor-confirm-title" className="text-lg font-bold text-[#343A40]">
+                Confirm Delete
+              </h2>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-[#343A40]">
+                Are you sure you want to delete <strong>{deleteConfirm.displayName}</strong>? This
+                action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-3 mt-6 pt-4">
+                <button
+                  type="button"
+                  onClick={closeDeleteConfirm}
+                  disabled={isDeletingVendor}
+                  className="px-4 py-2 rounded-lg border border-[#e9ecef] text-[#343A40] text-sm font-semibold bg-white hover:bg-[#F8F9FA] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  disabled={isDeletingVendor}
+                  className="px-4 py-2 rounded-lg bg-[#DC3545] text-white text-sm font-semibold hover:bg-[#c82333] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isDeletingVendor ? "Deleting…" : "Confirm Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
