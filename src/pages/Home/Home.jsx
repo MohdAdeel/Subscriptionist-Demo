@@ -61,7 +61,7 @@ const VENDOR_PROFILE_COLORS = ["#93E8FF", "#BFF1FF", "#00C2FA"];
 
 const DEPARTMENT_CHART_COLORS = ["#E1DBFE", "#BFF1FF", "#E1FFBB", "#EAECF0", "#CFE1FF", "#BFF1FF"];
 
-const UPCOMING_WINDOW_MONTHS = 6; // current month + next 5 months = 6 months total
+const UPCOMING_WINDOW_MONTHS = 6;
 
 const MONTHLY_WINDOW = 7;
 

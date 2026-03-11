@@ -89,7 +89,7 @@ export default function Vendor() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [editVendor, setEditVendor] = useState(null);
-  const [statusFilter, setStatusFilter] = useState("3");
+  const [statusFilter, setStatusFilter] = useState("0");
   const [selectedRowId, setSelectedRowId] = useState(null);
   const [vendorNameFilter, setVendorNameFilter] = useState("");
   const [debouncedVendorName, setDebouncedVendorName] = useState("");
