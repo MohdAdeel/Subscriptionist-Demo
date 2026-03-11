@@ -110,6 +110,16 @@ export default function Vendor() {
     vendor: debouncedVendorName,
   });
 
+  // When status is Inactive, fetch "All" data for the Amount by Vendor chart so it shows the same as All/Active
+  const { data: chartVendorData, isLoading: isLoadingChartVendors } = useVendorData(
+    {
+      status: "3",
+      pagenumber: 1,
+      vendor: debouncedVendorName,
+    },
+    { enabled: statusFilter === "1" }
+  );
+  const chartVendors = chartVendorData?.vendor ?? [];
   const vendors = vendorData?.vendor ?? [];
   const vendorsLengthCount = vendorData?.count ?? 0;
   const activityLineCountForVendor = Array.isArray(vendorData?.activityLineCountForVendor)
@@ -123,15 +133,16 @@ export default function Vendor() {
   const amountByVendorChartInstanceRef = useRef(null);
   const departmentSpendChartInstanceRef = useRef(null);
 
-  // Amount by Vendor chart data: vendors with amount > 0 (from API vendors state)
+  // Amount by Vendor chart data: when Inactive filter is selected, use "All" data so chart matches All/Active; otherwise use current table vendors
   const amountByVendorData = useMemo(() => {
-    return vendors
+    const source = statusFilter === "1" ? chartVendors : vendors;
+    return source
       .filter((v) => (v.amount ?? 0) > 0)
       .map((v) => ({
         label: v.vendorName ?? "Unknown",
         value: v.amount ?? 0,
       }));
-  }, [vendors]);
+  }, [statusFilter, chartVendors, vendors]);
 
   // Server-side pagination: total pages from API count (e.g. 35 / 10 = 4 pages)
   const totalPages = Math.max(1, Math.ceil(vendorsLengthCount / RECORDS_PER_PAGE));
@@ -644,7 +655,7 @@ export default function Vendor() {
               Amount by Vendor
             </h3>
             <div className="flex items-start gap-3">
-              {isLoadingVendors ? (
+              {isLoadingVendors || (statusFilter === "1" && isLoadingChartVendors) ? (
                 <>
                   <div
                     className="flex-shrink-0 rounded-full bg-[#e9ecef] animate-pulse"
