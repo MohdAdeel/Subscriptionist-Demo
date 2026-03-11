@@ -204,7 +204,7 @@ function Profile() {
           className="order-5 sm:order-none px-4 py-2 rounded-lg bg-[#172B4D] text-white text-sm font-semibold hover:bg-[#0f1f3d] transition-colors"
           onClick={handleResetPassword}
         >
-          Reset Password
+          Forgot Password
         </button>
       </div>
 
