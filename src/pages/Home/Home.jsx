@@ -61,9 +61,7 @@ const VENDOR_PROFILE_COLORS = ["#93E8FF", "#BFF1FF", "#00C2FA"];
 
 const DEPARTMENT_CHART_COLORS = ["#E1DBFE", "#BFF1FF", "#E1FFBB", "#EAECF0", "#CFE1FF", "#BFF1FF"];
 
-const UPCOMING_WINDOW_MONTHS = 6;
-const UPCOMING_HALF_FIRST = 0;
-const UPCOMING_HALF_LAST = 1;
+const UPCOMING_WINDOW_MONTHS = 6; // current month + next 5 months = 6 months total
 
 const MONTHLY_WINDOW = 7;
 
@@ -136,13 +134,14 @@ const Home = () => {
   const userAuthLoading = useAuthStore((state) => state.userAuthLoading);
 
   const [monthlyStartMonthIndex, setMonthlyStartMonthIndex] = useState(() => {
+    // Start from current month and show 7 months (e.g. Mar 26 → Mar, Apr, May, Jun, Jul, Aug, Sep)
     const currentMonth = new Date().getMonth();
     return Math.min(currentMonth, 12 - MONTHLY_WINDOW);
   });
   const [departmentYear, setDepartmentYear] = useState(() => new Date().getFullYear());
   const [upcomingRenewalYear, setUpcomingRenewalYear] = useState(() => new Date().getFullYear());
-  const [upcomingRenewalHalf, setUpcomingRenewalHalf] = useState(() =>
-    new Date().getMonth() < 6 ? UPCOMING_HALF_FIRST : UPCOMING_HALF_LAST
+  const [upcomingRenewalStartMonth, setUpcomingRenewalStartMonth] = useState(() =>
+    new Date().getMonth()
   );
   const [budgetYearLabel, setBudgetYearLabel] = useState(
     () => `FY${String(new Date().getFullYear()).slice(-2)}`
@@ -255,11 +254,15 @@ const Home = () => {
     return { minMonth: Math.min(...months), year };
   }, [monthlySpendChartData]);
 
+  // When data loads, ensure start index is valid; prefer current month so chart starts from "this month"
   useEffect(() => {
     if (!monthlyDataStats) return;
     const maxStart = Math.max(0, 12 - MONTHLY_WINDOW);
-    const nextStart = Math.min(monthlyDataStats.minMonth, maxStart);
-    setMonthlyStartMonthIndex((prev) => (prev === nextStart ? prev : nextStart));
+    const currentMonth = new Date().getMonth();
+    setMonthlyStartMonthIndex((prev) => {
+      if (prev >= 0 && prev <= maxStart) return prev;
+      return Math.min(currentMonth, maxStart);
+    });
   }, [monthlyDataStats]);
 
   const monthlySpendByMonth = useMemo(() => {
@@ -301,18 +304,14 @@ const Home = () => {
   );
 
   const departmentYears = useMemo(() => {
-    const years = new Set();
-    departmentRecords.forEach((record) => {
-      const date = toSafeDate(record.SubscriptionStartDate);
-      if (date) years.add(date.getFullYear());
-    });
-    return Array.from(years).sort((a, b) => a - b);
-  }, [departmentRecords]);
+    const currentYear = new Date().getFullYear();
+    return [currentYear - 1, currentYear, currentYear + 1];
+  }, []);
 
   useEffect(() => {
     if (departmentYears.length === 0) return;
-    const latestYear = departmentYears[departmentYears.length - 1];
-    setDepartmentYear((prev) => (departmentYears.includes(prev) ? prev : latestYear));
+    const currentYear = new Date().getFullYear();
+    setDepartmentYear((prev) => (departmentYears.includes(prev) ? prev : currentYear));
   }, [departmentYears]);
 
   const departmentYearRecords = useMemo(() => {
@@ -369,11 +368,10 @@ const Home = () => {
   const upcomingRenewalSeries = useMemo(() => {
     const byMonth = new Map();
     const records = Array.isArray(upcomingRenewalRecords) ? upcomingRenewalRecords : [];
-    const year = upcomingRenewalYear ?? new Date().getFullYear();
-    const startMonth = upcomingRenewalHalf === UPCOMING_HALF_FIRST ? 0 : UPCOMING_WINDOW_MONTHS;
+    // Build byMonth from all records (any year) so we can show any 6-month window
     records.forEach((record) => {
       const date = toSafeDate(record.SubscriptionStartDate);
-      if (!date || date.getFullYear() !== year) return;
+      if (!date) return;
       const key = getMonthKey(date);
       if (byMonth.has(key)) {
         byMonth.get(key).push(record);
@@ -385,9 +383,14 @@ const Home = () => {
     const labels = [];
     const values = [];
     const monthKeys = [];
+    const year = upcomingRenewalYear ?? new Date().getFullYear();
+    let startMonth = upcomingRenewalStartMonth ?? new Date().getMonth();
 
     for (let i = 0; i < UPCOMING_WINDOW_MONTHS; i += 1) {
-      const date = new Date(year, startMonth + i, 1);
+      const monthIndex = startMonth + i;
+      const y = year + Math.floor(monthIndex / 12);
+      const m = monthIndex % 12;
+      const date = new Date(y, m, 1);
       const label = date.toLocaleString("default", { month: "short", year: "numeric" });
       const key = getMonthKey(date);
       labels.push(breakLongMonthNames(label, maxLabelLength));
@@ -399,7 +402,7 @@ const Home = () => {
     const stepSize = Math.max(1, Math.ceil(maxValue / 6));
 
     return { labels, values, monthKeys, byMonth, maxValue, stepSize };
-  }, [upcomingRenewalRecords, upcomingRenewalYear, upcomingRenewalHalf, maxLabelLength]);
+  }, [upcomingRenewalRecords, upcomingRenewalYear, upcomingRenewalStartMonth, maxLabelLength]);
 
   const vendorProfileSeries = useMemo(() => {
     const hasValidData = vendorProfileCounts.length > 0;
@@ -452,9 +455,13 @@ const Home = () => {
   const hasUpcomingTasks = !isLoading && upcomingTasks.length > 0;
   const hasOverdueTasks = !isLoading && overdueTasks.length > 0;
   const upcomingRenewalYearLabel = `FY${String(upcomingRenewalYear).slice(-2)}`;
-  const upcomingRenewalHalfLabel =
-    upcomingRenewalHalf === UPCOMING_HALF_FIRST ? "Jan-Jun" : "Jul-Dec";
-  const upcomingRenewalPeriodLabel = `${upcomingRenewalYearLabel} · ${upcomingRenewalHalfLabel}`;
+  const upcomingRenewalPeriodLabel = (() => {
+    const y = upcomingRenewalYear ?? new Date().getFullYear();
+    const startM = upcomingRenewalStartMonth ?? new Date().getMonth();
+    const startDate = new Date(y, startM, 1);
+    const endDate = new Date(y, startM + UPCOMING_WINDOW_MONTHS - 1, 1);
+    return `${startDate.toLocaleString("default", { month: "short", year: "2-digit" })} - ${endDate.toLocaleString("default", { month: "short", year: "2-digit" })}`;
+  })();
 
   const handleBudgetTrendChange = async (action) => {
     if (action === "last-x-months" && !canBudgetPrev) return;
@@ -477,20 +484,20 @@ const Home = () => {
   const handleBudgetNext = () => handleBudgetTrendChange("next-x-months");
 
   const handleUpcomingRenewalPrev = () => {
-    if (upcomingRenewalHalf === UPCOMING_HALF_LAST) {
-      setUpcomingRenewalHalf(UPCOMING_HALF_FIRST);
-    } else {
+    if (upcomingRenewalStartMonth <= 0) {
+      setUpcomingRenewalStartMonth(11);
       setUpcomingRenewalYear((prev) => prev - 1);
-      setUpcomingRenewalHalf(UPCOMING_HALF_LAST);
+    } else {
+      setUpcomingRenewalStartMonth((prev) => prev - 1);
     }
   };
 
   const handleUpcomingRenewalNext = () => {
-    if (upcomingRenewalHalf === UPCOMING_HALF_FIRST) {
-      setUpcomingRenewalHalf(UPCOMING_HALF_LAST);
-    } else {
+    if (upcomingRenewalStartMonth >= 11) {
+      setUpcomingRenewalStartMonth(0);
       setUpcomingRenewalYear((prev) => prev + 1);
-      setUpcomingRenewalHalf(UPCOMING_HALF_FIRST);
+    } else {
+      setUpcomingRenewalStartMonth((prev) => prev + 1);
     }
   };
 

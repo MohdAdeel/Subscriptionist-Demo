@@ -155,7 +155,17 @@ const ActualVsBudgetChart = ({
           </button>
         </div>
       </div>
-      <div className="mt-4 h-56">{hasActualVsBudget ? <canvas ref={chartRef} /> : skeleton}</div>
+      <div className="mt-4 h-56">
+        {isLoading || isNavigating ? (
+          skeleton
+        ) : hasActualVsBudget ? (
+          <canvas ref={chartRef} />
+        ) : (
+          <div className="h-full flex items-center justify-center text-sm text-[#6B7280]">
+            No data is available
+          </div>
+        )}
+      </div>
     </div>
   );
 };
