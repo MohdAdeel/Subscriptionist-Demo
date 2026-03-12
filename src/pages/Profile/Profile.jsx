@@ -162,11 +162,19 @@ function Profile() {
       ? ((form.firstName?.[0] ?? "") + (form.lastName?.[0] ?? "")).toUpperCase() || "?"
       : "PP";
 
+  // const handleResetPassword = () => {
+  //   const { clientId, authority, redirectUri } = msalConfig.auth;
+  //   const tenant = authority.split("/")[3]; // e.g. subscriptionistportal.onmicrosoft.com
+  //   const redirect = redirectUri;
+  //   window.location.href = `https://subscriptionistportal.b2clogin.com/${tenant}/B2C_1_PasswordReset/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirect)}&response_type=id_token&scope=openid&nonce=defaultNonce&ui_locales=en-US`;
+  // };
+
   const handleResetPassword = () => {
-    const { clientId, authority, redirectUri } = msalConfig.auth;
-    const tenant = authority.split("/")[3]; // e.g. subscriptionistportal.onmicrosoft.com
-    const redirect = redirectUri;
-    window.location.href = `https://subscriptionistportal.b2clogin.com/${tenant}/B2C_1_PasswordReset/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirect)}&response_type=id_token&scope=openid&nonce=defaultNonce&ui_locales=en-US`;
+    msalInstance.loginRedirect({
+      authority:
+        "https://subscriptionistportal.b2clogin.com/subscriptionistportal.onmicrosoft.com/B2C_1_PasswordReset",
+      scopes: ["openid"],
+    });
   };
 
   useEffect(() => {
