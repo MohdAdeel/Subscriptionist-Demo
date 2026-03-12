@@ -4,6 +4,7 @@ import {
   getProfileImage,
   updateProfilePicture,
 } from "../../lib/api/profile/profile";
+import { msalConfig } from "../../lib/msalConfig/authConfig";
 import { FiUpload } from "react-icons/fi";
 import { useAuthStore } from "../../stores";
 import { usePopup } from "../../components/Popup";
@@ -162,8 +163,10 @@ function Profile() {
       : "PP";
 
   const handleResetPassword = () => {
-    const contactId = useAuthStore.getState().userAuth?.contactid;
-    window.location.href = `https://subscriptionistportal.b2clogin.com/a7f3acb1-590c-4634-a6a1-611aa80ea65e/B2C_1_PasswordReset/oauth2/v2.0/authorize?client_id=${contactId}&redirect_uri=https%3A%2F%2Fsubscriptionistportal.powerappsportals.com%2Fsignin-aad-b2c_1&response_type=id_token&scope=openid&response_mode=form_post&nonce=defaultNonce&ui_locales=en-US`;
+    const { clientId, authority, redirectUri } = msalConfig.auth;
+    const tenant = authority.split("/")[3]; // e.g. subscriptionistportal.onmicrosoft.com
+    const redirect = redirectUri;
+    window.location.href = `https://subscriptionistportal.b2clogin.com/a7f3acb1-590c-4634-a6a1-611aa80ea65e/B2C_1_PasswordReset/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirect)}&response_type=id_token&scope=openid&response_mode=form_post&nonce=defaultNonce&ui_locales=en-US`;
   };
 
   useEffect(() => {
