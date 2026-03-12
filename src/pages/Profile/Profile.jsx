@@ -65,6 +65,7 @@ function Profile() {
   const [profileImageUrl, setProfileImageUrl] = useState(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
 
   const userAuth = useAuthStore((state) => state.userAuth);
   const setUserAuth = useAuthStore((state) => state.setUserAuth);
@@ -162,14 +163,8 @@ function Profile() {
       ? ((form.firstName?.[0] ?? "") + (form.lastName?.[0] ?? "")).toUpperCase() || "?"
       : "PP";
 
-  // const handleResetPassword = () => {
-  //   const { clientId, authority, redirectUri } = msalConfig.auth;
-  //   const tenant = authority.split("/")[3]; // e.g. subscriptionistportal.onmicrosoft.com
-  //   const redirect = redirectUri;
-  //   window.location.href = `https://subscriptionistportal.b2clogin.com/${tenant}/B2C_1_PasswordReset/oauth2/v2.0/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirect)}&response_type=id_token&scope=openid&nonce=defaultNonce&ui_locales=en-US`;
-  // };
-
   const handleResetPassword = () => {
+    setIsResettingPassword(true);
     msalInstance.loginRedirect({
       authority:
         "https://subscriptionistportal.b2clogin.com/subscriptionistportal.onmicrosoft.com/B2C_1_PasswordReset",
@@ -212,10 +207,11 @@ function Profile() {
         </div>
         <button
           type="button"
-          className="order-5 sm:order-none px-4 py-2 rounded-lg bg-[#172B4D] text-white text-sm font-semibold hover:bg-[#0f1f3d] transition-colors"
+          className="order-5 sm:order-none px-4 py-2 rounded-lg bg-[#172B4D] text-white text-sm font-semibold hover:bg-[#0f1f3d] transition-colors disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-[#172B4D]"
           onClick={handleResetPassword}
+          disabled={isResettingPassword}
         >
-          Forgot Password
+          {isResettingPassword ? "Redirecting..." : "Reset Password"}
         </button>
       </div>
 
