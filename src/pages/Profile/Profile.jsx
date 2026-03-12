@@ -4,13 +4,13 @@ import {
   getProfileImage,
   updateProfilePicture,
 } from "../../lib/api/profile/profile";
-import { msalConfig } from "../../lib/msalConfig/authConfig";
 import { FiUpload } from "react-icons/fi";
 import { useAuthStore } from "../../stores";
 import { usePopup } from "../../components/Popup";
 import React, { useState, useEffect } from "react";
 import Notifications from "./components/Notifications";
 import AssociatedUsers from "./components/AssociatedUsers";
+import { msalInstance } from "../../lib/msalConfig/msalInstance";
 
 const TABS = [
   { id: "personal", label: "Personal Information" },
