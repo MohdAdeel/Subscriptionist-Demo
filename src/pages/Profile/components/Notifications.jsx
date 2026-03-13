@@ -289,7 +289,7 @@ function Notifications({ contactId, isActive }) {
                       role="switch"
                       aria-checked={emailToggles[opt.id]}
                       onClick={() => setEmailToggle(opt.id, !emailToggles[opt.id])}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-[#172B4D] focus:ring-offset-2 ${
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-[#172B4D] focus:ring-offset-2 cursor-pointer ${
                         emailToggles[opt.id] ? "bg-[#172B4D]" : "bg-[#e9ecef]"
                       }`}
                     >
@@ -382,7 +382,7 @@ function Notifications({ contactId, isActive }) {
                       role="switch"
                       aria-checked={pushToggles[opt.id]}
                       onClick={() => setPushToggle(opt.id, !pushToggles[opt.id])}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-[#172B4D] focus:ring-offset-2 ${
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-[#172B4D] focus:ring-offset-2 cursor-pointer ${
                         pushToggles[opt.id] ? "bg-[#172B4D]" : "bg-[#e9ecef]"
                       }`}
                     >

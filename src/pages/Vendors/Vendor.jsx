@@ -459,7 +459,7 @@ export default function Vendor() {
                   <button
                     type="button"
                     onClick={() => setShowAddVendorModal(true)}
-                    className="px-4 py-2 rounded-lg bg-[#172B4D] text-white text-sm font-semibold hover:bg-[#0f1f3d] transition-colors"
+                    className="px-4 py-2 rounded-lg bg-[#172B4D] text-white text-sm font-semibold hover:bg-[#0f1f3d] transition-colors cursor-pointer"
                   >
                     Add Vendor
                   </button>
@@ -545,7 +545,7 @@ export default function Vendor() {
                                   e.stopPropagation();
                                   openDeleteConfirm(row);
                                 }}
-                                className="p-1 rounded text-[#DC3545] hover:bg-red-50 transition-colors"
+                                className="p-1 rounded text-[#DC3545] hover:bg-red-50 transition-colors cursor-pointer"
                                 aria-label="Delete vendor"
                               >
                                 <FiTrash2 className="w-4 h-4" />

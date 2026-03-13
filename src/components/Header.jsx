@@ -411,7 +411,7 @@ const Header = () => {
                 className="flex items-center gap-2 sm:gap-3 hover:bg-[#f6f7fb] rounded-lg px-2 sm:px-3 py-2 transition-all duration-200 group"
               >
                 {/* User Photo */}
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#172B4D] to-[#000435] flex items-center justify-center overflow-hidden border-2 border-[#e9ecef] group-hover:border-[#172B4D] transition-all shadow-sm">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-[#172B4D] to-[#000435] flex items-center justify-center overflow-hidden border-2 border-[#e9ecef] group-hover:border-[#172B4D] transition-all shadow-sm cursor-pointer">
                   {userPhoto ? (
                     <img
                       src={
@@ -435,7 +435,7 @@ const Header = () => {
 
                 {/* Dropdown Arrow */}
                 <FiChevronDown
-                  className={`text-[#6C757D] text-sm sm:text-base transition-transform duration-200 ${
+                  className={`text-[#6C757D] text-sm sm:text-base transition-transform duration-200 cursor-pointer ${
                     isDropdownOpen ? "rotate-180" : ""
                   }`}
                 />
@@ -455,13 +455,13 @@ const Header = () => {
                 <div className="py-2">
                   <button
                     onClick={handleProfileClick}
-                    className="w-full px-4 py-2.5 text-left text-sm text-[#343A40] hover:bg-[#f6f7fb] hover:text-[#172B4D] transition-all duration-200 font-medium"
+                    className="w-full px-4 py-2.5 text-left text-sm text-[#343A40] hover:bg-[#f6f7fb] hover:text-[#172B4D] transition-all duration-200 font-medium cursor-pointer"
                   >
                     My Profile
                   </button>
                   <button
                     onClick={handleLogout}
-                    className="w-full px-4 py-2.5 text-left text-sm text-[#DC3545] hover:bg-red-50 transition-all duration-200 font-medium"
+                    className="w-full px-4 py-2.5 text-left text-sm text-[#DC3545] hover:bg-red-50 transition-all duration-200 font-medium cursor-pointer"
                   >
                     Logout
                   </button>

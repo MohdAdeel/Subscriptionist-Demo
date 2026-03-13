@@ -273,7 +273,7 @@ function AssociatedUsers({ contactId, isActive }) {
                           <button
                             type="button"
                             onClick={() => openDeleteConfirm(c2.contactid, fullName)}
-                            className="p-1.5 text-[#DC3545] hover:bg-[#DC3545]/10 rounded transition-colors"
+                            className="p-1.5 text-[#DC3545] hover:bg-[#DC3545]/10 rounded transition-colors cursor-pointer"
                             aria-label="Delete"
                           >
                             <FiTrash2 className="w-4 h-4" />

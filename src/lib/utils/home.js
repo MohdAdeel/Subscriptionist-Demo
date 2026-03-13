@@ -401,18 +401,22 @@ function mergeRecordsByMonth() {
 
   let mergedRecords = {};
   filtermonthlysubsinRange();
-
   monthlySubscription.forEach((record) => {
     if (record && record.SubscriptionStartDate) {
       // Extract the month from the SubscriptionnextDate
-      const monthKey = record.SubscriptionStartDate.getMonth();
+      const startDate =
+        record.SubscriptionStartDate instanceof Date
+          ? record.SubscriptionStartDate
+          : new Date(record.SubscriptionStartDate);
+      if (Number.isNaN(startDate.getTime())) return;
+      const monthKey = `${startDate.getFullYear()}-${startDate.getMonth()}`;
       // If the monthKey exists in mergedRecords, accumulate the value
       if (mergedRecords.hasOwnProperty(monthKey)) {
         mergedRecords[monthKey].SubscriptionContractAmount.Value +=
           record.SubscriptionContractAmount.Value;
       } else {
         // Otherwise, create a new entry in mergedRecords
-        mergedRecords[monthKey] = { ...record };
+        mergedRecords[monthKey] = { ...record, SubscriptionStartDate: startDate };
       }
     }
   });
@@ -420,6 +424,8 @@ function mergeRecordsByMonth() {
   // Convert mergedRecords object back to an array of arrays
   const mergedArray = Object.values(mergedRecords).map((record) => [record]);
   const flattenedArray = mergedArray.flat();
+
+  console.log("here is record", flattenedArray);
 
   const { setMonthlySpendChartData } = useHomeStore.getState();
   setMonthlySpendChartData(flattenedArray);
@@ -766,16 +772,15 @@ function parseFrequency(frequencyString) {
 }
 
 function filtermonthlysubsinRange() {
-  const startDate = new Date(currentDate.getFullYear(), startMonthIndex, 1);
-  const endDate = new Date(currentDate.getFullYear(), endMonthIndex + 1, 0); // Set end date to last day of end month
   var tempMonthly = [];
 
   monthlySubscription.forEach(function (record) {
-    var subscriptionstartDate = new Date(record.SubscriptionStartDate);
-
-    if (subscriptionstartDate >= startDate && subscriptionstartDate <= endDate) {
-      // Keep the record if the date is within the specified range
-      tempMonthly.push(record);
+    var subscriptionstartDate =
+      record?.SubscriptionStartDate instanceof Date
+        ? record.SubscriptionStartDate
+        : new Date(record?.SubscriptionStartDate);
+    if (!Number.isNaN(subscriptionstartDate.getTime())) {
+      tempMonthly.push({ ...record, SubscriptionStartDate: subscriptionstartDate });
     }
   });
 

@@ -1,3 +1,9 @@
+import {
+  GetBudgetTrend,
+  handleDataProcessing,
+  calculateSubscriptionAmount,
+  updateDepartmentBudgetChart,
+} from "../../lib/utils/home";
 import { useActivityLines } from "../../hooks";
 import { useAuthStore, useHomeStore } from "../../stores";
 import React, { useEffect, useMemo, useState } from "react";
@@ -18,12 +24,6 @@ import DepartmentSpendChart from "./components/Graphs/DepartmentSpendChart";
 import UpcomingRenewalChart from "./components/Graphs/UpcomingRenewalChart";
 import DashboardSkeletonLoader from "./components/HomeLoader/DashboardSkeletonLoader";
 import { populateAccountModal, getAccountDetails } from "../../lib/api/Account/Account";
-import {
-  GetBudgetTrend,
-  calculateSubscriptionAmount,
-  handleDataProcessing,
-  updateDepartmentBudgetChart,
-} from "../../lib/utils/home";
 
 const BarSkeleton = ({ bars = 6, heights }) => {
   const presetHeights = heights ?? [35, 60, 55, 72, 50, 66];
@@ -111,6 +111,12 @@ const toSafeDate = (value) => {
 };
 
 const getMonthKey = (date) => `${date.getFullYear()}-${date.getMonth()}`;
+const getAbsoluteMonthIndex = (date) => date.getFullYear() * 12 + date.getMonth();
+const monthIndexToDate = (monthIndex) => {
+  const year = Math.floor(monthIndex / 12);
+  const month = monthIndex - year * 12;
+  return new Date(year, month, 1);
+};
 
 const Home = () => {
   const { data: activityLinesData, isLoading } = useActivityLines();
@@ -133,11 +139,9 @@ const Home = () => {
   const userAuth = useAuthStore((state) => state.userAuth);
   const userAuthLoading = useAuthStore((state) => state.userAuthLoading);
 
-  const [monthlyStartMonthIndex, setMonthlyStartMonthIndex] = useState(() => {
-    // Start from current month and show 7 months (e.g. Mar 26 → Mar, Apr, May, Jun, Jul, Aug, Sep)
-    const currentMonth = new Date().getMonth();
-    return Math.min(currentMonth, 12 - MONTHLY_WINDOW);
-  });
+  const [monthlyStartMonthIndex, setMonthlyStartMonthIndex] = useState(() =>
+    getAbsoluteMonthIndex(new Date())
+  );
   const [departmentYear, setDepartmentYear] = useState(() => new Date().getFullYear());
   const [upcomingRenewalYear, setUpcomingRenewalYear] = useState(() => new Date().getFullYear());
   const [upcomingRenewalStartMonth, setUpcomingRenewalStartMonth] = useState(() =>
@@ -246,22 +250,19 @@ const Home = () => {
       .map((item) => toSafeDate(item.SubscriptionStartDate))
       .filter(Boolean);
     if (dates.length === 0) return null;
-    const months = dates.map((date) => date.getMonth());
-    const year = dates.reduce(
-      (max, date) => Math.max(max, date.getFullYear()),
-      dates[0].getFullYear()
-    );
-    return { minMonth: Math.min(...months), year };
+    const monthIndexes = dates.map((date) => getAbsoluteMonthIndex(date));
+    return {
+      minMonthIndex: Math.min(...monthIndexes),
+      maxMonthIndex: Math.max(...monthIndexes),
+    };
   }, [monthlySpendChartData]);
 
   // When data loads, ensure start index is valid; prefer current month so chart starts from "this month"
   useEffect(() => {
     if (!monthlyDataStats) return;
-    const maxStart = Math.max(0, 12 - MONTHLY_WINDOW);
-    const currentMonth = new Date().getMonth();
+    const currentMonthIndex = getAbsoluteMonthIndex(new Date());
     setMonthlyStartMonthIndex((prev) => {
-      if (prev >= 0 && prev <= maxStart) return prev;
-      return Math.min(currentMonth, maxStart);
+      return Number.isFinite(prev) ? prev : currentMonthIndex;
     });
   }, [monthlyDataStats]);
 
@@ -278,13 +279,12 @@ const Home = () => {
   }, [monthlySpendChartData]);
 
   const monthlySpendSeries = useMemo(() => {
+    if (!monthlyDataStats) return { labels: [], values: [] };
     const labels = [];
     const values = [];
-    const year = monthlyDataStats?.year ?? new Date().getFullYear();
     for (let i = 0; i < MONTHLY_WINDOW; i += 1) {
       const monthIndex = monthlyStartMonthIndex + i;
-      if (monthIndex > 11) break;
-      const date = new Date(year, monthIndex, 1);
+      const date = monthIndexToDate(monthIndex);
       const label = date.toLocaleString("default", { month: "short", year: "numeric" });
       labels.push(breakLongMonthNames(label, maxLabelLength));
       values.push(monthlySpendByMonth.get(getMonthKey(date)) ?? 0);
@@ -561,9 +561,8 @@ const Home = () => {
       setSelectedVendorProfileKey(null);
     }
   }, [selectedVendorProfileKey, VendorProfileChartData]);
-  const maxMonthlyStartMonthIndex = Math.max(0, 12 - MONTHLY_WINDOW);
-  const canMonthlyPrev = monthlyStartMonthIndex > 0;
-  const canMonthlyNext = monthlyStartMonthIndex < maxMonthlyStartMonthIndex;
+  const canMonthlyPrev = true;
+  const canMonthlyNext = true;
   const departmentYearIndex = departmentYears.indexOf(departmentYear);
   const canDepartmentPrev = departmentYearIndex > 0;
   const canDepartmentNext =
@@ -699,10 +698,8 @@ const Home = () => {
               hasMonthlySpend={hasMonthlySpend}
               canMonthlyPrev={canMonthlyPrev}
               canMonthlyNext={canMonthlyNext}
-              onMonthlyPrev={() => setMonthlyStartMonthIndex((prev) => Math.max(0, prev - 1))}
-              onMonthlyNext={() =>
-                setMonthlyStartMonthIndex((prev) => Math.min(maxMonthlyStartMonthIndex, prev + 1))
-              }
+              onMonthlyPrev={() => setMonthlyStartMonthIndex((prev) => prev - 1)}
+              onMonthlyNext={() => setMonthlyStartMonthIndex((prev) => prev + 1)}
               skeleton={<LineSkeleton />}
             />
             <DepartmentSpendChart
