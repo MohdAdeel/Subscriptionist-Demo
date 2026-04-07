@@ -36,6 +36,35 @@
   animation: fadeIn 0.3s ease-in-out;
 }
 
+/* Modal entrance — soft depth without harsh motion */
+@keyframes modalBackdropIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalPanelIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-modal-backdrop {
+  animation: modalBackdropIn 0.22s ease-out forwards;
+}
+
+.animate-modal-panel {
+  animation: modalPanelIn 0.34s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* Smooth skeleton loader - gentle shimmer */
 @keyframes skeletonShimmer {
   0%,

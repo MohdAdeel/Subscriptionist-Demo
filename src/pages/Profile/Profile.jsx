@@ -11,15 +11,15 @@ import React, { useState, useEffect } from "react";
 import Notifications from "./components/Notifications";
 import AssociatedUsers from "./components/AssociatedUsers";
 import { msalInstance } from "../../lib/msalConfig/msalInstance";
+import OrganizationSettings from "./components/OrganizationSettings";
 
 const TABS = [
   { id: "personal", label: "Personal Information" },
   { id: "notification", label: "Notification Settings" },
   { id: "associated", label: "Associated Users" },
+  { id: "organization", label: "Organizational Settings" },
 ];
 
-// Map API contact object to form fields (API returns array with one object)
-// Fields: contactid, telephone1, emailaddress1, firstname, lastname, adx_organizationname, accountrolecode, websiteurl
 function mapProfileToForm(contact) {
   if (!contact || typeof contact !== "object") return null;
   return {
@@ -465,6 +465,14 @@ function Profile() {
       {/* Associated Users tab */}
       {activeTab === "associated" && (
         <AssociatedUsers contactId={profile?.contactid} isActive={activeTab === "associated"} />
+      )}
+
+      {/* Organization Settings tab */}
+      {activeTab === "organization" && (
+        <OrganizationSettings
+          // contactId={profile?.contactid}
+          isActive={activeTab === "organization"}
+        />
       )}
     </div>
   );
