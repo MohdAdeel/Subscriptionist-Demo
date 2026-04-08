@@ -140,3 +140,36 @@ export async function updateProfilePicture(contactId, entityimage) {
     throw new Error(`Failed to update profile picture: ${err.response?.status ?? ""} - ${message}`);
   }
 }
+
+
+/**
+ * Create a new contract
+ * @param {Object} payload - { contractName, planId, contactId, startDate, endDate, contractStatus }
+ * @returns {Promise<Object>} Response data
+ */
+export async function createContract(payload) {
+  try {
+    const response = await API.post("/createContract", payload);
+    if (response.status === 204) return {};
+    return response.data ?? {};
+  } catch (err) {
+    const message = err.response?.data != null ? String(err.response.data) : err.message;
+    throw new Error(`Failed to create contract: ${err.response?.status ?? ""} - ${message}`);
+  }
+}
+
+/**
+ * Update an existing contract
+ * @param {Object} payload - { contractId, contractName, accountId, contactId, endDate, contractStatus }
+ * @returns {Promise<Object>} Response data
+ */
+export async function updateContract(payload) {
+  try {
+    const response = await API.patch("/updateContract", payload);
+    if (response.status === 204) return {};
+    return response.data ?? {};
+  } catch (err) {
+    const message = err.response?.data != null ? String(err.response.data) : err.message;
+    throw new Error(`Failed to update contract: ${err.response?.status ?? ""} - ${message}`);
+  }
+}

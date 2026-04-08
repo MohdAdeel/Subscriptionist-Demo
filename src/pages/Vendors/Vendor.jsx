@@ -78,6 +78,7 @@ const DUMMY_DEPARTMENT_SPEND = [
 ];
 
 export default function Vendor() {
+    console.log("Vendor component rerendered");
   const { showError, showSuccess } = usePopup();
   const userAuth = useAuthStore((state) => state.userAuth);
   const userAuthLoading = useAuthStore((state) => state.userAuthLoading);
@@ -196,8 +197,14 @@ export default function Vendor() {
     };
   }, [activityLineCountForVendor]);
 
+  const serializedAmountByVendorData = useMemo(
+  () => JSON.stringify(amountByVendorData),
+  [amountByVendorData]
+);
+
   // Amount by Vendor donut (driven by vendors with amount > 0)
   useEffect(() => {
+     console.log("Amount By Vendor effect fired");
     if (!amountByVendorChartRef.current) return;
     const labels = amountByVendorData.map((e) => e.label);
     const values = amountByVendorData.map((e) => e.value);
@@ -242,7 +249,7 @@ export default function Vendor() {
         amountByVendorChartInstanceRef.current = null;
       }
     };
-  }, [amountByVendorData]);
+  }, [serializedAmountByVendorData]);
 
   // Departmental Spend Trend bar (dummy data; chart created when canvas is visible after loading)
   useEffect(() => {
