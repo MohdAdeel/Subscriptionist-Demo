@@ -209,7 +209,8 @@ const Subscription = () => {
   const isSavingEdit = updateMutation.isPending;
   const isDeletingSubscription = deleteMutation.isPending;
 
-  const totalCount = Number(subscriptionResult?.TotalCount) ?? 0;
+  const totalCountRaw = Number(subscriptionResult?.TotalCount);
+  const totalCount = Number.isFinite(totalCountRaw) ? totalCountRaw : 0;
   const ActivityLines = mapActivityLinesToTableRows(subscriptionResult ?? {});
 
   // Keep a cumulative list of all vendors from every API response so the dropdown
@@ -476,7 +477,8 @@ const Subscription = () => {
   }, [subscriptionError, showError]);
 
   const handleUpdateSubscription = useCallback(
-    async (formData) => {
+    async (formData, options = {}) => {
+      const { closeAfter = true } = options;
       if (!formData) return;
       const subscriptionName = formData.subsname;
       const subscriptionActivityId = formData.activityLineId;
@@ -491,14 +493,18 @@ const Subscription = () => {
         await updateMutation.mutateAsync(formData);
         showSuccess("Subscription updated successfully.");
         invalidateNotifications();
-        setShowEditModal(false);
+        if (closeAfter) {
+          setShowEditModal(false);
+        }
       } catch (err) {
         console.error("Subscription check or update failed:", err);
         showError("Unable to save subscription. Please try again.");
-        setShowEditModal(false);
+        if (closeAfter) {
+          setShowEditModal(false);
+        }
       }
     },
-    [updateMutation, showSuccess, showError, showWarning]
+    [updateMutation, showSuccess, showError, showWarning, invalidateNotifications]
   );
 
   const handleAddSuccess = useCallback(() => {

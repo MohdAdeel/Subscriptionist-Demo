@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ACTIVITY_LINES_QUERY_KEY } from "../../../../hooks/useActivityLines";
-import AddSubscriptionModalFromFlow from "../Models/AddSubscriptionModalFromFlow";
+import AddSubscriptionModal from "../../../Subscriptions/components/AddSubscriptionModal";
 
 export default function AddSubscription() {
   const queryClient = useQueryClient();
@@ -86,7 +86,7 @@ export default function AddSubscription() {
         </button>
       </div>
 
-      <AddSubscriptionModalFromFlow
+      <AddSubscriptionModal
         open={modalOpen}
         setOpen={setModalOpen}
         onAddSuccess={handleAddSuccess}

@@ -1,6 +1,6 @@
-import { FiCalendar } from "react-icons/fi";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { InputSkeleton } from "../../../components/SkeletonLoader";
+import { FiCalendar, FiLock, FiChevronRight } from "react-icons/fi";
 
 const UNIT_MAP = { 0: "Active", 1: "InActive", 2: "Canceled", 3: "Scheduled" };
 const DESC_MAX = 2000;
@@ -25,7 +25,6 @@ function toDateInputValue(val) {
   return s.length >= 10 ? s.substring(0, 10) : s;
 }
 
-/** Format date (yyyy-mm-dd or ISO) for display as dd/mm/yyyy */
 function formatDateToDDMMYYYY(val) {
   if (val == null || val === "") return "";
   const s = String(val);
@@ -36,25 +35,10 @@ function formatDateToDDMMYYYY(val) {
   return `${d}/${m}/${y}`;
 }
 
-/** Parse dd/mm/yyyy to yyyy-mm-dd for form state / API */
-function parseDDMMYYYYToYYYYMMDD(val) {
-  if (val == null || val === "") return "";
-  const parts = String(val).trim().split("/");
-  if (parts.length !== 3) return "";
-  const [d, m, y] = parts;
-  const day = d.padStart(2, "0");
-  const month = m.padStart(2, "0");
-  const year = y.trim();
-  if (day.length !== 2 || month.length !== 2 || year.length !== 4) return "";
-  const num = parseInt(year, 10) * 10000 + parseInt(month, 10) * 100 + parseInt(day, 10);
-  if (Number.isNaN(num)) return "";
-  return `${year}-${month}-${day}`;
-}
-
-function defaultFormState(editFormData) {
+function defaultFormState() {
   return {
     ActivityAutoNumber: "",
-    activityLineId: editFormData?.activityid ?? "",
+    activityLineId: "",
     subsname: "",
     description: "",
     subsstartdate: "",
@@ -70,13 +54,19 @@ function defaultFormState(editFormData) {
     nextduedate: "",
     activityStatus: "",
     subscontractamount: "",
-    department: "",
+    departmentId: "",
     departmentName: "",
     account: "",
+    vendorProfileDisplay: "",
+    vendorName: "",
+    subscriptionAmount: "",
+    lastUpdated: "",
+    accountManagerName: "",
+    accountManagerEmail: "",
+    accountManagerPhone: "",
   };
 }
 
-/** Convert yyyy-mm-dd to ISO date string for server if needed */
 function toISODateString(val) {
   if (val == null || val === "") return val;
   const s = String(val).trim();
@@ -86,7 +76,7 @@ function toISODateString(val) {
   return s;
 }
 
-/** Build payload for server with exact property names the server accepts. Values from form. */
+/** Update payload only — used with UpdateSubscriptionActivityLine (no create/add). */
 function buildSavePayload(form, editFormData) {
   const subsfrequencyunit =
     form.subsfrequencyunit === "null" || form.subsfrequencyunit === ""
@@ -122,6 +112,13 @@ function buildSavePayload(form, editFormData) {
   };
 }
 
+function mapVendorProfileLabel(vpRaw) {
+  if (vpRaw === 1 || vpRaw === "1") return "Strategic";
+  if (vpRaw === 2 || vpRaw === "2") return "Tactical";
+  if (vpRaw === 3 || vpRaw === "3") return "Operational";
+  return "";
+}
+
 function mapEditFormDataToState(data) {
   if (!data) return defaultFormState();
   const al = data[0];
@@ -131,12 +128,10 @@ function mapEditFormDataToState(data) {
   const frequencyNumberFromApi =
     al.yiic_subscriptionfrequencynumber != null ? String(al.yiic_subscriptionfrequencynumber) : "";
   const frequencyUnitFromApi = al.yiic_subscriptionfrequencyunit ?? "null";
-  // Normalize unit to string (API may return number e.g. 664160002)
   const frequencyUnitRaw =
     frequencyUnitFromApi !== "null" && frequencyUnitFromApi != null
       ? String(frequencyUnitFromApi)
       : null;
-  // If backend sent subsfrequency (e.g. "1 Year", "2 Months", "100 Monthly") but number/unit missing, parse it
   const parsed = parseSubscriptionFrequency(subscriptionFrequencyRaw);
   const subsfrequencynumber =
     frequencyNumberFromApi !== "" ? frequencyNumberFromApi : parsed.number;
@@ -145,6 +140,7 @@ function mapEditFormDataToState(data) {
     subsfrequencynumber && subsfrequencyunit !== "null"
       ? formatSubscriptionFrequencyDisplay(subsfrequencynumber, subsfrequencyunit)
       : subscriptionFrequencyRaw;
+  const vpRaw = sub?.yiic_vendorprofile ?? al?.yiic_vendorprofile;
   return {
     ActivityAutoNumber: sub.yiic_activityid ?? "",
     activityLineId: al.yiic_activityid ?? "",
@@ -180,15 +176,16 @@ function mapEditFormDataToState(data) {
       "",
     departmentName: dept.yiic_name ?? "",
     vendorName: sub.yiic_vendorname ?? "",
+    vendorProfileDisplay: mapVendorProfileLabel(vpRaw),
     account:
       sub?.account?.name ??
       al?.yiic_Subscriptionactivity_yiic_subscriptionsactivityline?.account?.name,
     subscriptionAmount:
       sub.yiic_subscriptionamount != null ? String(sub.yiic_subscriptionamount) : "",
     lastUpdated: toDateInputValue(al.modifiedon),
-    accountManagerName: sub.yiic_accountmanagername ?? "Not Available",
-    accountManagerEmail: sub.yiic_accountmanageremail ?? "Not Available",
-    accountManagerPhone: sub.yiic_accountmanagerphone ?? "Not Available",
+    accountManagerName: sub.yiic_accountmanagername ?? "",
+    accountManagerEmail: sub.yiic_accountmanageremail ?? "",
+    accountManagerPhone: sub.yiic_accountmanagerphone ?? "",
   };
 }
 
@@ -198,7 +195,6 @@ function formatContractAmount(val) {
   return n.toFixed(2);
 }
 
-/** Parse subsfrequency string from backend (e.g. "1 Year", "2 Months", "100 Monthly", "1 Yearly") into number and unit code */
 function parseSubscriptionFrequency(str) {
   if (str == null || typeof str !== "string" || !str.trim()) return { number: "", unit: "null" };
   const s = str.trim();
@@ -207,11 +203,10 @@ function parseSubscriptionFrequency(str) {
   const num = match[1];
   const unitWord = (match[2] || "").toLowerCase();
   const isMonths = unitWord === "month" || unitWord === "months" || unitWord === "monthly";
-  const unit = isMonths ? "664160002" : "664160003"; // Months : Years
+  const unit = isMonths ? "664160002" : "664160003";
   return { number: num, unit };
 }
 
-/** Build display string for Subscription Frequency (singular when 1: "1 Year", "1 Month") */
 function formatSubscriptionFrequencyDisplay(number, unitCode) {
   if (number === "" || !unitCode || unitCode === "null") return "";
   const n = parseInt(number, 10);
@@ -223,6 +218,18 @@ function formatSubscriptionFrequencyDisplay(number, unitCode) {
     return n === 1 ? "1 Year" : `${n} Years`;
   }
   return "";
+}
+
+function LockedInput({ children, className = "" }) {
+  return (
+    <div className={`relative ${className}`.trim()}>
+      <i
+        className="fa fa-lock pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-[13px] text-slate-400/90"
+        aria-hidden
+      />
+      {children}
+    </div>
+  );
 }
 
 export default function EditSubscriptionModal({
@@ -249,21 +256,28 @@ export default function EditSubscriptionModal({
     }
   };
 
-  // Clear form when modal closes
+  const handleEnterOrSpace = useCallback(
+    (action) => (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        action();
+      }
+    },
+    []
+  );
+
   useEffect(() => {
     if (!open) {
-      setForm(defaultFormState(editFormData));
+      setForm(defaultFormState());
     }
   }, [open]);
 
-  // Populate form when editFormData is available
   useEffect(() => {
     if (open && editFormData) {
       setForm(mapEditFormDataToState(editFormData));
     }
   }, [open, editFormData]);
 
-  // Sync Subscription Frequency display when number or unit changes (use same singular/plural as backend)
   useEffect(() => {
     const unitCode =
       form.subsfrequencyunit === "664160002" || form.subsfrequencyunit === 664160002
@@ -310,12 +324,17 @@ export default function EditSubscriptionModal({
     }
   }, []);
 
-  const handleSave = useCallback(() => {
-    setLocalSubmitting(true);
-    onSave?.(buildSavePayload(form, editFormData));
-  }, [form, editFormData, onSave]);
+  const runSave = useCallback(
+    (closeAfter) => {
+      if (!form.subsname?.trim() || !form.lastduedate?.trim() || !form.departmentId?.trim()) {
+        return;
+      }
+      setLocalSubmitting(true);
+      onSave?.(buildSavePayload(form, editFormData), { closeAfter });
+    },
+    [form, editFormData, onSave]
+  );
 
-  // Clear local submitting when parent reports save finished (e.g. isSaving went false) or modal closed
   useEffect(() => {
     if (!isSaving) setLocalSubmitting(false);
   }, [isSaving]);
@@ -328,43 +347,75 @@ export default function EditSubscriptionModal({
   const isLoading = (open && editFormData == null) || isLoadingForm;
   const descriptionCount = form.description.length;
 
+  const labelCls =
+    "text-xs sm:text-[13px] font-semibold text-slate-600 mb-2 block leading-snug tracking-tight";
+  const requiredCls = "text-rose-400 font-normal normal-case tracking-normal ml-0.5";
   const inputCls =
-    "h-9 sm:h-10 text-xs sm:text-sm rounded-md border border-gray-300 text-gray-900 w-full box-border py-1.5 px-2 sm:px-2.5 focus:border-[#7259f6] focus:outline-none focus:shadow-[0_0_0_1px_#7259f6]";
+    "h-10 sm:h-11 text-sm rounded-xl border border-slate-200/90 bg-white text-slate-800 w-full box-border py-2 px-3 sm:px-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-[border-color,box-shadow] duration-200 placeholder:text-slate-400 focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200/70 focus:ring-offset-0";
   const readonlyCls =
-    "h-9 sm:h-10 text-xs sm:text-sm rounded-md border border-gray-300 text-gray-900 w-full box-border py-1.5 px-2 sm:px-2.5 pl-8 sm:pl-[34px] bg-gray-100 cursor-not-allowed";
-  const lockIcon = (
-    <i className="fa fa-lock absolute left-2 sm:left-3 top-[37px] text-xs sm:text-sm text-gray-400" />
-  );
+    "h-10 sm:h-11 text-sm rounded-xl border border-slate-200/70 bg-gradient-to-b from-slate-50/95 to-slate-100/50 text-slate-600 w-full box-border py-2 px-3 sm:px-3.5 pl-9 sm:pl-10 cursor-not-allowed shadow-inner shadow-slate-200/40";
+  const sectionCls =
+    "rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white via-indigo-50/[0.35] to-sky-50/30 p-4 sm:p-5 shadow-[0_1px_3px_rgba(15,23,42,0.04),0_8px_24px_-8px_rgba(99,102,241,0.08)]";
+  const sectionHeaderCls = "flex items-start justify-between gap-3 mb-4 sm:mb-5";
+  const sectionTitleCls =
+    "text-[15px] sm:text-base font-semibold tracking-tight text-slate-800 m-0";
+  const sectionHintCls = "text-xs text-slate-500 mt-1 leading-snug max-w-prose";
+  const sectionGridCls = "grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-4 sm:gap-y-5";
+  const accordionCls =
+    "group rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white to-indigo-50/20 shadow-[0_1px_3px_rgba(15,23,42,0.04)] transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] hover:border-indigo-200/50 hover:shadow-[0_12px_32px_-16px_rgba(99,102,241,0.18)] open:border-indigo-200/60 open:shadow-[0_16px_40px_-18px_rgba(99,102,241,0.2)]";
+  const accordionSummaryCls =
+    "cursor-pointer rounded-2xl px-4 sm:px-5 py-3.5 flex items-center gap-3 list-none transition-colors duration-300 ease-out group-open:bg-indigo-50/40 hover:bg-slate-50/80 [&::-webkit-details-marker]:hidden";
+  const accordionChevronCls =
+    "w-4 h-4 shrink-0 text-indigo-400 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-open:rotate-90";
+  const accordionPanelCls =
+    "grid overflow-hidden px-4 sm:px-5 transition-[grid-template-rows,opacity,padding] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] grid-rows-[0fr] opacity-60 pb-0 group-open:grid-rows-[1fr] group-open:opacity-100 group-open:pb-5";
+  const accordionPanelInnerCls =
+    "min-h-0 overflow-hidden pt-0 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] opacity-0 translate-y-1 group-open:pt-2 group-open:opacity-100 group-open:translate-y-0";
+  const textareaCls = `${inputCls} h-auto min-h-[104px] resize-y py-2.5 leading-relaxed`;
+
+  const actionDisabled =
+    isSaving ||
+    localSubmitting ||
+    !form.subsname?.trim() ||
+    !form.lastduedate?.trim() ||
+    !form.departmentId?.trim();
+
+  const lastUpdatedDisplay = formatDateToDDMMYYYY(form.lastUpdated) || "—";
 
   return (
-    <div className="fixed top-0 right-0 bottom-0 left-[245px] z-[1000] bg-black/50 flex items-center justify-center overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6">
-      <div className="bg-white rounded-lg sm:rounded-[14px] w-full max-w-[1200px] flex flex-col overflow-hidden my-auto max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-2rem)] min-h-0 shadow-xl">
+    <div className="animate-modal-backdrop fixed top-0 right-0 bottom-0 left-[245px] z-[80] flex items-center justify-center overflow-y-auto overflow-x-hidden bg-slate-900/30 p-4 sm:p-5 md:p-8 backdrop-blur-[3px]">
+      <div className="animate-modal-panel bg-white/95 w-full max-w-[1180px] flex flex-col overflow-hidden my-auto max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-2.5rem)] min-h-0 rounded-2xl border border-white/80 shadow-[0_0_0_1px_rgba(15,23,42,0.04),0_24px_48px_-12px_rgba(15,23,42,0.12),0_12px_24px_-8px_rgba(99,102,241,0.1)]">
         <div className="flex flex-col h-full min-h-0">
-          {/* HEADER */}
-          <div className="p-3 sm:p-4 md:p-[18px_28px] border-b border-gray-200 flex justify-between items-center gap-3 sm:gap-4">
-            <h5 className="text-base sm:text-lg font-semibold text-slate-900 m-0 flex-1">
-              Edit Subscription
-            </h5>
+          <div className="shrink-0 px-5 sm:px-7 py-4 sm:py-5 border-b border-slate-200/70 bg-gradient-to-r from-indigo-50/50 via-white to-sky-50/40 flex justify-between items-start sm:items-center gap-4">
+            <div className="min-w-0 flex-1">
+              <h5 className="text-lg sm:text-xl font-semibold tracking-tight text-slate-800 m-0">
+                Edit Subscription
+              </h5>
+              <p className="text-sm text-slate-500 mt-1 m-0 leading-snug">
+                Update subscription details, schedule, and financial information.
+              </p>
+            </div>
             <button
               type="button"
-              className="group p-2.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:rotate-90"
+              className="shrink-0 inline-flex h-10 w-10 items-center justify-center rounded-full text-slate-400 transition-colors duration-200 hover:bg-indigo-100/70 hover:text-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300/80"
               onClick={onClose}
               aria-label="Close"
             >
-              ×
+              <span className="text-2xl leading-none font-light" aria-hidden>
+                ×
+              </span>
             </button>
           </div>
 
-          {/* BODY */}
-          <div className="p-3 sm:p-4 md:p-[22px_28px] overflow-y-auto flex-1 max-h-[calc(95vh-100px)] sm:max-h-[calc(90vh-120px)]">
+          <div className="px-5 sm:px-7 py-5 sm:py-6 overflow-y-auto flex-1 max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-140px)] bg-gradient-to-b from-slate-50/40 to-white">
             {isLoading ? (
-              <div className="flex flex-col lg:flex-row gap-4 sm:gap-5 md:gap-7 animate-pulse">
-                <div className="flex-1 lg:border-r lg:border-gray-200 lg:pr-4 lg:pr-7 space-y-3.5">
+              <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 md:gap-10 animate-pulse">
+                <div className="flex-1 lg:border-r lg:border-slate-200/70 lg:pr-6 lg:pr-10 space-y-5">
                   {Array.from({ length: 10 }).map((_, i) => (
                     <InputSkeleton key={i} className="mb-0" />
                   ))}
                 </div>
-                <div className="flex-1 lg:pl-4 xl:pl-7 space-y-3.5">
+                <div className="flex-1 space-y-5">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <InputSkeleton key={i} className="mb-0" />
                   ))}
@@ -372,334 +423,494 @@ export default function EditSubscriptionModal({
               </div>
             ) : (
               <form onSubmit={(e) => e.preventDefault()}>
-                <div className="flex flex-col lg:flex-row gap-4 sm:gap-5 md:gap-7">
-                  {/* LEFT COLUMN */}
-                  <div className="flex-1 lg:border-r lg:border-gray-200 lg:pr-4 lg:pr-7">
-                    <div className="mb-3.5 relative">
-                      {lockIcon}
-                      <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                        Subscription Activity ID
-                      </label>
-                      <input readOnly value={form.ActivityAutoNumber} className={readonlyCls} />
-                    </div>
-
-                    <div className="mb-3.5 relative">
-                      <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                        Subscription Name
-                      </label>
-                      <input
-                        maxLength={87}
-                        value={form.subsname}
-                        onChange={(e) => update("subsname", e.target.value)}
-                        className={inputCls}
-                      />
-                    </div>
-
-                    <div className="mb-3.5 relative">
-                      <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                        Subscription Contract Amount
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min={0}
-                        value={form.subscontractamount}
-                        onChange={(e) => update("subscontractamount", e.target.value)}
-                        onBlur={handleContractAmountBlur}
-                        className={inputCls}
-                      />
-                    </div>
-
-                    <div className="mb-3.5 relative">
-                      <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                        Description
-                      </label>
-                      <textarea
-                        maxLength={DESC_MAX}
-                        rows={4}
-                        value={form.description}
-                        onChange={handleDescriptionChange}
-                        className="h-auto resize-none py-1.5 px-2 sm:px-2.5 text-xs sm:text-sm rounded-md border border-gray-300 text-gray-900 w-full box-border focus:border-[#7259f6] focus:outline-none focus:shadow-[0_0_0_1px_#7259f6]"
-                      />
-                      <small className="text-[10px] sm:text-xs text-gray-500 flex justify-end">
-                        <span>{descriptionCount}</span>/2000
-                      </small>
-                    </div>
-
-                    {[
-                      {
-                        key: "subsstartdate",
-                        label: "Subscription Start Date",
-                        disabled: false,
-                        pickerRef: startDatePickerRef,
-                      },
-                      {
-                        key: "subsenddate",
-                        label: "Subscription End Date",
-                        disabled: false,
-                        pickerRef: endDatePickerRef,
-                      },
-                    ].map(({ key, label, disabled, pickerRef }) => (
-                      <div className="mb-3.5 relative" key={key}>
-                        <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                          {label}
-                        </label>
-                        <div
-                          className="relative cursor-pointer"
-                          onClick={() => !disabled && openDatePicker(pickerRef)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              if (!disabled) openDatePicker(pickerRef);
-                            }
-                          }}
-                          role="button"
-                          tabIndex={disabled ? -1 : 0}
-                          aria-label={`Open calendar for ${label}`}
-                        >
-                          <input
-                            ref={pickerRef}
-                            type="date"
-                            value={form[key] || ""}
-                            onChange={(e) => update(key, e.target.value)}
-                            disabled={disabled}
-                            className="absolute inset-0 w-full h-full opacity-0 pointer-events-none disabled:pointer-events-none"
-                            aria-label={label}
-                            tabIndex={-1}
-                          />
-                          <input
-                            type="text"
-                            readOnly
-                            placeholder="dd/mm/yyyy"
-                            value={formatDateToDDMMYYYY(form[key])}
-                            className={`${inputCls} pl-8 sm:pl-10 pointer-events-none disabled:opacity-60`}
-                            tabIndex={-1}
-                            aria-hidden
-                          />
-                          <FiCalendar
-                            className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-[18px] sm:h-[18px] pointer-events-none text-gray-500"
-                            aria-hidden
-                          />
+                <div className="flex flex-col lg:flex-row gap-6 sm:gap-8 md:gap-10">
+                  <div className="flex-1 lg:border-r lg:border-slate-200/70 lg:pr-6 lg:pr-10 space-y-5 sm:space-y-6">
+                    <section className={sectionCls}>
+                      <div className={sectionHeaderCls}>
+                        <div>
+                          <h6 className={sectionTitleCls}>Subscription Overview</h6>
+                          <p className={sectionHintCls}>The core identity of the subscription</p>
                         </div>
                       </div>
-                    ))}
+                      <div className={sectionGridCls}>
+                        <div>
+                          <label className={labelCls}>Subscription ID</label>
+                          <LockedInput>
+                            <input
+                              readOnly
+                              value={form.ActivityAutoNumber || "—"}
+                              className={readonlyCls}
+                            />
+                          </LockedInput>
+                        </div>
 
-                    <div className="mb-3.5 relative">
-                      <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                        Subscription Frequency Number
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={form.subsfrequencynumber}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          if (v === "" || v === "-") update("subsfrequencynumber", v);
-                          else {
-                            const n = Number(v);
-                            update("subsfrequencynumber", Number.isNaN(n) ? v : n < 0 ? "0" : v);
-                          }
-                        }}
-                        className={inputCls}
-                      />
-                    </div>
-
-                    <div className="mb-3.5 relative">
-                      <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                        Subscription Frequency Unit
-                      </label>
-                      <select
-                        value={form.subsfrequencyunit}
-                        onChange={(e) => update("subsfrequencyunit", e.target.value)}
-                        className={inputCls}
-                      >
-                        <option value="null">Select</option>
-                        <option value="664160002">Months</option>
-                        <option value="664160003">Years</option>
-                      </select>
-                    </div>
-
-                    <div className="mb-3.5 relative">
-                      {lockIcon}
-                      <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                        Subscription Frequency
-                      </label>
-                      <input readOnly value={form.subsfrequency} className={readonlyCls} />
-                    </div>
-                    <div className="mb-3.5 relative">
-                      <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                        Is it Auto Renew Contract?
-                      </label>
-                      <div className="mt-2.5 flex flex-wrap gap-3 sm:gap-4">
-                        <label className="inline-flex items-center gap-1.5">
-                          <input
-                            type="radio"
-                            name="autorenewcontract"
-                            checked={form.autorenewcontract === true}
-                            readOnly
-                            className="bg-gray-100 cursor-not-allowed w-3.5 h-3.5 sm:w-4 sm:h-4"
-                          />
-                          <span className="text-xs sm:text-sm">Yes</span>
-                        </label>
-                        <label className="inline-flex items-center gap-1.5">
-                          <input
-                            type="radio"
-                            name="autorenewcontract"
-                            checked={form.autorenewcontract === false}
-                            readOnly
-                            className="bg-gray-100 cursor-not-allowed w-3.5 h-3.5 sm:w-4 sm:h-4"
-                          />
-                          <span className="text-xs sm:text-sm">No</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    <div className="mb-3.5 relative">
-                      <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                        Last Due Date <span className="text-red-500">*</span>
-                      </label>
-                      <div
-                        className="relative cursor-pointer"
-                        onClick={() => openDatePicker(lastDueDatePickerRef)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            openDatePicker(lastDueDatePickerRef);
-                          }
-                        }}
-                        role="button"
-                        tabIndex={0}
-                        aria-label="Open calendar for Last Due Date"
-                      >
-                        <input
-                          ref={lastDueDatePickerRef}
-                          type="date"
-                          value={form.lastduedate || ""}
-                          onChange={(e) => update("lastduedate", e.target.value)}
-                          className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
-                          aria-label="Last Due Date"
-                          tabIndex={-1}
-                        />
-                        <input
-                          type="text"
-                          readOnly
-                          placeholder="dd/mm/yyyy"
-                          value={formatDateToDDMMYYYY(form.lastduedate)}
-                          className={`${inputCls} pl-8 sm:pl-10 pointer-events-none`}
-                          tabIndex={-1}
-                          aria-hidden
-                        />
-                        <FiCalendar
-                          className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-[18px] sm:h-[18px] pointer-events-none text-gray-500"
-                          aria-hidden
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mb-3.5 relative">
-                      {lockIcon}
-                      <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                        Next Due Date
-                      </label>
-                      <input
-                        readOnly
-                        value={formatDateToDDMMYYYY(form.nextduedate)}
-                        className={readonlyCls}
-                      />
-                    </div>
-
-                    <div className="mb-3.5 relative">
-                      {lockIcon}
-                      <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                        Activity Status
-                      </label>
-                      <input readOnly value={form.activityStatus} className={readonlyCls} />
-                    </div>
-                  </div>
-
-                  {/* RIGHT COLUMN */}
-                  <div className="flex-1 lg:pl-4 xl:pl-7">
-                    <div className="mb-3.5 relative">
-                      <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                        Subscription Department <span className="text-red-600 ml-1">*</span>
-                      </label>
-                      <select
-                        value={form.departmentId || ""}
-                        onChange={(e) => {
-                          const id = e.target.value;
-                          const selected = Array.isArray(departments)
-                            ? departments.find(
-                                (d) => (d.yiic_departmentid || d.yiic_departmentId) === id
-                              )
-                            : null;
-                          setForm((prev) => ({
-                            ...prev,
-                            departmentId: id,
-                            departmentName: selected?.yiic_name ?? "",
-                          }));
-                        }}
-                        className={inputCls}
-                      >
-                        <option value="">Select Department</option>
-                        {Array.isArray(departments) &&
-                          departments.map((d) => {
-                            const id = d.yiic_departmentid ?? d.yiic_departmentId ?? "";
-                            const name = d.yiic_name ?? "";
-                            return (
-                              <option key={id} value={id}>
-                                {name}
-                              </option>
-                            );
-                          })}
-                      </select>
-                    </div>
-
-                    {[
-                      "activityLineId",
-                      "vendorName",
-                      "subscriptionAmount",
-                      "lastUpdated",
-                      "account",
-                      "doyourequireapart",
-                      "licenses",
-                      "currentusers",
-                      "accountManagerName",
-                      "accountManagerEmail",
-                      "accountManagerPhone",
-                    ].map((key) =>
-                      key === "doyourequireapart" ? (
-                        <div className="mb-3.5 relative" key={key} style={{ minHeight: 63 }}>
-                          <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                            {RIGHT_COLUMN_LABELS[key]}
+                        <div className="relative">
+                          <label className={labelCls}>
+                            Subscription Name <span className={requiredCls}>*</span>
                           </label>
+                          <input
+                            maxLength={87}
+                            value={form.subsname}
+                            onChange={(e) => update("subsname", e.target.value)}
+                            className={inputCls}
+                          />
+                        </div>
+
+                        <div className="relative">
+                          <label className={labelCls}>
+                            Subscription Department <span className={requiredCls}>*</span>
+                          </label>
+                          <select
+                            value={form.departmentId || ""}
+                            onChange={(e) => {
+                              const id = e.target.value;
+                              const selected = Array.isArray(departments)
+                                ? departments.find(
+                                    (d) => (d.yiic_departmentid || d.yiic_departmentId) === id
+                                  )
+                                : null;
+                              setForm((prev) => ({
+                                ...prev,
+                                departmentId: id,
+                                departmentName: selected?.yiic_name ?? "",
+                              }));
+                            }}
+                            className={inputCls}
+                          >
+                            <option value="">Select Department</option>
+                            {Array.isArray(departments) &&
+                              departments.map((d) => {
+                                const id = d.yiic_departmentid ?? d.yiic_departmentId ?? "";
+                                const name = d.yiic_name ?? "";
+                                return (
+                                  <option key={id} value={id}>
+                                    {name}
+                                  </option>
+                                );
+                              })}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className={labelCls}>{RIGHT_COLUMN_LABELS.vendorProfile}</label>
+                          <LockedInput>
+                            <input
+                              readOnly
+                              value={form.vendorProfileDisplay || "—"}
+                              className={readonlyCls}
+                            />
+                          </LockedInput>
+                        </div>
+
+                        <div>
+                          <label className={labelCls}>{RIGHT_COLUMN_LABELS.account}</label>
+                          <LockedInput>
+                            <input readOnly value={form.account || "—"} className={readonlyCls} />
+                          </LockedInput>
+                        </div>
+
+                        <div>
+                          <label className={labelCls}>Activity Status</label>
+                          <LockedInput>
+                            <input
+                              readOnly
+                              value={form.activityStatus || "—"}
+                              className={readonlyCls}
+                            />
+                          </LockedInput>
+                        </div>
+
+                        <div className="relative sm:col-span-2">
+                          <label className={labelCls}>Description</label>
+                          <textarea
+                            maxLength={DESC_MAX}
+                            rows={4}
+                            value={form.description}
+                            onChange={handleDescriptionChange}
+                            className={textareaCls}
+                          />
+                          <small className="text-[11px] sm:text-xs text-slate-400 mt-1.5 flex justify-end tabular-nums">
+                            <span>{descriptionCount}</span>/2000
+                          </small>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section className={sectionCls}>
+                      <div className={sectionHeaderCls}>
+                        <div>
+                          <h6 className={sectionTitleCls}>Schedule & Frequency</h6>
+                          <p className={sectionHintCls}>All date and recurrence logic together</p>
+                        </div>
+                      </div>
+                      <div className={sectionGridCls}>
+                        {[
+                          {
+                            key: "subsstartdate",
+                            label: "Subscription Start Date",
+                            pickerRef: startDatePickerRef,
+                            locked: false,
+                          },
+                          {
+                            key: "subsenddate",
+                            label: "Subscription End Date",
+                            pickerRef: endDatePickerRef,
+                            locked: true,
+                          },
+                        ].map(({ key, label, pickerRef, locked }) => (
+                          <div className="relative" key={key}>
+                            <label className={labelCls}>{label}</label>
+                            {locked ? (
+                              <div className="relative">
+                                <input
+                                  type="text"
+                                  readOnly
+                                  placeholder="dd/mm/yyyy"
+                                  value={formatDateToDDMMYYYY(form[key])}
+                                  className={`${inputCls} pl-9 sm:pl-10 bg-slate-50/90 cursor-not-allowed`}
+                                  aria-label={label}
+                                />
+                                <FiLock
+                                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-[18px] sm:h-[18px] pointer-events-none text-slate-400"
+                                  aria-hidden
+                                />
+                              </div>
+                            ) : (
+                              <div
+                                className="relative cursor-pointer"
+                                onClick={() => openDatePicker(pickerRef)}
+                                onKeyDown={handleEnterOrSpace(() => openDatePicker(pickerRef))}
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`Open calendar for ${label}`}
+                              >
+                                <input
+                                  ref={pickerRef}
+                                  type="date"
+                                  value={form[key] || ""}
+                                  onChange={(e) => update(key, e.target.value)}
+                                  className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
+                                  aria-label={label}
+                                  tabIndex={-1}
+                                />
+                                <input
+                                  type="text"
+                                  readOnly
+                                  placeholder="dd/mm/yyyy"
+                                  value={formatDateToDDMMYYYY(form[key])}
+                                  className={`${inputCls} pl-9 sm:pl-10 pointer-events-none`}
+                                  tabIndex={-1}
+                                  aria-hidden
+                                />
+                                <FiCalendar
+                                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-[18px] sm:h-[18px] pointer-events-none text-indigo-400/90"
+                                  aria-hidden
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+
+                        <div className="relative">
+                          <label className={labelCls}>Subscription Frequency Number</label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={form.subsfrequencynumber}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (v === "" || v === "-") update("subsfrequencynumber", v);
+                              else {
+                                const n = Number(v);
+                                update(
+                                  "subsfrequencynumber",
+                                  Number.isNaN(n) ? v : n < 0 ? "0" : v
+                                );
+                              }
+                            }}
+                            className={inputCls}
+                          />
+                        </div>
+
+                        <div className="relative">
+                          <label className={labelCls}>Subscription Frequency Unit</label>
+                          <select
+                            value={form.subsfrequencyunit}
+                            onChange={(e) => update("subsfrequencyunit", e.target.value)}
+                            className={inputCls}
+                          >
+                            <option value="null">Select</option>
+                            <option value="664160002">Months</option>
+                            <option value="664160003">Years</option>
+                          </select>
+                        </div>
+
+                        <div className="relative">
+                          <label className={labelCls}>
+                            Subscription Frequency (auto-calculated, read-only)
+                          </label>
+                          <LockedInput>
+                            <input readOnly value={form.subsfrequency} className={readonlyCls} />
+                          </LockedInput>
+                        </div>
+
+                        <div className="relative self-center">
+                          <label className={labelCls}>Is it Auto Renew Contract?</label>
                           <div className="mt-2.5 flex flex-wrap gap-3 sm:gap-4">
-                            <label className="inline-flex items-center gap-1.5">
+                            <label className="inline-flex items-center gap-2">
                               <input
                                 type="radio"
-                                name="doyourequireapart"
-                                checked={form.doyourequireapart === true}
-                                onChange={() => update("doyourequireapart", true)}
-                                className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                                name="autorenewcontract"
+                                checked={form.autorenewcontract === true}
+                                onChange={() => update("autorenewcontract", true)}
+                                className="h-4 w-4 shrink-0 accent-indigo-400"
                               />
-                              <span className="text-xs sm:text-sm">Yes</span>
+                              <span className="text-sm text-slate-700">Yes</span>
                             </label>
-                            <label className="inline-flex items-center gap-1.5">
+                            <label className="inline-flex items-center gap-2">
                               <input
                                 type="radio"
-                                name="doyourequireapart"
-                                checked={form.doyourequireapart === false}
-                                onChange={() => update("doyourequireapart", false)}
-                                className="w-3.5 h-3.5 sm:w-4 sm:h-4"
+                                name="autorenewcontract"
+                                checked={form.autorenewcontract === false}
+                                onChange={() => update("autorenewcontract", false)}
+                                className="h-4 w-4 shrink-0 accent-indigo-400"
                               />
-                              <span className="text-xs sm:text-sm">No</span>
+                              <span className="text-sm text-slate-700">No</span>
                             </label>
                           </div>
                         </div>
-                      ) : key === "licenses" ? (
-                        <div className="mb-3.5 relative" key={key}>
-                          <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                            {RIGHT_COLUMN_LABELS[key]}
+
+                        <div className="relative">
+                          <label className={labelCls}>
+                            Last Due Date <span className={requiredCls}>*</span>
                           </label>
+                          <div
+                            className="relative cursor-pointer"
+                            onClick={() => openDatePicker(lastDueDatePickerRef)}
+                            onKeyDown={handleEnterOrSpace(() =>
+                              openDatePicker(lastDueDatePickerRef)
+                            )}
+                            role="button"
+                            tabIndex={0}
+                            aria-label="Open calendar for Last Due Date"
+                          >
+                            <input
+                              ref={lastDueDatePickerRef}
+                              type="date"
+                              value={form.lastduedate || ""}
+                              onChange={(e) => update("lastduedate", e.target.value)}
+                              className="absolute inset-0 w-full h-full opacity-0 pointer-events-none"
+                              aria-label="Last Due Date"
+                              tabIndex={-1}
+                            />
+                            <input
+                              type="text"
+                              readOnly
+                              placeholder="dd/mm/yyyy"
+                              value={formatDateToDDMMYYYY(form.lastduedate)}
+                              className={`${inputCls} pl-9 sm:pl-10 pointer-events-none`}
+                              tabIndex={-1}
+                              aria-hidden
+                            />
+                            <FiCalendar
+                              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-[18px] sm:h-[18px] pointer-events-none text-indigo-400/90"
+                              aria-hidden
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className={labelCls}>Next Due Date</label>
+                          <LockedInput>
+                            <input
+                              readOnly
+                              value={formatDateToDDMMYYYY(form.nextduedate) || "—"}
+                              className={readonlyCls}
+                            />
+                          </LockedInput>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+
+                  <div className="flex-1 space-y-5 sm:space-y-6">
+                    <details className={accordionCls}>
+                      <summary className={accordionSummaryCls}>
+                        <FiChevronRight className={accordionChevronCls} aria-hidden />
+                        <div className="flex flex-col">
+                          <span className={sectionTitleCls}>Vendor Details</span>
+                          <span className={sectionHintCls}>Vendor identity and contacts</span>
+                        </div>
+                      </summary>
+                      <div className={accordionPanelCls}>
+                        <div className={accordionPanelInnerCls}>
+                          <div className={sectionGridCls}>
+                            <div>
+                              <label className={labelCls}>{RIGHT_COLUMN_LABELS.vendorName}</label>
+                              <LockedInput>
+                                <input
+                                  readOnly
+                                  value={form.vendorName || "—"}
+                                  className={readonlyCls}
+                                />
+                              </LockedInput>
+                            </div>
+
+                            <div>
+                              <label className={labelCls}>
+                                {RIGHT_COLUMN_LABELS.activityLineId}
+                              </label>
+                              <LockedInput>
+                                <input
+                                  readOnly
+                                  value={form.activityLineId || "—"}
+                                  className={readonlyCls}
+                                />
+                              </LockedInput>
+                            </div>
+
+                            <div>
+                              <label className={labelCls}>
+                                {RIGHT_COLUMN_LABELS.accountManagerName}
+                              </label>
+                              <LockedInput>
+                                <input
+                                  readOnly
+                                  value={form.accountManagerName || "—"}
+                                  className={readonlyCls}
+                                />
+                              </LockedInput>
+                            </div>
+
+                            <div>
+                              <label className={labelCls}>
+                                {RIGHT_COLUMN_LABELS.accountManagerEmail}
+                              </label>
+                              <LockedInput>
+                                <input
+                                  readOnly
+                                  type="text"
+                                  value={form.accountManagerEmail || "—"}
+                                  className={readonlyCls}
+                                />
+                              </LockedInput>
+                            </div>
+
+                            <div className="sm:col-span-2">
+                              <label className={labelCls}>
+                                {RIGHT_COLUMN_LABELS.accountManagerPhone}
+                              </label>
+                              <LockedInput>
+                                <input
+                                  readOnly
+                                  type="text"
+                                  value={form.accountManagerPhone || "—"}
+                                  className={readonlyCls}
+                                />
+                              </LockedInput>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </details>
+
+                    <details className={accordionCls}>
+                      <summary className={accordionSummaryCls}>
+                        <FiChevronRight className={accordionChevronCls} aria-hidden />
+                        <div className="flex flex-col">
+                          <span className={sectionTitleCls}>Renewal & Audit</span>
+                          <span className={sectionHintCls}>
+                            Administrative details reviewed at renewal
+                          </span>
+                        </div>
+                      </summary>
+                      <div className={accordionPanelCls}>
+                        <div className={accordionPanelInnerCls}>
+                          <div className={sectionGridCls}>
+                            <div className="relative sm:col-span-2" style={{ minHeight: 63 }}>
+                              <label className={labelCls}>
+                                {RIGHT_COLUMN_LABELS.doyourequireapart}
+                              </label>
+                              <div className="mt-2.5 flex flex-wrap gap-3 sm:gap-4">
+                                <label className="inline-flex items-center gap-2">
+                                  <input
+                                    type="radio"
+                                    name="doyourequireapart"
+                                    checked={form.doyourequireapart === true}
+                                    onChange={() => update("doyourequireapart", true)}
+                                    className="h-4 w-4 shrink-0 accent-indigo-400"
+                                  />
+                                  <span className="text-sm text-slate-700">Yes</span>
+                                </label>
+                                <label className="inline-flex items-center gap-2">
+                                  <input
+                                    type="radio"
+                                    name="doyourequireapart"
+                                    checked={form.doyourequireapart === false}
+                                    onChange={() => update("doyourequireapart", false)}
+                                    className="h-4 w-4 shrink-0 accent-indigo-400"
+                                  />
+                                  <span className="text-sm text-slate-700">No</span>
+                                </label>
+                              </div>
+                            </div>
+
+                            <div>
+                              <label className={labelCls}>{RIGHT_COLUMN_LABELS.lastUpdated}</label>
+                              <LockedInput>
+                                <input
+                                  readOnly
+                                  value={lastUpdatedDisplay}
+                                  className={readonlyCls}
+                                />
+                              </LockedInput>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </details>
+
+                    <section className={sectionCls}>
+                      <div className={sectionHeaderCls}>
+                        <div>
+                          <h6 className={sectionTitleCls}>Financial Details</h6>
+                          <p className={sectionHintCls}>Everything money-related in one place</p>
+                        </div>
+                      </div>
+                      <div className={sectionGridCls}>
+                        <div className="relative">
+                          <label className={labelCls}>Subscription Contract Amount</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min={0}
+                            value={form.subscontractamount}
+                            onChange={(e) => update("subscontractamount", e.target.value)}
+                            onBlur={handleContractAmountBlur}
+                            className={inputCls}
+                          />
+                        </div>
+
+                        <div>
+                          <label className={labelCls}>
+                            {RIGHT_COLUMN_LABELS.subscriptionAmount}
+                          </label>
+                          <LockedInput>
+                            <input
+                              readOnly
+                              type="text"
+                              value={
+                                form.subscriptionAmount != null && form.subscriptionAmount !== ""
+                                  ? `$ ${form.subscriptionAmount}`
+                                  : "$ —"
+                              }
+                              className={readonlyCls}
+                            />
+                          </LockedInput>
+                        </div>
+
+                        <div className="relative">
+                          <label className={labelCls}>{RIGHT_COLUMN_LABELS.licenses}</label>
                           <input
                             type="number"
                             min={0}
@@ -711,11 +922,9 @@ export default function EditSubscriptionModal({
                             className={inputCls}
                           />
                         </div>
-                      ) : key === "currentusers" ? (
-                        <div className="mb-3.5 relative" key={key}>
-                          <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                            {RIGHT_COLUMN_LABELS[key]}
-                          </label>
+
+                        <div className="relative">
+                          <label className={labelCls}>{RIGHT_COLUMN_LABELS.currentusers}</label>
                           <input
                             type="number"
                             min={0}
@@ -727,52 +936,39 @@ export default function EditSubscriptionModal({
                             className={inputCls}
                           />
                         </div>
-                      ) : key === "lastUpdated" ? (
-                        <div className="mb-3.5 relative" key={key}>
-                          {lockIcon}
-                          <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                            {RIGHT_COLUMN_LABELS[key] ?? key}
-                          </label>
-                          <input
-                            readOnly
-                            value={formatDateToDDMMYYYY(form[key])}
-                            className={readonlyCls}
-                          />
-                        </div>
-                      ) : (
-                        <div className="mb-3.5 relative" key={key}>
-                          {lockIcon}
-                          <label className="text-xs sm:text-[13px] font-medium text-slate-900 mb-1.5 block">
-                            {RIGHT_COLUMN_LABELS[key] ?? key}
-                          </label>
-                          <input readOnly value={form[key]} className={readonlyCls} />
-                        </div>
-                      )
-                    )}
+                      </div>
+                    </section>
                   </div>
                 </div>
               </form>
             )}
           </div>
 
-          {/* FOOTER */}
-          <div className="p-3 sm:p-4 md:p-[18px_28px] border-t border-gray-200 flex flex-col sm:flex-row items-center justify-center gap-3 shrink-0">
+          <div className="shrink-0 px-5 sm:px-7 py-4 sm:py-5 border-t border-slate-200/70 bg-gradient-to-r from-slate-50/90 via-indigo-50/30 to-slate-50/90 flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-end gap-2.5 sm:gap-3">
             {!isLoading && (
               <>
                 <button
                   type="button"
-                  className="w-full sm:w-auto px-6 h-10 sm:h-[42px] rounded-lg bg-white border border-gray-300 text-sm sm:text-base font-medium whitespace-nowrap hover:bg-gray-50"
+                  className="w-full sm:w-auto min-h-11 px-6 rounded-xl border border-slate-200/90 bg-white text-sm font-medium text-slate-600 shadow-sm transition-[background-color,border-color,box-shadow] duration-200 hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-200/80"
                   onClick={onClose}
                 >
                   Close
                 </button>
                 <button
                   type="button"
-                  className="w-full sm:w-auto px-7 h-10 sm:h-[42px] rounded-lg bg-[#1b1f6a] text-white text-sm sm:text-base font-semibold whitespace-nowrap hover:bg-[#15195a] disabled:opacity-60 disabled:cursor-not-allowed"
-                  onClick={handleSave}
-                  disabled={isSaving || localSubmitting}
+                  className="w-full sm:w-auto min-h-11 px-7 rounded-xl border border-indigo-300/70 bg-indigo-50/60 text-sm font-semibold text-indigo-800 shadow-sm transition-[background-color,border-color] duration-200 hover:bg-indigo-100/80 hover:border-indigo-400/60 disabled:cursor-not-allowed disabled:opacity-55"
+                  onClick={() => runSave(false)}
+                  disabled={actionDisabled}
                 >
-                  {isSaving || localSubmitting ? "Saving..." : "Save changes"}
+                  {isSaving || localSubmitting ? "Saving..." : "Save"}
+                </button>
+                <button
+                  type="button"
+                  className="w-full sm:w-auto min-h-11 px-8 rounded-xl bg-gradient-to-b from-indigo-400 to-indigo-500 text-sm font-semibold text-white shadow-md shadow-indigo-400/25 transition-[filter,opacity] duration-200 hover:from-indigo-500 hover:to-indigo-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-55"
+                  onClick={() => runSave(true)}
+                  disabled={actionDisabled}
+                >
+                  {isSaving || localSubmitting ? "Saving..." : "Save and Close"}
                 </button>
               </>
             )}

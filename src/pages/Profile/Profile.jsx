@@ -470,7 +470,7 @@ function Profile() {
       {/* Organization Settings tab */}
       {activeTab === "organization" && (
         <OrganizationSettings
-          // contactId={profile?.contactid}
+          contactId={profile?.contactid}
           isActive={activeTab === "organization"}
         />
       )}

@@ -140,3 +140,19 @@ export async function updateProfilePicture(contactId, entityimage) {
     throw new Error(`Failed to update profile picture: ${err.response?.status ?? ""} - ${message}`);
   }
 }
+
+/**
+ * Get contract / plan features for a contact (e.g. pricing entitlements).
+ * @param {string} contactId - Contact ID
+ * @returns {Promise<Object>} Contract or features payload from backend
+ */
+export async function getContractbyContactId(contactId) {
+  try {
+    const response = await API.get("/getFeaturesByContact", { params: { contactId } });
+    if (response.status === 204) return null;
+    return response.data;
+  } catch (err) {
+    const message = err.response?.data != null ? String(err.response.data) : err.message;
+    throw new Error(`Failed to get contract details: ${err.response?.status ?? ""} - ${message}`);
+  }
+}
